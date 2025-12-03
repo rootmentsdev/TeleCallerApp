@@ -6,6 +6,7 @@ import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
+import 'package:telecaller_app/view/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Demo',
         theme: ThemeData(useMaterial3: true),
-        home: const BottomNav(),
+        home: const LoginScreen(),
       ),
     );
   }
