@@ -65,14 +65,17 @@ class LeadScreenController extends ChangeNotifier {
         leads = leads.where((lead) => lead.location == location).toList();
       }
 
-      // Filter by date
-      leads =
-          leads.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
+      // Filter by date - but for Loss of Sale, count all leads (date filter is handled by API)
+      // For other categories, filter by selected date
+      if (category != LeadConstants.categoryLossOfSales) {
+        leads =
+            leads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == date.year &&
+                  leadDate.month == date.month &&
+                  leadDate.day == date.day;
+            }).toList();
+      }
 
       // Filter out leads that have been called
       leads =
@@ -162,14 +165,17 @@ class LeadScreenController extends ChangeNotifier {
           filteredLeads.where((lead) => lead.location == location).toList();
     }
 
-    // Filter by date
-    filteredLeads =
-        filteredLeads.where((lead) {
-          final leadDate = lead.createdAt;
-          return leadDate.year == date.year &&
-              leadDate.month == date.month &&
-              leadDate.day == date.day;
-        }).toList();
+    // Filter by date - but for Loss of Sale, show all leads (date filter is handled by API)
+    // For other categories, filter by selected date
+    if (_selectedCallTypeIndex != 1) {
+      filteredLeads =
+          filteredLeads.where((lead) {
+            final leadDate = lead.createdAt;
+            return leadDate.year == date.year &&
+                leadDate.month == date.month &&
+                leadDate.day == date.day;
+          }).toList();
+    }
 
     // Filter out leads that have been called (only show uncalled leads)
     filteredLeads =
@@ -223,5 +229,32 @@ class LeadScreenController extends ChangeNotifier {
 
   void refresh() {
     notifyListeners();
+  }
+
+  /// Fetch Loss of Sale leads from API
+  Future<void> fetchLossOfSaleLeadsFromApi({
+    String? store,
+    String? enquiryFrom,
+    String? enquiryTo,
+    String? functionFrom,
+    String? functionTo,
+    String? visitFrom,
+    String? visitTo,
+  }) async {
+    try {
+      await _repository.fetchLossOfSaleLeadsFromApi(
+        store: store,
+        enquiryFrom: enquiryFrom,
+        enquiryTo: enquiryTo,
+        functionFrom: functionFrom,
+        functionTo: functionTo,
+        visitFrom: visitFrom,
+        visitTo: visitTo,
+      );
+      notifyListeners();
+    } catch (e) {
+      print('LeadScreenController: Error fetching Loss of Sale leads: $e');
+      rethrow;
+    }
   }
 }

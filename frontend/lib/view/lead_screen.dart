@@ -15,6 +15,8 @@ class LeadScreen extends StatefulWidget {
 }
 
 class _LeadScreenState extends State<LeadScreen> {
+  bool _isLoadingLossOfSale = false;
+
   @override
   void initState() {
     super.initState();
@@ -30,7 +32,63 @@ class _LeadScreenState extends State<LeadScreen> {
       );
       leadController.init(headerController);
       leadController.refresh();
+
+      // Always fetch Loss of Sale leads from API on initial load
+      // This ensures data is available when user switches to Loss of Sale tab
+      // Add a small delay to ensure everything is initialized
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _fetchLossOfSaleLeads(leadController, headerController);
+      });
     });
+  }
+
+  Future<void> _fetchLossOfSaleLeads(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingLossOfSale) return;
+
+    setState(() {
+      _isLoadingLossOfSale = true;
+    });
+
+    try {
+      final store = headerController.selectedStore;
+      final storeParam =
+          (store == null || store == 'All Stores') ? null : store;
+      await controller.fetchLossOfSaleLeadsFromApi(store: storeParam);
+
+      if (mounted) {
+        controller.refresh();
+      }
+    } catch (e) {
+      if (mounted) {
+        final leadController = Provider.of<LeadScreenController>(
+          context,
+          listen: false,
+        );
+        if (leadController.selectedCallTypeIndex == 1 ||
+            e.toString().contains('Authentication') ||
+            e.toString().contains('401') ||
+            e.toString().contains('403')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to load Loss of Sale leads: ${e.toString().replaceAll('Exception: ', '')}',
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLossOfSale = false;
+        });
+      }
+    }
   }
 
   @override
@@ -38,11 +96,20 @@ class _LeadScreenState extends State<LeadScreen> {
     super.didChangeDependencies();
     // Refresh when screen becomes visible to show updated leads
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final headerController = Provider.of<HeaderController>(
+        context,
+        listen: false,
+      );
       final leadController = Provider.of<LeadScreenController>(
         context,
         listen: false,
       );
       leadController.refresh();
+
+      // Refresh Loss of Sale leads when screen becomes visible
+      if (!_isLoadingLossOfSale) {
+        _fetchLossOfSaleLeads(leadController, headerController);
+      }
     });
   }
 
@@ -88,8 +155,19 @@ class _LeadScreenState extends State<LeadScreen> {
                             icon: item["icon"],
                             isSelected:
                                 controller.selectedCallTypeIndex == index,
-                            onTap: () {
+                            onTap: () async {
                               controller.setSelectedCallTypeIndex(index);
+                              if (index == 1) {
+                                final headerController =
+                                    Provider.of<HeaderController>(
+                                      context,
+                                      listen: false,
+                                    );
+                                await _fetchLossOfSaleLeads(
+                                  controller,
+                                  headerController,
+                                );
+                              }
                             },
                           ),
                         ),
@@ -148,38 +226,78 @@ class _LeadScreenState extends State<LeadScreen> {
 
               // Leads List
               Expanded(
-                child:
-                    filteredLeads.isEmpty
-                        ? Center(
-                          child: Text(
-                            "No leads found",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                              fontFamily: TextConstant.dmSansRegular,
-                            ),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    print('LeadScreen: Pull to refresh triggered');
+                    final headerController = Provider.of<HeaderController>(
+                      context,
+                      listen: false,
+                    );
+                    await _fetchLossOfSaleLeads(controller, headerController);
+                  },
+                  child:
+                      _isLoadingLossOfSale &&
+                              controller.selectedCallTypeIndex == 1
+                          ? const Center(child: CircularProgressIndicator())
+                          : filteredLeads.isEmpty
+                          ? ListView(
+                            children: [
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.3,
+                              ),
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      "No leads found",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                        fontFamily: TextConstant.dmSansRegular,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: () {
+                                        final headerController =
+                                            Provider.of<HeaderController>(
+                                              context,
+                                              listen: false,
+                                            );
+                                        _fetchLossOfSaleLeads(
+                                          controller,
+                                          headerController,
+                                        );
+                                      },
+                                      child: const Text('Tap to refresh'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                          : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: filteredLeads.length,
+                            itemBuilder: (context, index) {
+                              final lead = filteredLeads[index];
+                              return LeadListItem(
+                                lead:
+                                    lead.toMap(), // Convert to map for backward compatibility
+                                onTap: () {
+                                  if (lead.leadModel != null) {
+                                    NavigationHelper.navigateToDetails(
+                                      context,
+                                      lead.leadModel!,
+                                      lead.date,
+                                    );
+                                  }
+                                },
+                              );
+                            },
                           ),
-                        )
-                        : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredLeads.length,
-                          itemBuilder: (context, index) {
-                            final lead = filteredLeads[index];
-                            return LeadListItem(
-                              lead:
-                                  lead.toMap(), // Convert to map for backward compatibility
-                              onTap: () {
-                                if (lead.leadModel != null) {
-                                  NavigationHelper.navigateToDetails(
-                                    context,
-                                    lead.leadModel!,
-                                    lead.date,
-                                  );
-                                }
-                              },
-                            );
-                          },
-                        ),
+                ),
               ),
             ],
           ),

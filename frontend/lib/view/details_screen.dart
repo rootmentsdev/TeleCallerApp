@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
@@ -7,7 +6,6 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
-import 'package:telecaller_app/services/phone_call_service.dart';
 import 'dart:async';
 
 class DetailsScreen extends StatefulWidget {
@@ -25,9 +23,8 @@ class DetailsScreen extends StatefulWidget {
   State<DetailsScreen> createState() => _DetailsScreenState();
 }
 
-class _DetailsScreenState extends State<DetailsScreen> {
-  bool callNow = false;
-  bool callAnswered = false; // Track if call was answered
+class _DetailsScreenState extends State<DetailsScreen>
+    with WidgetsBindingObserver {
   String? selectedCallStatus;
   String? selectedReason;
   final TextEditingController customReasonController = TextEditingController();
@@ -37,101 +34,14 @@ class _DetailsScreenState extends State<DetailsScreen> {
   int rating = 0;
   final TextEditingController remarksController = TextEditingController();
 
-  // Call duration tracking
-  Timer? _callTimer;
+  // Call tracking variables
+  bool _isCallActive = false;
+  DateTime? _callStartTime;
   int _callDurationSeconds = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize call duration from existing contact if available
-    final existingDuration = widget.contact["callDuration"] as int?;
-    if (existingDuration != null && existingDuration > 0) {
-      _callDurationSeconds = existingDuration;
-    }
-
-    // Initialize phone call service to receive call duration updates
-    PhoneCallService.initialize(
-      onCallEnded: (phoneNumber, duration) {
-        debugPrint(
-          'PhoneCallService: Call ended - Phone: $phoneNumber, Duration: $duration',
-        );
-
-        // Normalize phone numbers for comparison
-        String normalizePhone(String phone) {
-          // Remove all non-digit characters except +
-          String cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
-          // Remove leading + if present for comparison
-          if (cleaned.startsWith('+')) {
-            cleaned = cleaned.substring(1);
-          }
-          // Remove leading country code if it's 91 (India)
-          if (cleaned.startsWith('91') && cleaned.length > 10) {
-            cleaned = cleaned.substring(2);
-          }
-          return cleaned;
-        }
-
-        // Check if this call matches the current contact
-        final contactPhone = widget.contact["phone"] as String? ?? "";
-        final normalizedContact = normalizePhone(contactPhone);
-        final normalizedCall = normalizePhone(phoneNumber);
-
-        debugPrint(
-          'PhoneCallService: Contact phone: $contactPhone -> $normalizedContact',
-        );
-        debugPrint(
-          'PhoneCallService: Call phone: $phoneNumber -> $normalizedCall',
-        );
-        debugPrint(
-          'PhoneCallService: Match: ${normalizedContact == normalizedCall || normalizedContact.contains(normalizedCall) || normalizedCall.contains(normalizedContact)}',
-        );
-
-        // Update duration if phone numbers match (more lenient matching)
-        final isMatch =
-            normalizedContact == normalizedCall ||
-            normalizedContact.contains(normalizedCall) ||
-            normalizedCall.contains(normalizedContact) ||
-            normalizedContact.endsWith(normalizedCall) ||
-            normalizedCall.endsWith(normalizedContact);
-
-        if (isMatch) {
-          debugPrint(
-            'PhoneCallService: Phone numbers match! Updating duration: $duration',
-          );
-          if (mounted) {
-            setState(() {
-              if (duration != null && duration > 0) {
-                // Call was answered - automatically set status to Connected
-                _callDurationSeconds = duration;
-                callAnswered = true;
-                selectedCallStatus = "Connected";
-                debugPrint(
-                  'PhoneCallService: Updated call duration to $_callDurationSeconds seconds',
-                );
-                // Stop any running timer since we have the actual duration
-                _stopCallTimer();
-              } else {
-                // Call was not answered - allow manual status selection
-                callAnswered = false;
-                debugPrint(
-                  'PhoneCallService: Call not answered (duration: $duration)',
-                );
-                // Set default status if not already set
-                if (selectedCallStatus == null) {
-                  selectedCallStatus = "Not Connected";
-                }
-              }
-            });
-          }
-        } else {
-          debugPrint(
-            'PhoneCallService: Phone numbers do not match, ignoring callback',
-          );
-        }
-      },
-    );
-  }
+  Timer? _callTimer;
+  bool _wasAppInBackground = false;
+  DateTime? _backgroundTime;
+  Timer? _autoStopTimer;
 
   final List<Map<String, dynamic>> callSummary = [
     {
@@ -220,37 +130,91 @@ class _DetailsScreenState extends State<DetailsScreen> {
     return callSummary[widget.callTypeIndex]["icon"] as IconData;
   }
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Initialize call duration from existing contact if available
+    final existingDuration = widget.contact["callDuration"] as int?;
+    if (existingDuration != null && existingDuration > 0) {
+      _callDurationSeconds = existingDuration;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // App went to background - user likely opened dialer or is on a call
+      if (_isCallActive && _callStartTime != null) {
+        _wasAppInBackground = true;
+        _backgroundTime = DateTime.now();
+        // Set auto-stop timer in case user doesn't return (max 2 hours)
+        _autoStopTimer?.cancel();
+        _autoStopTimer = Timer(const Duration(hours: 2), () {
+          if (mounted && _isCallActive) {
+            _stopCallTimer();
+            setState(() {});
+          }
+        });
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      // App came back to foreground
+      _autoStopTimer?.cancel();
+      _autoStopTimer = null;
+
+      if (_wasAppInBackground && _isCallActive) {
+        // Calculate time spent in background
+        if (_backgroundTime != null) {
+          final backgroundDuration = DateTime.now().difference(
+            _backgroundTime!,
+          );
+
+          // If user was away for more than 30 seconds, assume call ended
+          // This handles the case where user makes call and returns to app
+          if (backgroundDuration.inSeconds > 30) {
+            // Finalize the duration - timer already calculated it
+            _stopCallTimer();
+            _wasAppInBackground = false;
+            _backgroundTime = null;
+
+            // Auto-set status to Connected if duration > 0
+            if (_callDurationSeconds > 0 && selectedCallStatus == null) {
+              selectedCallStatus = "Connected";
+            }
+          } else {
+            // User returned quickly, might still be in dialer
+            // Keep timer running
+            _wasAppInBackground = false;
+            _backgroundTime = null;
+          }
+        } else {
+          // Fallback: stop timer if we were tracking
+          _stopCallTimer();
+          _wasAppInBackground = false;
+        }
+      }
+    }
+  }
+
   Future<void> _saveCallUpdate() async {
     // Stop timer if running
     _stopCallTimer();
 
-    debugPrint('_saveCallUpdate: _callDurationSeconds = $_callDurationSeconds');
-    debugPrint('_saveCallUpdate: selectedCallStatus = $selectedCallStatus');
-    debugPrint('_saveCallUpdate: callAnswered = $callAnswered');
-
-    // Auto-set call status if call was answered (has duration)
+    // If call was made and has duration, auto-set status to Connected
     if (_callDurationSeconds > 0 && selectedCallStatus == null) {
       selectedCallStatus = "Connected";
-      callAnswered = true;
-      debugPrint(
-        '_saveCallUpdate: Auto-set status to Connected (duration: $_callDurationSeconds)',
-      );
     }
 
-    // If no call status is set and no duration, set default
+    // If no call status is set, set default
     if (selectedCallStatus == null || selectedCallStatus!.isEmpty) {
-      // If call was made but no status selected, default to "Not Connected"
-      if (callNow) {
-        selectedCallStatus = "Not Connected";
+      if (_isCallActive || _callDurationSeconds > 0) {
+        selectedCallStatus = "Connected";
       } else {
-        // No call was made, don't require status
         selectedCallStatus = "Not called yet";
       }
     }
-
-    // Update callAnswered based on final call status
-    callAnswered =
-        selectedCallStatus == "Connected" || _callDurationSeconds > 0;
 
     // Get the lead ID if available
     final leadId = widget.contact["id"] as String?;
@@ -267,7 +231,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
           brand: lead.brand,
           location: lead.location,
           leadStatus: selectedLeadStatus,
-          callStatus: selectedCallStatus, // Now guaranteed to be non-null
+          callStatus: selectedCallStatus,
           followUpDate: markAsFollowUp ? followUpDate : null,
           reason:
               selectedReason == "Other"
@@ -277,21 +241,17 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   : selectedReason,
           category: lead.category,
           createdAt: lead.createdAt,
-          callDuration:
-              (_callDurationSeconds > 0) ? _callDurationSeconds : null,
+          callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
         );
 
-        debugPrint(
-          '_saveCallUpdate: Saving lead with callDuration: ${updatedLead.callDuration}',
-        );
         await repository.updateLead(updatedLead);
-        debugPrint('_saveCallUpdate: Lead updated successfully');
       }
     }
 
-    // Navigate back to root (bottom navigation) and switch to Reports tab
+    // Navigate back to previous screen (BottomNav) and switch to Reports tab
     if (mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // Pop back to BottomNav (not all the way to LoginScreen)
+      Navigator.of(context).pop();
 
       // Switch to Reports tab (index 3) in bottom navigation
       // Set flag to navigate to Equary Calls tab when Report screen loads
@@ -304,29 +264,119 @@ class _DetailsScreenState extends State<DetailsScreen> {
     }
   }
 
+  void _startCallTimer() {
+    _callStartTime = DateTime.now();
+    _isCallActive = true;
+    _callDurationSeconds = 0; // Reset duration when starting new call
+    _callTimer?.cancel();
+    _callTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted && _callStartTime != null) {
+        final elapsed = DateTime.now().difference(_callStartTime!);
+        setState(() {
+          _callDurationSeconds = elapsed.inSeconds;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
   void _stopCallTimer() {
     _callTimer?.cancel();
     _callTimer = null;
+    _autoStopTimer?.cancel();
+    _autoStopTimer = null;
+
+    // Finalize duration calculation
+    if (_callStartTime != null && _isCallActive) {
+      final elapsed = DateTime.now().difference(_callStartTime!);
+      _callDurationSeconds = elapsed.inSeconds;
+    }
+
+    _isCallActive = false;
+    _callStartTime = null;
+    _wasAppInBackground = false;
+    _backgroundTime = null;
+
+    // Auto-set status to Connected if call had duration
+    if (_callDurationSeconds > 0 && selectedCallStatus == null) {
+      selectedCallStatus = "Connected";
+    }
   }
 
-  String _formatDuration(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    if (phoneNumber.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Phone number is not available'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    } else {
-      return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    // Clean phone number - keep + sign but remove spaces, dashes, parentheses
+    String cleanedNumber = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+    if (cleanedNumber.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid phone number'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
+      final launched = await launchUrl(
+        phoneUri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (launched && mounted) {
+        // Don't start timer yet - wait for user to tap call logo when call is answered
+        // Just mark that dialer was opened
+        setState(() {
+          // Timer will start when user taps the call logo
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error making phone call: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _onCallLogoTap() {
+    // User taps call logo to indicate call was answered
+    // Start tracking call duration from this point
+    if (!_isCallActive) {
+      _startCallTimer();
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
     _stopCallTimer();
+    _autoStopTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     remarksController.dispose();
     customReasonController.dispose();
-    PhoneCallService.dispose();
     super.dispose();
   }
 
@@ -431,14 +481,26 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           ),
                         ),
                         ElevatedButton.icon(
-                          onPressed: () async {
-                            await _makePhoneCall(widget.contact["phone"] ?? "");
-                            // callNow will be set to true in _makePhoneCall if call succeeds
-                          },
-                          icon: const Icon(Icons.phone, size: 18),
-                          label: const Text("Call Now"),
+                          onPressed:
+                              _isCallActive
+                                  ? null
+                                  : () async {
+                                    await _makePhoneCall(
+                                      widget.contact["phone"] ?? "",
+                                    );
+                                  },
+                          icon: Icon(
+                            _isCallActive ? Icons.phone_disabled : Icons.phone,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _isCallActive ? "Calling..." : "Call Now",
+                          ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: ColorConstant.primaryColor,
+                            backgroundColor:
+                                _isCallActive
+                                    ? Colors.grey[400]
+                                    : ColorConstant.primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -459,92 +521,96 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Show message if Call Now not clicked
-                    // if (!callNow)
-                    //   Container(
-                    //     padding: const EdgeInsets.all(16),
-                    //     decoration: BoxDecoration(
-                    //       color: Colors.blue[50],
-                    //       borderRadius: BorderRadius.circular(8),
-                    //       border: Border.all(color: Colors.blue[200]!),
-                    //     ),
-                    //     child: Row(
-                    //       children: [
-                    //         Icon(
-                    //           Icons.info_outline,
-                    //           color: Colors.blue[700],
-                    //           size: 20,
-                    //         ),
-                    //         const SizedBox(width: 12),
-                    //         Expanded(
-                    //           child: Text(
-                    //             "Click 'Call Now' to enable data entry options",
-                    //             style: TextStyle(
-                    //               fontSize: 14,
-                    //               color: Colors.blue[900],
-                    //               fontFamily: TextConstant.dmSansRegular,
-                    //             ),
-                    //           ),
-                    //         ),
-                    //       ],
-                    //     ),
-                    //   ),
-                    if (!callNow) const SizedBox(height: 24),
-
-                    // Call Status Dropdown (optional - auto-set if call answered)
-                    _buildDropdown(
-                      label:
-                          "Call Status ${_callDurationSeconds > 0 ? '(Auto: Connected)' : ''}",
-                      value: selectedCallStatus,
-                      items: callStatusOptions,
-                      enabled: callNow,
-                      onChanged:
-                          callNow
-                              ? (value) {
-                                setState(() {
-                                  // Allow manual override of status
-                                  selectedCallStatus = value;
-                                  // Update callAnswered flag
-                                  callAnswered =
-                                      value == "Connected" ||
-                                      _callDurationSeconds > 0;
-                                });
-                              }
-                              : null,
-                    ),
-                    // Display call duration if call is answered
-                    if (callAnswered && _callDurationSeconds > 0) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.timer,
-                              size: 16,
-                              color: Colors.green[700],
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Call Duration: ${_formatDuration(_callDurationSeconds)}",
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.green[700],
-                                fontFamily: TextConstant.dmSansMedium,
+                    // Call Logo - Tap to start tracking when call is answered
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _onCallLogoTap,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color:
+                                  _isCallActive
+                                      ? Colors.green[50]
+                                      : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color:
+                                    _isCallActive
+                                        ? Colors.green[300]!
+                                        : Colors.grey[300]!,
                               ),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _isCallActive
+                                      ? Icons.phone_in_talk
+                                      : Icons.phone,
+                                  size: 24,
+                                  color:
+                                      _isCallActive
+                                          ? Colors.green[700]
+                                          : Colors.grey[700],
+                                ),
+                                if (_isCallActive) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Call Active",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green[700],
+                                      fontFamily: TextConstant.dmSansMedium,
+                                    ),
+                                  ),
+                                ] else ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Tap when answered",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                      fontFamily: TextConstant.dmSansRegular,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                        if (_isCallActive) ...[
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: () {
+                              _stopCallTimer();
+                              setState(() {});
+                            },
+                            child: const Text(
+                              "End Call",
+                              style: TextStyle(color: Colors.red, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Call Status Dropdown
+                    _buildDropdown(
+                      label:
+                          _callDurationSeconds > 0
+                              ? "Call Status (Auto: Connected)"
+                              : "Call Status",
+                      value: selectedCallStatus,
+                      items: callStatusOptions,
+                      enabled: true,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedCallStatus = value;
+                        });
+                      },
+                    ),
                     const SizedBox(height: 16),
                     // Reason Dropdown - Only for Loss of Sale and All Calls
                     if (widget.callTypeIndex == 0 ||
@@ -554,25 +620,22 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         value: selectedReason,
                         items: reasonOptions,
                         hint: "Add reason",
-                        enabled: callNow,
-                        onChanged:
-                            callNow
-                                ? (value) {
-                                  setState(() {
-                                    selectedReason = value;
-                                    if (value != "Other") {
-                                      customReasonController.clear();
-                                    }
-                                  });
-                                }
-                                : null,
+                        enabled: true,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedReason = value;
+                            if (value != "Other") {
+                              customReasonController.clear();
+                            }
+                          });
+                        },
                       ),
                       // Custom Reason TextField (shown when "Other" is selected)
                       if (selectedReason == "Other") ...[
                         const SizedBox(height: 16),
                         TextField(
                           controller: customReasonController,
-                          enabled: callNow,
+                          enabled: true,
                           decoration: InputDecoration(
                             hintText: "Enter custom reason",
                             hintStyle: TextStyle(
@@ -586,10 +649,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            disabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[200]!),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -616,15 +675,12 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         value: selectedLeadStatus,
                         items: leadStatusOptions,
                         hint: "No Status",
-                        enabled: callNow,
-                        onChanged:
-                            callNow
-                                ? (value) {
-                                  setState(() {
-                                    selectedLeadStatus = value;
-                                  });
-                                }
-                                : null,
+                        enabled: true,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedLeadStatus = value;
+                          });
+                        },
                       ),
 
                     if (widget.callTypeIndex == 3 ||
@@ -638,20 +694,16 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       children: [
                         Checkbox(
                           value: markAsFollowUp,
-                          onChanged:
-                              callNow
-                                  ? (value) {
-                                    setState(() {
-                                      markAsFollowUp = value ?? false;
-                                      if (markAsFollowUp &&
-                                          followUpDate == null) {
-                                        followUpDate = DateTime.now().add(
-                                          const Duration(days: 7),
-                                        );
-                                      }
-                                    });
-                                  }
-                                  : null,
+                          onChanged: (value) {
+                            setState(() {
+                              markAsFollowUp = value ?? false;
+                              if (markAsFollowUp && followUpDate == null) {
+                                followUpDate = DateTime.now().add(
+                                  const Duration(days: 7),
+                                );
+                              }
+                            });
+                          },
                           activeColor: ColorConstant.primaryColor,
                         ),
                         Text(
@@ -659,30 +711,25 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           style: TextStyle(
                             fontFamily: TextConstant.dmSansMedium,
                             fontSize: 14,
-                            color: callNow ? Colors.black : Colors.grey[400],
+                            color: Colors.black,
                           ),
                         ),
-                        if (markAsFollowUp && callNow) ...[
+                        if (markAsFollowUp) ...[
                           const Spacer(),
                           GestureDetector(
-                            onTap:
-                                callNow
-                                    ? () async {
-                                      DateTime? pickedDate =
-                                          await showDatePicker(
-                                            context: context,
-                                            initialDate:
-                                                followUpDate ?? DateTime.now(),
-                                            firstDate: DateTime.now(),
-                                            lastDate: DateTime(2101),
-                                          );
-                                      if (pickedDate != null) {
-                                        setState(() {
-                                          followUpDate = pickedDate;
-                                        });
-                                      }
-                                    }
-                                    : null,
+                            onTap: () async {
+                              DateTime? pickedDate = await showDatePicker(
+                                context: context,
+                                initialDate: followUpDate ?? DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime(2101),
+                              );
+                              if (pickedDate != null) {
+                                setState(() {
+                                  followUpDate = pickedDate;
+                                });
+                              }
+                            },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -717,13 +764,13 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         fontFamily: TextConstant.dmSansMedium,
-                        color: callNow ? Colors.grey[800] : Colors.grey[400],
+                        color: Colors.grey[800],
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: remarksController,
-                      enabled: callNow,
+                      enabled: true,
                       maxLines: 2,
                       decoration: InputDecoration(
                         hintText: "Enter your remarks",
@@ -739,10 +786,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.grey[300]!),
                         ),
-                        disabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[200]!),
-                        ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
@@ -750,9 +793,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
                             width: 2,
                           ),
                         ),
-                        filled: !callNow,
-                        fillColor:
-                            callNow ? Colors.transparent : Colors.grey[100],
                         contentPadding: const EdgeInsets.all(12),
                       ),
                     ),
@@ -786,17 +826,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed:
-                                callNow
-                                    ? () async {
-                                      await _saveCallUpdate();
-                                    }
-                                    : null,
+                            onPressed: () async {
+                              await _saveCallUpdate();
+                            },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  callNow
-                                      ? ColorConstant.primaryColor
-                                      : Colors.grey[300],
+                              backgroundColor: ColorConstant.primaryColor,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -805,8 +839,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                             child: Text(
                               "Save Call Update",
                               style: TextStyle(
-                                color:
-                                    callNow ? Colors.white : Colors.grey[600],
+                                color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: TextConstant.dmSansMedium,
@@ -1036,27 +1069,21 @@ class _DetailsScreenState extends State<DetailsScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w500,
             fontFamily: TextConstant.dmSansMedium,
-            color: callNow ? Colors.grey[800] : Colors.grey[400],
+            color: Colors.grey[800],
           ),
         ),
         const SizedBox(height: 8),
         Row(
           children: List.generate(5, (index) {
             return GestureDetector(
-              onTap:
-                  callNow
-                      ? () {
-                        setState(() {
-                          rating = index + 1;
-                        });
-                      }
-                      : null,
+              onTap: () {
+                setState(() {
+                  rating = index + 1;
+                });
+              },
               child: Icon(
                 index < rating ? Icons.star : Icons.star_border,
-                color:
-                    callNow
-                        ? (index < rating ? Colors.amber : Colors.grey[400])
-                        : Colors.grey[300],
+                color: index < rating ? Colors.amber : Colors.grey[400],
                 size: 32,
               ),
             );
@@ -1082,116 +1109,5 @@ class _DetailsScreenState extends State<DetailsScreen> {
       "Dec",
     ];
     return months[month - 1];
-  }
-
-  /// Makes a direct phone call without opening dialer
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    if (phoneNumber.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Phone number is not available'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Clean phone number - keep + sign but remove spaces, dashes, parentheses
-    String cleanedNumber = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-
-    if (cleanedNumber.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid phone number'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    try {
-      // Use PhoneCallService for call tracking
-      final leadId = widget.contact["id"] as String?;
-      final result = await PhoneCallService.makeCall(
-        phoneNumber: cleanedNumber,
-        leadId: leadId,
-      );
-
-      // If call was initiated successfully, enable fields
-      if (result && mounted) {
-        setState(() {
-          callNow = true;
-          // Duration will be automatically updated via PhoneCallService callback
-        });
-      }
-
-      // Fallback to url_launcher if PhoneCallService fails
-      if (!result) {
-        if (mounted) {
-          try {
-            final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
-            final launched = await launchUrl(
-              phoneUri,
-              mode: LaunchMode.externalApplication,
-            );
-
-            if (launched && mounted) {
-              setState(() {
-                callNow = true;
-              });
-            }
-          } catch (launchError) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Could not make call: ${launchError.toString()}',
-                  ),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          }
-        }
-      }
-    } catch (e) {
-      // Fallback to url_launcher if PhoneCallService is not available
-      debugPrint('Error in _makePhoneCall: $e');
-
-      if (mounted) {
-        try {
-          final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
-          final launched = await launchUrl(
-            phoneUri,
-            mode: LaunchMode.externalApplication,
-          );
-
-          if (launched && mounted) {
-            setState(() {
-              callNow = true;
-            });
-          }
-        } catch (launchError) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Error making phone call: ${launchError.toString()}',
-                ),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        }
-      }
-    }
   }
 }

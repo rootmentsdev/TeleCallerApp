@@ -117,11 +117,17 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
   String _formatCallDuration(int? seconds) {
     if (seconds == null || seconds <= 0) {
-      return "00:00 mins";
+      return "00:00";
     }
-    final minutes = seconds ~/ 60;
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
     final remainingSeconds = seconds % 60;
-    return "${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')} mins";
+
+    if (hours > 0) {
+      return "${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}";
+    } else {
+      return "${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}";
+    }
   }
 
   @override
@@ -216,27 +222,50 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  // Call Duration Badge
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      _formatCallDuration(
-                                        widget.contact["callDuration"] as int?,
+                                  // Call Duration Badge - Show if duration exists
+                                  if (widget.contact["callDuration"] != null &&
+                                      (widget.contact["callDuration"]
+                                              as int?) !=
+                                          null &&
+                                      (widget.contact["callDuration"]
+                                              as int?)! >
+                                          0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
                                       ),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[700],
-                                        fontFamily: TextConstant.dmSansMedium,
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[50],
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.green[300]!,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.timer,
+                                            size: 14,
+                                            color: Colors.green[700],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _formatCallDuration(
+                                              widget.contact["callDuration"]
+                                                  as int?,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.green[700],
+                                              fontFamily:
+                                                  TextConstant.dmSansMedium,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ],

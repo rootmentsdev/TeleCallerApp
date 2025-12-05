@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:telecaller_app/model/lead_model.dart';
+import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 
 /// Shared repository for managing all lead data
@@ -15,6 +17,7 @@ class LeadRepository {
   final List<LeadModel> _leads = [];
   static const String _storageKey = 'saved_leads';
   bool _isInitialized = false;
+  final ApiService _apiService = ApiService();
 
   // ========== Getters ==========
 
@@ -267,5 +270,295 @@ class LeadRepository {
     }
 
     return filtered.length;
+  }
+
+  // ========== API Integration ==========
+
+  /// Fetch Loss of Sale leads from API and sync with repository
+  /// This will replace existing loss of sale leads with fresh data from API
+  Future<void> fetchLossOfSaleLeadsFromApi({
+    String? store,
+    String? enquiryFrom,
+    String? enquiryTo,
+    String? functionFrom,
+    String? functionTo,
+    String? visitFrom,
+    String? visitTo,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      await ensureInitialized();
+
+      final response = await _apiService.getLossOfSaleLeads(
+        store: store,
+        enquiryFrom: enquiryFrom,
+        enquiryTo: enquiryTo,
+        functionFrom: functionFrom,
+        functionTo: functionTo,
+        visitFrom: visitFrom,
+        visitTo: visitTo,
+      );
+
+      // Parse response - handle different response formats
+      List<dynamic> leadsData = [];
+
+      if (response.containsKey('data')) {
+        final data = response['data'];
+        if (data is List) {
+          leadsData = data;
+        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
+          final leads = data['leads'];
+          if (leads is List) {
+            leadsData = leads;
+          }
+        }
+      } else if (response.containsKey('leads')) {
+        final leads = response['leads'];
+        if (leads is List) {
+          leadsData = leads;
+        }
+      } else if (response.containsKey('results')) {
+        final results = response['results'];
+        if (results is List) {
+          leadsData = results;
+        }
+      } else {
+        // If no recognized key, check if any value is a list
+        for (var entry in response.entries) {
+          if (entry.value is List) {
+            leadsData = entry.value as List;
+            break;
+          }
+        }
+      }
+
+      // Remove existing loss of sale leads (to avoid duplicates)
+      _leads.removeWhere(
+        (lead) => lead.category == LeadConstants.categoryLossOfSales,
+      );
+
+      // Convert API data to LeadModel and add to repository
+      int failedCount = 0;
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            _leads.add(lead);
+          } else {
+            failedCount++;
+          }
+        } catch (e) {
+          failedCount++;
+          print('LeadRepository: Error parsing lead: $e');
+        }
+      }
+
+      if (failedCount > 0) {
+        print('LeadRepository: Failed to parse $failedCount leads');
+      }
+
+      await _saveLeads();
+    } catch (e) {
+      print('LeadRepository: Error fetching Loss of Sale leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Parse date string from API - handles multiple date formats
+  DateTime? _parseDate(dynamic dateValue) {
+    if (dateValue == null) return null;
+
+    final dateStr = dateValue.toString().trim();
+    if (dateStr.isEmpty) return null;
+
+    // List of common date formats to try
+    final dateFormats = [
+      'yyyy-MM-dd', // 2024-01-15
+      'yyyy-MM-ddTHH:mm:ss', // 2024-01-15T10:30:00
+      'yyyy-MM-ddTHH:mm:ssZ', // 2024-01-15T10:30:00Z
+      'yyyy-MM-ddTHH:mm:ss.SSSZ', // 2024-01-15T10:30:00.000Z
+      'yyyy-MM-dd HH:mm:ss', // 2024-01-15 10:30:00
+      'yyyy/MM/dd', // 2024/01/15
+      'dd-MM-yyyy', // 15-01-2024
+      'dd/MM/yyyy', // 15/01/2024
+      'MM/dd/yyyy', // 01/15/2024
+    ];
+
+    // First try DateTime.parse (handles ISO 8601 and most standard formats)
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      // If standard parse fails, try custom formats
+      for (final format in dateFormats) {
+        try {
+          // For simple date formats like yyyy-MM-dd, we need to handle them manually
+          if (format == 'yyyy-MM-dd') {
+            final parts = dateStr.split('-');
+            if (parts.length == 3) {
+              final year = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final day = int.parse(parts[2]);
+              return DateTime(year, month, day);
+            }
+          } else if (format == 'yyyy/MM/dd') {
+            final parts = dateStr.split('/');
+            if (parts.length == 3) {
+              final year = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final day = int.parse(parts[2]);
+              return DateTime(year, month, day);
+            }
+          } else if (format == 'dd-MM-yyyy') {
+            final parts = dateStr.split('-');
+            if (parts.length == 3) {
+              final day = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final year = int.parse(parts[2]);
+              return DateTime(year, month, day);
+            }
+          } else if (format == 'dd/MM/yyyy') {
+            final parts = dateStr.split('/');
+            if (parts.length == 3) {
+              final day = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final year = int.parse(parts[2]);
+              return DateTime(year, month, day);
+            }
+          } else if (format == 'MM/dd/yyyy') {
+            final parts = dateStr.split('/');
+            if (parts.length == 3) {
+              final month = int.parse(parts[0]);
+              final day = int.parse(parts[1]);
+              final year = int.parse(parts[2]);
+              return DateTime(year, month, day);
+            }
+          }
+        } catch (e) {
+          // Continue to next format
+          continue;
+        }
+      }
+
+      return null;
+    }
+  }
+
+  /// Parse API lead data to LeadModel
+  /// Handles different possible API response formats
+  LeadModel? _parseApiLeadToLeadModel(dynamic leadData) {
+    try {
+      if (leadData is! Map<String, dynamic>) {
+        return null;
+      }
+
+      // Extract fields from API response
+      // Backend uses: lead_name, phone_number, store, lead_type, call_status, lead_status, enquiry_date, function_date
+      final id =
+          leadData['id']?.toString() ??
+          leadData['_id']?.toString() ??
+          leadData['leadId']?.toString() ??
+          leadData['lead_id']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+      final name =
+          leadData['lead_name']?.toString() ?? // Backend field name
+          leadData['name']?.toString() ??
+          leadData['customerName']?.toString() ??
+          leadData['customer_name']?.toString() ??
+          leadData['customer']?.toString() ??
+          leadData['clientName']?.toString() ??
+          '';
+      final phone =
+          leadData['phone_number']?.toString() ?? // Backend field name
+          leadData['phone']?.toString() ??
+          leadData['phoneNumber']?.toString() ??
+          leadData['mobile']?.toString() ??
+          leadData['contactNumber']?.toString() ??
+          leadData['contact']?.toString() ??
+          '';
+      final brand = leadData['brand']?.toString();
+      // Backend uses 'store' field directly (e.g., "Zurocci - Perinthalmanna")
+      final location =
+          leadData['store']?.toString() ?? // Backend field name
+          leadData['location']?.toString();
+      final leadStatus =
+          leadData['lead_status']?.toString() ?? // Backend field name
+          leadData['leadStatus']?.toString();
+      final callStatus =
+          leadData['call_status']?.toString() ?? // Backend field name
+          leadData['callStatus']?.toString() ??
+          LeadConstants.callStatusNotCalled;
+      final reason = leadData['reason']?.toString();
+      final callDuration =
+          leadData['callDuration'] as int? ?? leadData['call_duration'] as int?;
+
+      // Parse dates using the helper function that handles multiple formats
+      // Backend uses: enquiry_date, function_date, created_at
+      DateTime? followUpDate =
+          _parseDate(leadData['followUpDate']) ??
+          _parseDate(leadData['follow_up_date']) ??
+          _parseDate(leadData['followUp']) ??
+          _parseDate(leadData['follow_up']);
+
+      DateTime createdAt = DateTime.now();
+      // Backend uses enquiry_date as the main date field
+      final parsedCreatedAt =
+          _parseDate(
+            leadData['enquiry_date'],
+          ) ?? // Backend field name (primary)
+          _parseDate(leadData['created_at']) ?? // Backend field name
+          _parseDate(leadData['enquiryDate']) ??
+          _parseDate(leadData['createdAt']) ??
+          _parseDate(leadData['date']) ??
+          _parseDate(leadData['leadDate']) ??
+          _parseDate(leadData['lead_date']);
+
+      if (parsedCreatedAt != null) {
+        createdAt = parsedCreatedAt;
+      }
+
+      // Validate required fields
+      if (name.isEmpty || phone.isEmpty) {
+        return null;
+      }
+
+      // Determine category - backend uses lead_type field
+      String? category =
+          LeadConstants.categoryLossOfSales; // Default for Loss of Sale API
+      if (leadData['lead_type'] != null) {
+        final leadType = leadData['lead_type'].toString().toLowerCase();
+        if (leadType == 'lossofsale' || leadType == 'loss of sale') {
+          category = LeadConstants.categoryLossOfSales;
+        } else if (leadType == 'rentout' || leadType == 'rent out') {
+          category = LeadConstants.categoryRentOut;
+        } else if (leadType == 'bookingconfirmation' ||
+            leadType == 'booking confirmation') {
+          category = LeadConstants.categoryBookingConfirmation;
+        } else if (leadType == 'justdial' || leadType == 'just dial') {
+          category = LeadConstants.categoryJustDial;
+        } else if (leadType == 'followup' || leadType == 'follow up') {
+          category = LeadConstants.categoryFollowUp;
+        }
+      }
+
+      return LeadModel(
+        id: id,
+        name: name,
+        phone: phone,
+        brand: brand,
+        location: location,
+        leadStatus: leadStatus,
+        callStatus: callStatus,
+        followUpDate: followUpDate,
+        reason: reason,
+        category: category,
+        callDuration: callDuration,
+        createdAt: createdAt,
+      );
+    } catch (e) {
+      print('Error parsing API lead: $e');
+      return null;
+    }
   }
 }
