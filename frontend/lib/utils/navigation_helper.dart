@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
+import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/view/reports_screens/just_dial_details_screen.dart';
@@ -51,23 +53,78 @@ class NavigationHelper {
       return;
     }
 
+    // Prepare contact data
+    final repository = LeadRepository();
+    Map<String, dynamic> contactData = {
+      "id": lead.id,
+      "name": lead.name,
+      "phone": lead.phone,
+      "date": formattedDate,
+      "visitDate": formattedDate,
+      "functionDate": "Not available",
+      "attendedBy": "Not available",
+      "reasonFromStore": lead.reason ?? "No reason provided",
+      "storeName": lead.location ?? "Zorucci Edappally",
+    };
+
+    // Add booking confirmation specific data if available
+    if (category == LeadConstants.categoryBookingConfirmation ||
+        category == "Booking Confirmation") {
+      final bookingData = repository.getBookingConfirmationData(lead.id);
+      if (bookingData != null) {
+        contactData["bookingNo"] =
+            bookingData['bookingNumber'] ?? "Not available";
+
+        // Format enquiry date
+        if (bookingData['enquiryDate'] != null) {
+          try {
+            final enquiryDate = DateTime.parse(bookingData['enquiryDate']);
+            contactData["enquiryDate"] = DateFormatter.formatDate(enquiryDate);
+          } catch (e) {
+            contactData["enquiryDate"] =
+                bookingData['enquiryDate'] ?? "Not available";
+          }
+        } else {
+          contactData["enquiryDate"] = formattedDate;
+        }
+
+        // Format function date
+        if (bookingData['functionDate'] != null) {
+          try {
+            final functionDate = DateTime.parse(bookingData['functionDate']);
+            contactData["functionDate"] = DateFormatter.formatDate(
+              functionDate,
+            );
+          } catch (e) {
+            contactData["functionDate"] =
+                bookingData['functionDate'] ?? "Not available";
+          }
+        } else {
+          contactData["functionDate"] = "Not available";
+        }
+
+        // Add security amount if available
+        if (bookingData['securityAmount'] != null) {
+          contactData["securityAmount"] = bookingData['securityAmount'];
+        } else {
+          contactData["securityAmount"] = "Not available";
+        }
+      } else {
+        // Fallback if booking data not found
+        contactData["bookingNo"] = "Not available";
+        contactData["enquiryDate"] = formattedDate;
+        contactData["functionDate"] = "Not available";
+        contactData["securityAmount"] = "Not available";
+      }
+    }
+
     // Navigate to regular details screen
     Navigator.push(
       context,
       MaterialPageRoute(
         builder:
             (context) => DetailsScreen(
-              contact: {
-                "id": lead.id,
-                "name": lead.name,
-                "phone": lead.phone,
-                "date": formattedDate,
-                "visitDate": formattedDate,
-                "functionDate": "Not available",
-                "attendedBy": "Not available",
-                "reasonFromStore": lead.reason ?? "No reason provided",
-                "storeName": lead.location ?? "Zorucci Edappally",
-              },
+              contact: contactData,
               callTypeIndex: callTypeIndex,
             ),
       ),

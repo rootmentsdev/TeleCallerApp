@@ -16,11 +16,13 @@ class LeadScreen extends StatefulWidget {
 
 class _LeadScreenState extends State<LeadScreen> {
   bool _isLoadingLossOfSale = false;
+  bool _isLoadingBookingConfirmation = false;
+  bool _isLoadingRentOut = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize controller with header controller
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final headerController = Provider.of<HeaderController>(
         context,
@@ -30,17 +32,19 @@ class _LeadScreenState extends State<LeadScreen> {
         context,
         listen: false,
       );
+
       leadController.init(headerController);
       leadController.refresh();
 
-      // Always fetch Loss of Sale leads from API on initial load
-      // This ensures data is available when user switches to Loss of Sale tab
-      // Add a small delay to ensure everything is initialized
       Future.delayed(const Duration(milliseconds: 500), () {
         _fetchLossOfSaleLeads(leadController, headerController);
+        _fetchBookingConfirmationLeads(leadController, headerController);
+        _fetchRentOutLeads(leadController, headerController);
       });
     });
   }
+
+  // ====================== FETCH FUNCTIONS ======================
 
   Future<void> _fetchLossOfSaleLeads(
     LeadScreenController controller,
@@ -48,53 +52,91 @@ class _LeadScreenState extends State<LeadScreen> {
   ) async {
     if (_isLoadingLossOfSale) return;
 
-    setState(() {
-      _isLoadingLossOfSale = true;
-    });
+    setState(() => _isLoadingLossOfSale = true);
 
     try {
       final store = headerController.selectedStore;
       final storeParam =
           (store == null || store == 'All Stores') ? null : store;
+
       await controller.fetchLossOfSaleLeadsFromApi(store: storeParam);
 
-      if (mounted) {
-        controller.refresh();
-      }
+      if (mounted) controller.refresh();
     } catch (e) {
-      if (mounted) {
-        final leadController = Provider.of<LeadScreenController>(
-          context,
-          listen: false,
-        );
-        if (leadController.selectedCallTypeIndex == 1 ||
-            e.toString().contains('Authentication') ||
-            e.toString().contains('401') ||
-            e.toString().contains('403')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Failed to load Loss of Sale leads: ${e.toString().replaceAll('Exception: ', '')}',
-              ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
+      if (mounted && controller.selectedCallTypeIndex == 1) {
+        _showError("Failed to load Loss of Sale leads", e);
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingLossOfSale = false;
-        });
-      }
+      if (mounted) setState(() => _isLoadingLossOfSale = false);
     }
   }
+
+  Future<void> _fetchBookingConfirmationLeads(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingBookingConfirmation) return;
+
+    setState(() => _isLoadingBookingConfirmation = true);
+
+    try {
+      final store = headerController.selectedStore;
+      final storeParam =
+          (store == null || store == 'All Stores') ? null : store;
+
+      await controller.fetchBookingConfirmationLeadsFromApi(store: storeParam);
+
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == 3) {
+        _showError("Failed to load Booking Confirmation leads", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingBookingConfirmation = false);
+    }
+  }
+
+  Future<void> _fetchRentOutLeads(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingRentOut) return;
+
+    setState(() => _isLoadingRentOut = true);
+
+    try {
+      final store = headerController.selectedStore;
+      final storeParam =
+          (store == null || store == 'All Stores') ? null : store;
+
+      await controller.fetchRentOutLeadsFromApi(store: storeParam);
+
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == 2) {
+        _showError("Failed to load Rent-Out leads", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingRentOut = false);
+    }
+  }
+
+  void _showError(String title, dynamic e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$title: ${e.toString().replaceAll("Exception: ", "")}'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  // =============================================================
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh when screen becomes visible to show updated leads
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final headerController = Provider.of<HeaderController>(
         context,
@@ -104,14 +146,19 @@ class _LeadScreenState extends State<LeadScreen> {
         context,
         listen: false,
       );
+
       leadController.refresh();
 
-      // Refresh Loss of Sale leads when screen becomes visible
-      if (!_isLoadingLossOfSale) {
+      if (!_isLoadingLossOfSale)
         _fetchLossOfSaleLeads(leadController, headerController);
-      }
+      if (!_isLoadingBookingConfirmation)
+        _fetchBookingConfirmationLeads(leadController, headerController);
+      if (!_isLoadingRentOut)
+        _fetchRentOutLeads(leadController, headerController);
     });
   }
+
+  // ============================ UI =============================
 
   @override
   Widget build(BuildContext context) {
@@ -125,15 +172,9 @@ class _LeadScreenState extends State<LeadScreen> {
           backgroundColor: Colors.white,
           body: Column(
             children: [
-              // Header Section
-              AppHeader(
-                userName: "Shafna",
-                onNotificationTap: () {
-                  // Handle notification tap
-                },
-              ),
+              AppHeader(userName: "Shafna", onNotificationTap: () {}),
 
-              // Call Summary Cards - Horizontal Scrollable
+              // ================= Summary Cards =================
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: SizedBox(
@@ -157,13 +198,25 @@ class _LeadScreenState extends State<LeadScreen> {
                                 controller.selectedCallTypeIndex == index,
                             onTap: () async {
                               controller.setSelectedCallTypeIndex(index);
+                              final headerController =
+                                  Provider.of<HeaderController>(
+                                    context,
+                                    listen: false,
+                                  );
+
                               if (index == 1) {
-                                final headerController =
-                                    Provider.of<HeaderController>(
-                                      context,
-                                      listen: false,
-                                    );
                                 await _fetchLossOfSaleLeads(
+                                  controller,
+                                  headerController,
+                                );
+                              } else if (index == 2) {
+                                // FIXED for RentOut
+                                await _fetchRentOutLeads(
+                                  controller,
+                                  headerController,
+                                );
+                              } else if (index == 3) {
+                                await _fetchBookingConfirmationLeads(
                                   controller,
                                   headerController,
                                 );
@@ -176,7 +229,8 @@ class _LeadScreenState extends State<LeadScreen> {
                   ),
                 ),
               ),
-              // All Calls List Header
+
+              // ==================== List Header ====================
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -222,81 +276,37 @@ class _LeadScreenState extends State<LeadScreen> {
                 ),
               ),
 
-              const SizedBox(height: 12),
-
-              // Leads List
+              // ==================== Lead List ====================
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    print('LeadScreen: Pull to refresh triggered');
                     final headerController = Provider.of<HeaderController>(
                       context,
                       listen: false,
                     );
-                    await _fetchLossOfSaleLeads(controller, headerController);
+
+                    if (controller.selectedCallTypeIndex == 1) {
+                      await _fetchLossOfSaleLeads(controller, headerController);
+                    } else if (controller.selectedCallTypeIndex == 2) {
+                      await _fetchRentOutLeads(controller, headerController);
+                    } else if (controller.selectedCallTypeIndex == 3) {
+                      await _fetchBookingConfirmationLeads(
+                        controller,
+                        headerController,
+                      );
+                    }
                   },
                   child:
-                      _isLoadingLossOfSale &&
-                              controller.selectedCallTypeIndex == 1
+                      (_isLoadingLossOfSale &&
+                                  controller.selectedCallTypeIndex == 1) ||
+                              (_isLoadingRentOut &&
+                                  controller.selectedCallTypeIndex == 2) ||
+                              (_isLoadingBookingConfirmation &&
+                                  controller.selectedCallTypeIndex == 3)
                           ? const Center(child: CircularProgressIndicator())
                           : filteredLeads.isEmpty
-                          ? ListView(
-                            children: [
-                              SizedBox(
-                                height:
-                                    MediaQuery.of(context).size.height * 0.3,
-                              ),
-                              Center(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      "No leads found",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                        fontFamily: TextConstant.dmSansRegular,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextButton(
-                                      onPressed: () {
-                                        final headerController =
-                                            Provider.of<HeaderController>(
-                                              context,
-                                              listen: false,
-                                            );
-                                        _fetchLossOfSaleLeads(
-                                          controller,
-                                          headerController,
-                                        );
-                                      },
-                                      child: const Text('Tap to refresh'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          )
-                          : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: filteredLeads.length,
-                            itemBuilder: (context, index) {
-                              final lead = filteredLeads[index];
-                              return LeadListItem(
-                                lead:
-                                    lead.toMap(), // Convert to map for backward compatibility
-                                onTap: () {
-                                  if (lead.leadModel != null) {
-                                    NavigationHelper.navigateToDetails(
-                                      context,
-                                      lead.leadModel!,
-                                      lead.date,
-                                    );
-                                  }
-                                },
-                              );
-                            },
-                          ),
+                          ? _buildEmptyList(controller)
+                          : _buildLeadList(filteredLeads),
                 ),
               ),
             ],
@@ -305,9 +315,77 @@ class _LeadScreenState extends State<LeadScreen> {
       },
     );
   }
+
+  // Empty state UI
+  Widget _buildEmptyList(LeadScreenController controller) {
+    return ListView(
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+        Center(
+          child: Column(
+            children: [
+              Text(
+                "No leads found",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontFamily: TextConstant.dmSansRegular,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  final headerController = Provider.of<HeaderController>(
+                    context,
+                    listen: false,
+                  );
+
+                  if (controller.selectedCallTypeIndex == 1) {
+                    _fetchLossOfSaleLeads(controller, headerController);
+                  } else if (controller.selectedCallTypeIndex == 2) {
+                    _fetchRentOutLeads(controller, headerController);
+                  } else if (controller.selectedCallTypeIndex == 3) {
+                    _fetchBookingConfirmationLeads(
+                      controller,
+                      headerController,
+                    );
+                  }
+                },
+                child: const Text('Tap to refresh'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Lead list builder
+  Widget _buildLeadList(List filteredLeads) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: filteredLeads.length,
+      itemBuilder: (context, index) {
+        final lead = filteredLeads[index];
+        return LeadListItem(
+          lead: lead.toMap(),
+          onTap: () {
+            if (lead.leadModel != null) {
+              NavigationHelper.navigateToDetails(
+                context,
+                lead.leadModel!,
+                lead.date,
+              );
+            }
+          },
+        );
+      },
+    );
+  }
 }
 
-// Lead List Item Widget
+// ==================== Lead List Item Widget ====================
+
 class LeadListItem extends StatelessWidget {
   final Map<String, dynamic> lead;
   final VoidCallback? onTap;

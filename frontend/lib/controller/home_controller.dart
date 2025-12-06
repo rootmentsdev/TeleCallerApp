@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/model/lead_model.dart';
+import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 
 /// Controller for Home Screen
@@ -27,82 +29,77 @@ class HomeController extends ChangeNotifier {
     super.dispose();
   }
 
-  // Get call summary data (filtered by store and date)
+  // Get call summary data (same logic as Lead Screen)
   List<Map<String, dynamic>> getCallSummary() {
-    final store = _headerController?.selectedStore;
-    final date = _headerController?.selectedDate ?? DateTime.now();
+    final allLeads = _repository.allLeads;
 
-    // Handle "All Stores" case and extract location from "Brand - Location" format
+    final store = _headerController?.selectedStore;
+
+    // Filter by store (brand + location)
     final storeFilter =
         (store == null || store == 'All Stores')
             ? null
             : StoreLocations.resolveSelection(store).location;
 
+    List<T> filterStore<T extends LeadModel>(List<T> leads) {
+      if (storeFilter == null) return leads;
+      return leads.where((e) => e.location == storeFilter).toList();
+    }
+
+    // Count only uncalled leads
+    int count(String? category) {
+      List<LeadModel> leads = allLeads;
+
+      if (category != null) {
+        leads = leads.where((e) => e.category == category).toList();
+      }
+
+      leads = filterStore(leads);
+
+      return leads
+          .where((e) => LeadConstants.isUncalledStatus(e.callStatus))
+          .length;
+    }
+
     return [
       {
         "title": "All Calls",
-        "count":
-            _repository
-                .getTotalLeadsCount(store: storeFilter, date: date)
-                .toString(),
+        "count": count(null).toString(),
         "bgColor": const Color(0xFFE8E3FF),
         "iconColor": const Color(0xFF7C5DFF),
         "icon": Icons.people_alt_outlined,
       },
       {
         "title": "Loss of Sale",
-        "count":
-            _repository
-                .getCountByCategory(
-                  "Loss of Sales",
-                  store: storeFilter,
-                  date: date,
-                )
-                .toString(),
+        "count": count(LeadConstants.categoryLossOfSales).toString(),
         "bgColor": const Color(0xFFFFE8E8),
         "iconColor": const Color(0xFFE23434),
         "icon": Icons.trending_down,
       },
       {
         "title": "Rent-Out Calls",
-        "count":
-            _repository
-                .getCountByCategory("Rent out", store: storeFilter, date: date)
-                .toString(),
+        "count": count(LeadConstants.categoryRentOut).toString(),
         "bgColor": const Color(0xFFFFF7CC),
         "iconColor": const Color(0xFFFFCC00),
         "icon": Icons.message_outlined,
       },
       {
         "title": "Booking\nConfirmation",
-        "count":
-            _repository
-                .getCountByCategory(
-                  "Booking confirmation",
-                  store: storeFilter,
-                  date: date,
-                )
-                .toString(),
+        "count": count(LeadConstants.categoryBookingConfirmation).toString(),
         "bgColor": const Color(0xFFD4F5DA),
         "iconColor": const Color(0xff56BE6B),
         "icon": Icons.flag_outlined,
       },
       {
         "title": "Just Dial\nEnquiry",
-        "count":
-            _repository
-                .getCountByCategory("Just Dial", store: storeFilter, date: date)
-                .toString(),
+        "count": count(LeadConstants.categoryJustDial).toString(),
         "bgColor": const Color(0xFFFFE8D5),
         "iconColor": const Color(0xFFF37927),
         "icon": Icons.headset_mic_outlined,
       },
       {
         "title": "Follow Up\nCalls",
-        "count":
-            _repository
-                .getFollowUpLeadsCount(store: storeFilter, date: date)
-                .toString(),
+        "count": count(LeadConstants.categoryFollowUp).toString(),
         "bgColor": const Color(0xFFD5E8FF),
         "iconColor": const Color(0xFF2196F3),
         "icon": Icons.event_note_outlined,

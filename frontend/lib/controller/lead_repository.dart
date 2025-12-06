@@ -11,7 +11,11 @@ class LeadRepository {
   static final LeadRepository _instance = LeadRepository._internal();
   factory LeadRepository() => _instance;
   LeadRepository._internal() {
-    _initialize();
+    // Initialize asynchronously without blocking
+    _initialize().catchError((error) {
+      // Silently handle initialization errors - app should still work
+      print('LeadRepository: Error during initialization: $error');
+    });
   }
 
   final List<LeadModel> _leads = [];
@@ -19,12 +23,18 @@ class LeadRepository {
   bool _isInitialized = false;
   final ApiService _apiService = ApiService();
 
+  // Store booking confirmation specific data (booking number, enquiry date, function date)
+  final Map<String, Map<String, dynamic>> _bookingConfirmationData = {};
+
   // ========== Getters ==========
 
   List<LeadModel> get allLeads {
-    // Initialize synchronously if not already done (for immediate access)
+    // Initialize asynchronously if not already done (for immediate access)
     if (!_isInitialized) {
-      _initialize().then((_) => _isInitialized = true);
+      _initialize().then((_) => _isInitialized = true).catchError((error) {
+        print('LeadRepository: Error initializing in allLeads getter: $error');
+        return false;
+      });
     }
     return List.unmodifiable(_leads);
   }
@@ -126,6 +136,11 @@ class LeadRepository {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Get booking confirmation specific data for a lead
+  Map<String, dynamic>? getBookingConfirmationData(String leadId) {
+    return _bookingConfirmationData[leadId];
   }
 
   // ========== Filtered Queries ==========
@@ -273,6 +288,119 @@ class LeadRepository {
   }
 
   // ========== API Integration ==========
+
+  /// Fetch Booking Confirmation leads from API and sync with repository
+  /// This will replace existing booking confirmation leads with fresh data from API
+  Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
+    try {
+      await ensureInitialized();
+
+      final response = await _apiService.getBookingConfirmationLeads();
+
+      // Parse response - handle different response formats
+      List<dynamic> leadsData = [];
+
+      if (response.containsKey('data')) {
+        final data = response['data'];
+        if (data is List) {
+          leadsData = data;
+        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
+          final leads = data['leads'];
+          if (leads is List) {
+            leadsData = leads;
+          }
+        }
+      } else if (response.containsKey('leads')) {
+        final leads = response['leads'];
+        if (leads is List) {
+          leadsData = leads;
+        }
+      } else if (response.containsKey('results')) {
+        final results = response['results'];
+        if (results is List) {
+          leadsData = results;
+        }
+      } else {
+        // If no recognized key, check if any value is a list
+        for (var entry in response.entries) {
+          if (entry.value is List) {
+            leadsData = entry.value as List;
+            break;
+          }
+        }
+      }
+
+      // Remove existing booking confirmation leads (to avoid duplicates)
+      _leads.removeWhere(
+        (lead) => lead.category == LeadConstants.categoryBookingConfirmation,
+      );
+
+      // Convert API data to LeadModel and add to repository
+      int failedCount = 0;
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            // Ensure category is set to Booking Confirmation
+            final bookingLead = LeadModel(
+              id: lead.id,
+              name: lead.name,
+              phone: lead.phone,
+              brand: lead.brand,
+              location: lead.location,
+              leadStatus: lead.leadStatus,
+              callStatus: lead.callStatus,
+              followUpDate: lead.followUpDate,
+              reason: lead.reason,
+              category: LeadConstants.categoryBookingConfirmation,
+              callDuration: lead.callDuration,
+              createdAt: lead.createdAt,
+            );
+            _leads.add(bookingLead);
+
+            // Store booking confirmation specific data
+            final bookingNumber =
+                leadData['booking_number']?.toString() ??
+                leadData['bookingNumber']?.toString() ??
+                '';
+            final enquiryDate =
+                leadData['enquiry_date']?.toString() ??
+                leadData['enquiryDate']?.toString();
+            final functionDate =
+                leadData['function_date']?.toString() ??
+                leadData['functionDate']?.toString();
+            final securityAmount =
+                leadData['security_amount']?.toString() ??
+                leadData['securityAmount']?.toString();
+
+            _bookingConfirmationData[lead.id] = {
+              'bookingNumber': bookingNumber,
+              'enquiryDate': enquiryDate,
+              'functionDate': functionDate,
+              'securityAmount': securityAmount,
+            };
+          } else {
+            failedCount++;
+          }
+        } catch (e) {
+          failedCount++;
+          print('LeadRepository: Error parsing booking confirmation lead: $e');
+        }
+      }
+
+      if (failedCount > 0) {
+        print(
+          'LeadRepository: Failed to parse $failedCount booking confirmation leads',
+        );
+      }
+
+      await _saveLeads();
+    } catch (e) {
+      print('LeadRepository: Error fetching Booking Confirmation leads: $e');
+      rethrow;
+    }
+  }
 
   /// Fetch Loss of Sale leads from API and sync with repository
   /// This will replace existing loss of sale leads with fresh data from API
@@ -504,15 +632,18 @@ class LeadRepository {
       DateTime createdAt = DateTime.now();
       // Backend uses enquiry_date as the main date field
       final parsedCreatedAt =
-          _parseDate(
-            leadData['enquiry_date'],
-          ) ?? // Backend field name (primary)
-          _parseDate(leadData['created_at']) ?? // Backend field name
-          _parseDate(leadData['enquiryDate']) ??
-          _parseDate(leadData['createdAt']) ??
-          _parseDate(leadData['date']) ??
-          _parseDate(leadData['leadDate']) ??
-          _parseDate(leadData['lead_date']);
+          _parseDate(leadData['created_at']) ?? DateTime.now();
+
+      // _parseDate(
+      //   leadData['enquiry_date'],
+      // ) ??
+      // Backend field name (primary)
+      // _parseDate(leadData['created_at']) ?? // Backend field name
+      // _parseDate(leadData['enquiryDate']) ??
+      // _parseDate(leadData['createdAt']) ??
+      // _parseDate(leadData['date']) ??
+      // _parseDate(leadData['leadDate']) ??
+      // _parseDate(leadData['lead_date']);
 
       if (parsedCreatedAt != null) {
         createdAt = parsedCreatedAt;
@@ -542,6 +673,22 @@ class LeadRepository {
         }
       }
 
+      // if (leadData['lead_type'] != null) {
+      //   final leadType = leadData['lead_type'].toString().toLowerCase();
+      //   if (leadType == 'lossofsale' || leadType == 'loss of sale') {
+      //     category = LeadConstants.categoryLossOfSales;
+      //   } else if (leadType == 'rentout' || leadType == 'rent out') {
+      //     category = LeadConstants.categoryRentOut;
+      //   } else if (leadType == 'bookingconfirmation' ||
+      //       leadType == 'booking confirmation') {
+      //     category = LeadConstants.categoryBookingConfirmation;
+      //   } else if (leadType == 'justdial' || leadType == 'just dial') {
+      //     category = LeadConstants.categoryJustDial;
+      //   } else if (leadType == 'followup' || leadType == 'follow up') {
+      //     category = LeadConstants.categoryFollowUp;
+      //   }
+      // }
+
       return LeadModel(
         id: id,
         name: name,
@@ -559,6 +706,94 @@ class LeadRepository {
     } catch (e) {
       print('Error parsing API lead: $e');
       return null;
+    }
+  }
+
+  /// Fetch Rent-Out leads from API and sync with repository
+  /// This will replace existing rent-out leads with fresh data from API
+  Future<void> fetchRentOutLeadsFromApi({String? store}) async {
+    try {
+      await ensureInitialized();
+
+      final response = await _apiService.getRentOutLeads();
+
+      // Parse response - handle different response formats
+      List<dynamic> leadsData = [];
+
+      if (response.containsKey('data')) {
+        final data = response['data'];
+        if (data is List) {
+          leadsData = data;
+        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
+          final leads = data['leads'];
+          if (leads is List) {
+            leadsData = leads;
+          }
+        }
+      } else if (response.containsKey('leads')) {
+        final leads = response['leads'];
+        if (leads is List) {
+          leadsData = leads;
+        }
+      } else if (response.containsKey('results')) {
+        final results = response['results'];
+        if (results is List) {
+          leadsData = results;
+        }
+      } else {
+        // Fallback: take first list in map
+        for (var entry in response.entries) {
+          if (entry.value is List) {
+            leadsData = entry.value as List;
+            break;
+          }
+        }
+      }
+
+      // Remove existing rent-out leads
+      _leads.removeWhere(
+        (lead) => lead.category == LeadConstants.categoryRentOut,
+      );
+
+      int failedCount = 0;
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            // Ensure category is Rent-Out
+            final rentOutLead = LeadModel(
+              id: lead.id,
+              name: lead.name,
+              phone: lead.phone,
+              brand: lead.brand,
+              location: lead.location,
+              leadStatus: lead.leadStatus,
+              callStatus: lead.callStatus,
+              followUpDate: lead.followUpDate,
+              reason: lead.reason,
+              category: LeadConstants.categoryRentOut,
+              callDuration: lead.callDuration,
+              createdAt: lead.createdAt,
+            );
+            _leads.add(rentOutLead);
+          } else {
+            failedCount++;
+          }
+        } catch (e) {
+          failedCount++;
+          print('LeadRepository: Error parsing Rent-Out lead: $e');
+        }
+      }
+
+      if (failedCount > 0) {
+        print('LeadRepository: Failed to parse $failedCount Rent-Out leads');
+      }
+
+      await _saveLeads();
+    } catch (e) {
+      print('LeadRepository: Error fetching Rent-Out leads: $e');
+      rethrow;
     }
   }
 }

@@ -53,31 +53,56 @@ class LeadScreenController extends ChangeNotifier {
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
 
     // Helper function to count uncalled leads
+    // int getUncalledLeadsCount({String? category}) {
+    //   List<LeadModel> leads =
+    //       category != null
+    //           ? _repository.getLeadsByCategory(category)
+    //           : _repository.allLeads;
+
+    //   // Filter by store - extract location from "Brand - Location" format
+    //   if (storeFilter != null) {
+    //     final location = StoreLocations.resolveSelection(storeFilter).location;
+    //     leads = leads.where((lead) => lead.location == location).toList();
+    //   }
+
+    //   // Filter by date - but for Loss of Sale, count all leads (date filter is handled by API)
+    //   // For other categories, filter by selected date
+    //   if (category != LeadConstants.categoryLossOfSales) {
+    //     leads =
+    //         leads.where((lead) {
+    //           final leadDate = lead.createdAt;
+    //           return leadDate.year == date.year &&
+    //               leadDate.month == date.month &&
+    //               leadDate.day == date.day;
+    //         }).toList();
+    //   }
+
+    //   // Filter out leads that have been called
+    //   leads =
+    //       leads
+    //           .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
+    //           .toList();
+
+    //   return leads.length;
+    // }
     int getUncalledLeadsCount({String? category}) {
+      // STEP 1: get leads by category
       List<LeadModel> leads =
           category != null
               ? _repository.getLeadsByCategory(category)
               : _repository.allLeads;
 
-      // Filter by store - extract location from "Brand - Location" format
-      if (storeFilter != null) {
+      // STEP 2: filter by store only
+      final storeFilter = _headerController?.selectedStore;
+      if (storeFilter != null && storeFilter != "All Stores") {
         final location = StoreLocations.resolveSelection(storeFilter).location;
         leads = leads.where((lead) => lead.location == location).toList();
       }
 
-      // Filter by date - but for Loss of Sale, count all leads (date filter is handled by API)
-      // For other categories, filter by selected date
-      if (category != LeadConstants.categoryLossOfSales) {
-        leads =
-            leads.where((lead) {
-              final leadDate = lead.createdAt;
-              return leadDate.year == date.year &&
-                  leadDate.month == date.month &&
-                  leadDate.day == date.day;
-            }).toList();
-      }
+      // STEP 3: DO NOT FILTER BY DATE
+      // (This is the reason counts were 0 before)
 
-      // Filter out leads that have been called
+      // STEP 4: count only uncalled
       leads =
           leads
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
@@ -148,7 +173,8 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   // Get filtered leads based on selected call type
-  // Only show leads that haven't been called yet
+  // For "All Calls" tab (index 0), show all leads regardless of call status
+  // For other tabs, only show leads that haven't been called yet
   List<LeadDisplayModel> getFilteredLeads() {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
 
@@ -165,9 +191,12 @@ class LeadScreenController extends ChangeNotifier {
           filteredLeads.where((lead) => lead.location == location).toList();
     }
 
-    // Filter by date - but for Loss of Sale, show all leads (date filter is handled by API)
+    // Filter by date - but for All Calls, Loss of Sale, Rent-Out, and Booking Confirmation, show all leads (date filter is handled by API)
     // For other categories, filter by selected date
-    if (_selectedCallTypeIndex != 1) {
+    if (_selectedCallTypeIndex != 0 &&
+        _selectedCallTypeIndex != 1 &&
+        _selectedCallTypeIndex != 2 &&
+        _selectedCallTypeIndex != 3) {
       filteredLeads =
           filteredLeads.where((lead) {
             final leadDate = lead.createdAt;
@@ -178,10 +207,13 @@ class LeadScreenController extends ChangeNotifier {
     }
 
     // Filter out leads that have been called (only show uncalled leads)
-    filteredLeads =
-        filteredLeads
-            .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-            .toList();
+    // EXCEPT for "All Calls" tab (index 0) which should show all leads
+    if (_selectedCallTypeIndex != 0) {
+      filteredLeads =
+          filteredLeads
+              .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
+              .toList();
+    }
 
     // Convert to display models
     return filteredLeads
@@ -254,6 +286,30 @@ class LeadScreenController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('LeadScreenController: Error fetching Loss of Sale leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch Booking Confirmation leads from API
+  Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
+    try {
+      await _repository.fetchBookingConfirmationLeadsFromApi(store: store);
+      notifyListeners();
+    } catch (e) {
+      print(
+        'LeadScreenController: Error fetching Booking Confirmation leads: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// Fetch Rent-Out leads from API
+  Future<void> fetchRentOutLeadsFromApi({String? store}) async {
+    try {
+      await _repository.fetchRentOutLeadsFromApi(store: store);
+      notifyListeners();
+    } catch (e) {
+      print('LeadScreenController: Error fetching Rent-Out leads: $e');
       rethrow;
     }
   }

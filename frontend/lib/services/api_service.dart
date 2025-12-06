@@ -81,44 +81,93 @@ class ApiService {
   }
 
   // Function to get Booking Confirmation leads
+  // Function to get Booking Confirmation leads
   Future<Map<String, dynamic>> getBookingConfirmationLeads() async {
     final url = Uri.parse(ApiConfig.bookingConfirmationLeads());
 
     try {
       final headers = await _getAuthHeaders();
+      print('ApiService: Fetching Booking Confirmation leads');
+      print('ApiService: URL => $url');
+
       final response = await http.get(url, headers: headers);
 
+      print('ApiService: Response status: ${response.statusCode}');
+      print('ApiService: Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final decoded = json.decode(response.body);
+
+        // Backend returns: { "leads": [ ... ] }
+        if (decoded is Map<String, dynamic>) {
+          if (decoded.containsKey('leads')) {
+            return {'data': decoded['leads']};
+          }
+          return decoded;
+        } else if (decoded is List) {
+          return {'data': decoded};
+        } else {
+          throw Exception(
+            'Unexpected response format for booking confirmation',
+          );
+        }
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
       } else {
-        throw Exception('Failed to load Booking Confirmation leads');
+        throw Exception(
+          'Failed to load Booking Confirmation leads: Status ${response.statusCode}',
+        );
       }
     } catch (e) {
+      print('ApiService: Error fetching Booking Confirmation leads: $e');
       rethrow;
     }
   }
 
-  // Function to get Rent-out leads
-  Future<Map<String, dynamic>> getRentOutLeads() async {
-    final url = Uri.parse(ApiConfig.rentOutLeads());
+ // Function to get Rent-out leads
+Future<Map<String, dynamic>> getRentOutLeads() async {
+  final url = Uri.parse(ApiConfig.rentOutLeads());
 
-    try {
-      final headers = await _getAuthHeaders();
-      final response = await http.get(url, headers: headers);
+  try {
+    final headers = await _getAuthHeaders();
+    print('ApiService: Fetching Rent-Out leads');
+    print('ApiService: URL => $url');
 
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
+    final response = await http.get(url, headers: headers);
+
+    print('ApiService: Rent-Out response status: ${response.statusCode}');
+    print('ApiService: Rent-Out response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body);
+
+      // Normalize to { "data": [...] }
+      if (decoded is Map<String, dynamic>) {
+        if (decoded.containsKey('leads')) {
+          return {'data': decoded['leads']};
+        }
+        if (decoded.containsKey('data')) {
+          return {'data': decoded['data']};
+        }
+        // If map but no known key, wrap entire thing
+        return {'data': [decoded]};
+      } else if (decoded is List) {
+        return {'data': decoded};
       } else {
-        throw Exception('Failed to load Rent-out leads');
+        throw Exception('Unexpected response format for Rent-Out leads');
       }
-    } catch (e) {
-      rethrow;
+    } else if (response.statusCode == 401) {
+      throw Exception('Authentication failed. Please login again.');
+    } else {
+      throw Exception(
+        'Failed to load Rent-Out leads: Status ${response.statusCode}',
+      );
     }
+  } catch (e) {
+    print('ApiService: Error fetching Rent-Out leads: $e');
+    rethrow;
   }
+}
 
   Future<Map<String, dynamic>> loginUser({
     required String empId,
