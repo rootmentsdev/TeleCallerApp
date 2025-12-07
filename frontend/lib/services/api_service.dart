@@ -5,7 +5,125 @@ import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/utils/api_config.dart';
 
 class ApiService {
-  // Function to get Loss of Sale leads
+  // -----------------------------------------------------------
+  // 🔐 AUTH HEADERS
+  // -----------------------------------------------------------
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await AuthService.getToken();
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    };
+
+    if (token != null && token.isNotEmpty) {
+      headers["Authorization"] = "Bearer $token";
+    }
+
+    return headers;
+  }
+
+  // -----------------------------------------------------------
+  // 🧰 COMMON HELPERS
+  // -----------------------------------------------------------
+
+  Map<String, dynamic> _decode(String body) {
+    try {
+      final decoded = json.decode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is List) return {"data": decoded};
+      return {"data": decoded};
+    } catch (_) {
+      return {"error": "Invalid JSON"};
+    }
+  }
+
+  Map<String, dynamic> _handleResponse(http.Response response) {
+    final decoded = _decode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return decoded;
+    }
+
+    final msg =
+        decoded["message"] ??
+        decoded["error"] ??
+        decoded["msg"] ??
+        "Something went wrong (${response.statusCode})";
+
+    throw Exception(msg);
+  }
+
+  Future<Map<String, dynamic>> _get(String url) async {
+    final headers = await _getAuthHeaders();
+    print("GET URL: $url");
+
+    final response = await http.get(Uri.parse(url), headers: headers);
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> _post(
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    final headers = await _getAuthHeaders();
+    print("POST URL: $url");
+    print("POST BODY: $body");
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: headers,
+      body: json.encode(body),
+    );
+
+    print("STATUS: ${response.statusCode}");
+    print("BODY: ${response.body}");
+
+    return _handleResponse(response);
+  }
+
+  // -----------------------------------------------------------
+  // 👤 LOGIN
+  // -----------------------------------------------------------
+  Future<Map<String, dynamic>> loginUser({
+    required String empId,
+    required String password,
+  }) async {
+    final url = ApiConfig.login();
+    final headers = {"Content-Type": "application/json"};
+
+    final body = {"employeeId": empId, "password": password};
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: headers,
+      body: json.encode(body),
+    );
+
+    final data = _handleResponse(response);
+
+    // Token saving
+    if (data.containsKey("token")) {
+      await AuthService.saveToken(data["token"]);
+    }
+
+    if (data.containsKey("refreshToken")) {
+      await AuthService.saveRefreshToken(data["refreshToken"]);
+    }
+
+    if (data.containsKey("user")) {
+      await AuthService.saveUserId(data["user"]["_id"]);
+    }
+
+    await AuthService.saveEmpId(empId);
+
+    return data;
+  }
+
+  // -----------------------------------------------------------
+  // 📌 GET LEADS
+  // -----------------------------------------------------------
+
   Future<Map<String, dynamic>> getLossOfSaleLeads({
     String? store,
     String? enquiryFrom,
@@ -14,8 +132,8 @@ class ApiService {
     String? functionTo,
     String? visitFrom,
     String? visitTo,
-  }) async {
-    final url = Uri.parse(
+  }) {
+    return _get(
       ApiConfig.lossOfSaleLeads(
         store: store,
         enquiryFrom: enquiryFrom,
@@ -26,300 +144,112 @@ class ApiService {
         visitTo: visitTo,
       ),
     );
-
-    try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
-      final response = await http.get(url, headers: headers);
-
-      if (response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-
-        // Handle both Map and List responses
-        if (decodedResponse is Map<String, dynamic>) {
-          return decodedResponse;
-        } else if (decodedResponse is List) {
-          return {'data': decodedResponse};
-        } else {
-          throw Exception('Unexpected response format from server');
-        }
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load Loss of Sale leads: Status ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      print('ApiService: Error fetching Loss of Sale leads: $e');
-      rethrow;
-    }
   }
 
-  // Function to get Walk-in leads
-  Future<Map<String, dynamic>> getWalkInLeads() async {
-    final url = Uri.parse(ApiConfig.walkInLeads());
-
-    try {
-      final headers = await _getAuthHeaders();
-      final response = await http.get(url, headers: headers);
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception('Failed to load Walk-in leads');
-      }
-    } catch (e) {
-      rethrow;
-    }
+  Future<Map<String, dynamic>> getWalkInLeads() {
+    return _get(ApiConfig.walkInLeads());
   }
 
-  // Function to get Booking Confirmation leads
-  // Function to get Booking Confirmation leads
-  Future<Map<String, dynamic>> getBookingConfirmationLeads() async {
-    final url = Uri.parse(ApiConfig.bookingConfirmationLeads());
-
-    try {
-      final headers = await _getAuthHeaders();
-      print('ApiService: Fetching Booking Confirmation leads');
-      print('ApiService: URL => $url');
-
-      final response = await http.get(url, headers: headers);
-
-      print('ApiService: Response status: ${response.statusCode}');
-      print('ApiService: Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-
-        // Backend returns: { "leads": [ ... ] }
-        if (decoded is Map<String, dynamic>) {
-          if (decoded.containsKey('leads')) {
-            return {'data': decoded['leads']};
-          }
-          return decoded;
-        } else if (decoded is List) {
-          return {'data': decoded};
-        } else {
-          throw Exception(
-            'Unexpected response format for booking confirmation',
-          );
-        }
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load Booking Confirmation leads: Status ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      print('ApiService: Error fetching Booking Confirmation leads: $e');
-      rethrow;
-    }
+  Future<Map<String, dynamic>> getBookingConfirmationLeads() {
+    return _get(ApiConfig.bookingConfirmationLeads());
   }
 
- // Function to get Rent-out leads
-Future<Map<String, dynamic>> getRentOutLeads() async {
-  final url = Uri.parse(ApiConfig.rentOutLeads());
-
-  try {
-    final headers = await _getAuthHeaders();
-    print('ApiService: Fetching Rent-Out leads');
-    print('ApiService: URL => $url');
-
-    final response = await http.get(url, headers: headers);
-
-    print('ApiService: Rent-Out response status: ${response.statusCode}');
-    print('ApiService: Rent-Out response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-
-      // Normalize to { "data": [...] }
-      if (decoded is Map<String, dynamic>) {
-        if (decoded.containsKey('leads')) {
-          return {'data': decoded['leads']};
-        }
-        if (decoded.containsKey('data')) {
-          return {'data': decoded['data']};
-        }
-        // If map but no known key, wrap entire thing
-        return {'data': [decoded]};
-      } else if (decoded is List) {
-        return {'data': decoded};
-      } else {
-        throw Exception('Unexpected response format for Rent-Out leads');
-      }
-    } else if (response.statusCode == 401) {
-      throw Exception('Authentication failed. Please login again.');
-    } else {
-      throw Exception(
-        'Failed to load Rent-Out leads: Status ${response.statusCode}',
-      );
-    }
-  } catch (e) {
-    print('ApiService: Error fetching Rent-Out leads: $e');
-    rethrow;
-  }
-}
-
-  Future<Map<String, dynamic>> loginUser({
-    required String empId,
-    required String password,
-  }) async {
-    final url = Uri.parse(ApiConfig.login());
-
-    try {
-      // Prepare request body - backend expects "employeeId" not "empId"
-      final requestBody = {"employeeId": empId, "password": password};
-
-      final requestBodyJson = json.encode(requestBody);
-
-      print('ApiService: Attempting login for EMP ID: $empId');
-      print('ApiService: Login URL: $url');
-      print('ApiService: Request body: $requestBodyJson');
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: requestBodyJson,
-      );
-
-      print('ApiService: Login response status: ${response.statusCode}');
-      print('ApiService: Login response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body) as Map<String, dynamic>;
-
-        // Save token if present in response
-        if (responseData.containsKey('token')) {
-          await AuthService.saveToken(responseData['token'] as String);
-          print('ApiService: Token saved successfully');
-        }
-
-        // Save refresh token if present
-        if (responseData.containsKey('refreshToken')) {
-          await AuthService.saveRefreshToken(
-            responseData['refreshToken'] as String,
-          );
-        }
-
-        // Save user data if present
-        if (responseData.containsKey('user')) {
-          final user = responseData['user'] as Map<String, dynamic>;
-          if (user.containsKey('_id') || user.containsKey('id')) {
-            await AuthService.saveUserId(
-              (user['_id'] ?? user['id']).toString(),
-            );
-          }
-          if (user.containsKey('empId')) {
-            await AuthService.saveEmpId(user['empId'].toString());
-          }
-        } else if (responseData.containsKey('userId')) {
-          await AuthService.saveUserId(responseData['userId'].toString());
-        }
-
-        // Save EMP ID
-        await AuthService.saveEmpId(empId);
-
-        return responseData;
-      } else if (response.statusCode == 400) {
-        // Bad Request - try to get detailed error message
-        String errorMessage = 'Invalid request. Please check your credentials.';
-        try {
-          final errorData = json.decode(response.body);
-          if (errorData is Map<String, dynamic>) {
-            errorMessage =
-                errorData['message'] ??
-                errorData['error'] ??
-                errorData['msg'] ??
-                'Invalid request format. Please check your EMP ID and Password.';
-
-            // Check for validation errors
-            if (errorData.containsKey('errors')) {
-              final errors = errorData['errors'];
-              if (errors is List) {
-                // Handle array of error objects like [{"field":"employeeId", "message":"..."}]
-                final errorMessages =
-                    errors
-                        .where((e) => e is Map && e.containsKey('message'))
-                        .map((e) => (e as Map)['message'].toString())
-                        .toList();
-                if (errorMessages.isNotEmpty) {
-                  errorMessage = errorMessages.join(', ');
-                }
-              } else if (errors is Map) {
-                final errorList =
-                    errors.values.map((e) => e.toString()).toList();
-                if (errorList.isNotEmpty) {
-                  errorMessage = errorList.join(', ');
-                }
-              }
-            }
-          } else if (errorData is String) {
-            errorMessage = errorData;
-          }
-        } catch (e) {
-          print('ApiService: Could not parse error response: $e');
-          errorMessage =
-              'Bad request. Please check your EMP ID and Password format.';
-        }
-        throw Exception(errorMessage);
-      } else if (response.statusCode == 401) {
-        throw Exception("Invalid EMP ID or Password");
-      } else {
-        // Try to parse error message from response
-        try {
-          final errorData = json.decode(response.body);
-          String errorMessage = 'Login failed. Please try again.';
-
-          if (errorData is Map<String, dynamic>) {
-            errorMessage =
-                errorData['message'] ??
-                errorData['error'] ??
-                errorData['msg'] ??
-                'Login failed. Please try again.';
-          } else if (errorData is String) {
-            errorMessage = errorData;
-          }
-
-          throw Exception(errorMessage);
-        } catch (_) {
-          throw Exception(
-            'Login failed: Status ${response.statusCode}. ${response.body.isNotEmpty ? response.body : "Please try again."}',
-          );
-        }
-      }
-    } catch (e) {
-      print('ApiService: Login error: $e');
-      if (e is Exception) {
-        rethrow;
-      }
-      throw Exception('Network error: ${e.toString()}');
-    }
+  Future<Map<String, dynamic>> getRentOutLeads() {
+    return _get(ApiConfig.rentOutLeads());
   }
 
-  /// Get authentication headers for API requests
-  Future<Map<String, String>> _getAuthHeaders() async {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
+  // -----------------------------------------------------------
+  // 📌 ADD LEAD
+  // -----------------------------------------------------------
+  Future<Map<String, dynamic>> addLead({
+    required String customerName,
+    required String phoneNumber,
+    String? brand,
+    String? storeLocation,
+    String? leadStatus,
+    String? callStatus,
+    DateTime? followUpDate,
+  }) {
+    final body = {
+      "customer_name": customerName,
+      "phone_number": phoneNumber,
+      if (brand != null) "brand": brand,
+      if (storeLocation != null) "store_location": storeLocation,
+      if (leadStatus != null) "lead_status": leadStatus,
+      if (callStatus != null) "call_status": callStatus,
+      if (followUpDate != null)
+        "follow_up_date": followUpDate.toIso8601String(),
     };
 
-    final token = await AuthService.getToken();
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
+    return _post(ApiConfig.addLead(), body);
+  }
 
-    return headers;
+  // -----------------------------------------------------------
+  // ✏️ UPDATE: LOSS OF SALE
+  // -----------------------------------------------------------
+  Future<Map<String, dynamic>> updateLossOfSaleLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    String? followUpDate,
+    String? reasonCollectedFromStore,
+    String? remarks,
+  }) {
+    final body = {
+      if (callStatus != null) "call_status": callStatus,
+      if (leadStatus != null) "lead_status": leadStatus,
+      if (followUpDate != null) "follow_up_date": followUpDate,
+      if (reasonCollectedFromStore != null)
+        "reason_collected_from_store": reasonCollectedFromStore,
+      if (remarks != null) "remarks": remarks,
+    };
+
+    return _post(ApiConfig.updateLossOfSale(id), body);
+  }
+
+  // -----------------------------------------------------------
+  // ✏️ UPDATE: RENT OUT
+  // -----------------------------------------------------------
+  Future<Map<String, dynamic>> updateRentOutLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    bool? followUpFlag,
+    DateTime? callDate,
+    int? rating,
+    String? remarks,
+  }) {
+    final body = {
+      if (callStatus != null) "call_status": callStatus,
+      if (leadStatus != null) "lead_status": leadStatus,
+      if (followUpFlag != null) "follow_up_flag": followUpFlag,
+      if (callDate != null) "call_date": callDate.toIso8601String(),
+      if (rating != null) "rating": rating,
+      if (remarks != null) "remarks": remarks,
+    };
+
+    return _post(ApiConfig.updateRentOut(id), body);
+  }
+
+  // -----------------------------------------------------------
+  // ✏️ UPDATE: BOOKING CONFIRMATION
+  // -----------------------------------------------------------
+  Future<Map<String, dynamic>> updateBookingConfirmationLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    bool? followUpFlag,
+    DateTime? callDate,
+    String? remarks,
+  }) {
+    final body = {
+      if (callStatus != null) "call_status": callStatus,
+      if (leadStatus != null) "lead_status": leadStatus,
+      if (followUpFlag != null) "follow_up_flag": followUpFlag,
+      if (callDate != null) "call_date": callDate.toIso8601String(),
+      if (remarks != null) "remarks": remarks,
+    };
+
+    return _post(ApiConfig.updateBookingConfirmation(id), body);
   }
 }

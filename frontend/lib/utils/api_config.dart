@@ -59,4 +59,20 @@ class ApiConfig {
   static String login() {
     return "https://telecallerappbackend.onrender.com/api/auth/login";
   }
+
+  static String updateLossOfSale(String id) {
+    return "https://telecallerappbackend.onrender.com/api/pages/loss-of-sale/$id";
+  }
+
+  static String addLead() {
+    return "https://telecallerappbackend.onrender.com/api/pages/add-lead";
+  }
+
+  static String updateRentOut(String id) {
+    return "https://telecallerappbackend.onrender.com/api/pages/rent-out/$id";
+  }
+
+  static String updateBookingConfirmation(String id) {
+    return "https://telecallerappbackend.onrender.com/api/pages/booking-confirmation/$id";
+  }
 }

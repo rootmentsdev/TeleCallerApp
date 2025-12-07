@@ -240,16 +240,17 @@ class _AddLeadBottomSheetContentState
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        final success = await controller.submitLead();
+                        final result = await controller.submitLead();
                         if (!mounted) return;
 
-                        if (success) {
+                        if (result['success'] == true) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
                                 controller.followUpDate != null
                                     ? 'Lead added successfully! Follow-up scheduled.'
-                                    : 'Lead added successfully!',
+                                    : result['message'] ??
+                                        'Lead added successfully!',
                               ),
                               backgroundColor: Colors.green,
                               behavior: SnackBarBehavior.floating,
@@ -263,12 +264,16 @@ class _AddLeadBottomSheetContentState
                           }
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'Please enter customer name and phone number',
+                                result['error'] ??
+                                    'Please enter customer name and phone number',
                               ),
                               backgroundColor: Colors.red,
                               behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           );
                         }

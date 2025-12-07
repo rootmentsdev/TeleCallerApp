@@ -796,4 +796,156 @@ class LeadRepository {
       rethrow;
     }
   }
+
+  /// Update Loss of Sale lead via API
+  Future<void> updateLossOfSaleLeadFromApi({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    DateTime? followUpDate,
+    String? reasonCollectedFromStore,
+    String? remarks,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      // Convert DateTime to ISO 8601 string format if provided
+      String? followUpDateString;
+      if (followUpDate != null) {
+        followUpDateString = followUpDate.toIso8601String();
+      }
+
+      await _apiService.updateLossOfSaleLead(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        followUpDate: followUpDateString,
+        reasonCollectedFromStore: reasonCollectedFromStore,
+        remarks: remarks,
+      );
+
+      // Update local lead if it exists
+      final lead = getLeadById(id);
+      if (lead != null) {
+        final updatedLead = LeadModel(
+          id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          brand: lead.brand,
+          location: lead.location,
+          leadStatus: leadStatus ?? lead.leadStatus,
+          callStatus: callStatus ?? lead.callStatus,
+          followUpDate: followUpDate ?? lead.followUpDate,
+          reason: reasonCollectedFromStore ?? lead.reason,
+          category: lead.category,
+          callDuration: lead.callDuration,
+          createdAt: lead.createdAt,
+        );
+        await updateLead(updatedLead);
+      }
+    } catch (e) {
+      print('LeadRepository: Error updating Loss of Sale lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Update Rent-Out lead via API
+  Future<void> updateRentOutLeadFromApi({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    bool? followUpFlag,
+    DateTime? callDate,
+    int? rating,
+    String? remarks,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      await _apiService.updateRentOutLead(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        followUpFlag: followUpFlag,
+        callDate: callDate,
+        rating: rating,
+        remarks: remarks,
+      );
+
+      // Update local lead if it exists
+      final lead = getLeadById(id);
+      if (lead != null) {
+        final updatedLead = LeadModel(
+          id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          brand: lead.brand,
+          location: lead.location,
+          leadStatus: leadStatus ?? lead.leadStatus,
+          callStatus: callStatus ?? lead.callStatus,
+          followUpDate:
+              followUpFlag == true
+                  ? callDate
+                  : (followUpFlag == false ? null : lead.followUpDate),
+          reason: remarks ?? lead.reason,
+          category: lead.category,
+          callDuration: lead.callDuration,
+          createdAt: lead.createdAt,
+        );
+        await updateLead(updatedLead);
+      }
+    } catch (e) {
+      print('LeadRepository: Error updating Rent-Out lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Update Booking Confirmation lead via API
+  Future<void> updateBookingConfirmationLeadFromApi({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    bool? followUpFlag,
+    DateTime? callDate,
+    String? remarks,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      await _apiService.updateBookingConfirmationLead(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        followUpFlag: followUpFlag,
+        callDate: callDate,
+        remarks: remarks,
+      );
+
+      // Update local lead if it exists
+      final lead = getLeadById(id);
+      if (lead != null) {
+        final updatedLead = LeadModel(
+          id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          brand: lead.brand,
+          location: lead.location,
+          leadStatus: leadStatus ?? lead.leadStatus,
+          callStatus: callStatus ?? lead.callStatus,
+          followUpDate:
+              followUpFlag == true
+                  ? callDate
+                  : (followUpFlag == false ? null : lead.followUpDate),
+          reason: remarks ?? lead.reason,
+          category: lead.category,
+          callDuration: lead.callDuration,
+          createdAt: lead.createdAt,
+        );
+        await updateLead(updatedLead);
+      }
+    } catch (e) {
+      print('LeadRepository: Error updating Booking Confirmation lead: $e');
+      rethrow;
+    }
+  }
 }

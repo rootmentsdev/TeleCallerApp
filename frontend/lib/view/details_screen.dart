@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
+import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'dart:async';
@@ -244,7 +247,210 @@ class _DetailsScreenState extends State<DetailsScreen>
           callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
         );
 
+        // Update locally first
         await repository.updateLead(updatedLead);
+
+        // Refresh controllers to update UI
+        // This ensures leads are moved from "leads" to "reports" if call status changed
+        try {
+          final leadController = Provider.of<LeadScreenController>(
+            context,
+            listen: false,
+          );
+          // Refresh to remove lead from leads list if it's now "called"
+          leadController.refresh();
+        } catch (e) {
+          // LeadScreenController might not be available, that's okay
+          print('Could not refresh LeadScreenController: $e');
+        }
+
+        try {
+          final reportController = Provider.of<ReportController>(
+            context,
+            listen: false,
+          );
+          // Refresh to show updated lead in reports if it's now "called"
+          reportController.refresh();
+        } catch (e) {
+          // ReportController might not be available, that's okay
+          print('Could not refresh ReportController: $e');
+        }
+
+        // If it's a Loss of Sale lead, also update via API
+        if (lead.category == LeadConstants.categoryLossOfSales) {
+          try {
+            // Get LeadScreenController from Provider
+            final leadController = Provider.of<LeadScreenController>(
+              context,
+              listen: false,
+            );
+
+            await leadController.updateLossOfSaleLead(
+              id: leadId,
+              callStatus: selectedCallStatus,
+              leadStatus: selectedLeadStatus,
+              followUpDate: markAsFollowUp ? followUpDate : null,
+              reasonCollectedFromStore: updatedLead.reason,
+              remarks:
+                  remarksController.text.trim().isEmpty
+                      ? null
+                      : remarksController.text.trim(),
+            );
+
+            // Refresh again after API update to ensure UI is updated
+            leadController.refresh();
+
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Loss of Sale lead updated successfully'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } catch (e) {
+            // Show error message but don't block navigation
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Failed to update on server: ${e.toString().replaceFirst('Exception: ', '')}',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+            print('Error updating Loss of Sale lead via API: $e');
+          }
+        }
+
+        // If it's a Rent-Out lead, also update via API
+        if (lead.category == LeadConstants.categoryRentOut ||
+            widget.contact["isRentout"] == true) {
+          try {
+            // Get LeadScreenController from Provider
+            final leadController = Provider.of<LeadScreenController>(
+              context,
+              listen: false,
+            );
+
+            // Determine call date - use call start time if available, otherwise use current time
+            DateTime? callDate;
+            if (_callStartTime != null) {
+              callDate = _callStartTime;
+            } else if (_callDurationSeconds > 0 || _isCallActive) {
+              // If call was made but start time not recorded, use current time
+              callDate = DateTime.now();
+            }
+
+            await leadController.updateRentOutLead(
+              id: leadId,
+              callStatus: selectedCallStatus,
+              leadStatus: selectedLeadStatus,
+              followUpFlag: markAsFollowUp,
+              callDate: callDate,
+              rating: rating > 0 ? rating : null,
+              remarks:
+                  remarksController.text.trim().isEmpty
+                      ? null
+                      : remarksController.text.trim(),
+            );
+
+            // Refresh again after API update to ensure UI is updated
+            leadController.refresh();
+
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Rent-Out lead updated successfully'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } catch (e) {
+            // Show error message but don't block navigation
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Failed to update on server: ${e.toString().replaceFirst('Exception: ', '')}',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+            print('Error updating Rent-Out lead via API: $e');
+          }
+        }
+
+        // If it's a Booking Confirmation lead, also update via API
+        if (lead.category == LeadConstants.categoryBookingConfirmation ||
+            widget.callTypeIndex == 3) {
+          try {
+            // Get LeadScreenController from Provider
+            final leadController = Provider.of<LeadScreenController>(
+              context,
+              listen: false,
+            );
+
+            // Determine call date - use call start time if available, otherwise use current time
+            DateTime? callDate;
+            if (_callStartTime != null) {
+              callDate = _callStartTime;
+            } else if (_callDurationSeconds > 0 || _isCallActive) {
+              // If call was made but start time not recorded, use current time
+              callDate = DateTime.now();
+            }
+
+            await leadController.updateBookingConfirmationLead(
+              id: leadId,
+              callStatus: selectedCallStatus,
+              leadStatus: selectedLeadStatus,
+              followUpFlag: markAsFollowUp,
+              callDate: callDate,
+              remarks:
+                  remarksController.text.trim().isEmpty
+                      ? null
+                      : remarksController.text.trim(),
+            );
+
+            // Refresh again after API update to ensure UI is updated
+            leadController.refresh();
+
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Booking Confirmation lead updated successfully',
+                  ),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } catch (e) {
+            // Show error message but don't block navigation
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Failed to update on server: ${e.toString().replaceFirst('Exception: ', '')}',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+            print('Error updating Booking Confirmation lead via API: $e');
+          }
+        }
       }
     }
 

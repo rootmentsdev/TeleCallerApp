@@ -10,9 +10,13 @@ import 'package:telecaller_app/utils/store_location.dart';
 class LeadScreenController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
   HeaderController? _headerController;
+
   int _selectedCallTypeIndex = 0; // 0: All Calls, 1: Loss of Sale, etc.
 
-  // Initialize with header controller
+  // ------------------------------------------------------------
+  // INITIALIZATION & DISPOSAL
+  // ------------------------------------------------------------
+
   void init(HeaderController headerController) {
     if (_headerController != headerController) {
       _headerController?.removeListener(_onHeaderChanged);
@@ -21,9 +25,7 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  void _onHeaderChanged() {
-    notifyListeners();
-  }
+  void _onHeaderChanged() => notifyListeners();
 
   @override
   void dispose() {
@@ -31,90 +33,57 @@ class LeadScreenController extends ChangeNotifier {
     super.dispose();
   }
 
-  // Getters
+  // ------------------------------------------------------------
+  // GETTERS
+  // ------------------------------------------------------------
+
   DateTime get selectedDate =>
       _headerController?.selectedDate ?? DateTime.now();
+
   String? get selectedStore => _headerController?.selectedStore;
+
   int get selectedCallTypeIndex => _selectedCallTypeIndex;
 
-  // Setters
+  // ------------------------------------------------------------
+  // SETTERS
+  // ------------------------------------------------------------
+
   void setSelectedCallTypeIndex(int index) {
     _selectedCallTypeIndex = index;
     notifyListeners();
   }
 
-  // Get call summary data (filtered by store and date)
-  // Only count leads that haven't been called yet
-  List<Map<String, dynamic>> getCallSummary() {
-    final store = _headerController?.selectedStore;
-    final date = _headerController?.selectedDate ?? DateTime.now();
+  // ------------------------------------------------------------
+  // SUMMARY COUNTS (STORE + UNCALLED)
+  // ------------------------------------------------------------
 
-    // Handle "All Stores" case
-    final storeFilter = (store == null || store == 'All Stores') ? null : store;
+  /// Counts uncalled leads in a category (or all)
+  int _countUncalledLeads({String? category}) {
+    List<LeadModel> leads =
+        category != null
+            ? _repository.getLeadsByCategory(category)
+            : _repository.allLeads;
 
-    // Helper function to count uncalled leads
-    // int getUncalledLeadsCount({String? category}) {
-    //   List<LeadModel> leads =
-    //       category != null
-    //           ? _repository.getLeadsByCategory(category)
-    //           : _repository.allLeads;
+    final storeFilter = selectedStore;
 
-    //   // Filter by store - extract location from "Brand - Location" format
-    //   if (storeFilter != null) {
-    //     final location = StoreLocations.resolveSelection(storeFilter).location;
-    //     leads = leads.where((lead) => lead.location == location).toList();
-    //   }
-
-    //   // Filter by date - but for Loss of Sale, count all leads (date filter is handled by API)
-    //   // For other categories, filter by selected date
-    //   if (category != LeadConstants.categoryLossOfSales) {
-    //     leads =
-    //         leads.where((lead) {
-    //           final leadDate = lead.createdAt;
-    //           return leadDate.year == date.year &&
-    //               leadDate.month == date.month &&
-    //               leadDate.day == date.day;
-    //         }).toList();
-    //   }
-
-    //   // Filter out leads that have been called
-    //   leads =
-    //       leads
-    //           .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-    //           .toList();
-
-    //   return leads.length;
-    // }
-    int getUncalledLeadsCount({String? category}) {
-      // STEP 1: get leads by category
-      List<LeadModel> leads =
-          category != null
-              ? _repository.getLeadsByCategory(category)
-              : _repository.allLeads;
-
-      // STEP 2: filter by store only
-      final storeFilter = _headerController?.selectedStore;
-      if (storeFilter != null && storeFilter != "All Stores") {
-        final location = StoreLocations.resolveSelection(storeFilter).location;
-        leads = leads.where((lead) => lead.location == location).toList();
-      }
-
-      // STEP 3: DO NOT FILTER BY DATE
-      // (This is the reason counts were 0 before)
-
-      // STEP 4: count only uncalled
-      leads =
-          leads
-              .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-              .toList();
-
-      return leads.length;
+    // Filter by selected store
+    if (storeFilter != null && storeFilter != "All Stores") {
+      final location = StoreLocations.resolveSelection(storeFilter).location;
+      leads = leads.where((lead) => lead.location == location).toList();
     }
 
+    // Count only uncalled statuses
+    return leads
+        .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
+        .length;
+  }
+
+  /// Dashboard summary boxes
+  List<Map<String, dynamic>> getCallSummary() {
     return [
       {
         "title": "All Calls",
-        "count": getUncalledLeadsCount().toString(),
+        "count": _countUncalledLeads().toString(),
         "bgColor": const Color(0xFFE8E3FF),
         "iconColor": const Color(0xFF7C5DFF),
         "icon": Icons.people_alt_outlined,
@@ -122,7 +91,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Loss of Sale",
         "count":
-            getUncalledLeadsCount(
+            _countUncalledLeads(
               category: LeadConstants.categoryLossOfSales,
             ).toString(),
         "bgColor": const Color(0xFFFFE8E8),
@@ -132,7 +101,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Rent-Out Calls",
         "count":
-            getUncalledLeadsCount(
+            _countUncalledLeads(
               category: LeadConstants.categoryRentOut,
             ).toString(),
         "bgColor": const Color(0xFFFFF7CC),
@@ -142,7 +111,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Booking\nConfirmation",
         "count":
-            getUncalledLeadsCount(
+            _countUncalledLeads(
               category: LeadConstants.categoryBookingConfirmation,
             ).toString(),
         "bgColor": const Color(0xFFD4F5DA),
@@ -152,7 +121,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Just Dial\nEnquiry",
         "count":
-            getUncalledLeadsCount(
+            _countUncalledLeads(
               category: LeadConstants.categoryJustDial,
             ).toString(),
         "bgColor": const Color(0xFFFFE8D5),
@@ -162,7 +131,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Follow Up\nCalls",
         "count":
-            getUncalledLeadsCount(
+            _countUncalledLeads(
               category: LeadConstants.categoryFollowUp,
             ).toString(),
         "bgColor": const Color(0xFFD5E8FF),
@@ -172,59 +141,51 @@ class LeadScreenController extends ChangeNotifier {
     ];
   }
 
-  // Get filtered leads based on selected call type
-  // For "All Calls" tab (index 0), show all leads regardless of call status
-  // For other tabs, only show leads that haven't been called yet
+  // ------------------------------------------------------------
+  // FILTERED LEADS FOR LIST VIEW
+  // ------------------------------------------------------------
+
   List<LeadDisplayModel> getFilteredLeads() {
-    String? category = _getCategoryForIndex(_selectedCallTypeIndex);
+    String? category = _categoryForIndex(_selectedCallTypeIndex);
 
-    final store = _headerController?.selectedStore;
-    final date = _headerController?.selectedDate ?? DateTime.now();
+    List<LeadModel> leads = _repository.getLeadsByCategory(category);
 
-    // Get leads filtered by category, store, and date
-    List<LeadModel> filteredLeads = _repository.getLeadsByCategory(category);
-
-    // Filter by store - extract location from "Brand - Location" format
-    if (store != null && store != 'All Stores') {
-      final location = StoreLocations.resolveSelection(store).location;
-      filteredLeads =
-          filteredLeads.where((lead) => lead.location == location).toList();
+    // Filter by store
+    if (selectedStore != null && selectedStore != "All Stores") {
+      final location = StoreLocations.resolveSelection(selectedStore!).location;
+      leads = leads.where((lead) => lead.location == location).toList();
     }
 
-    // Filter by date - but for All Calls, Loss of Sale, Rent-Out, and Booking Confirmation, show all leads (date filter is handled by API)
-    // For other categories, filter by selected date
-    if (_selectedCallTypeIndex != 0 &&
-        _selectedCallTypeIndex != 1 &&
-        _selectedCallTypeIndex != 2 &&
-        _selectedCallTypeIndex != 3) {
-      filteredLeads =
-          filteredLeads.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
+    // Date filter only for categories other than main 4
+    bool skipDateFilter = _selectedCallTypeIndex <= 3;
+
+    if (!skipDateFilter) {
+      leads =
+          leads.where((lead) {
+            final date = lead.createdAt;
+            return date.year == selectedDate.year &&
+                date.month == selectedDate.month &&
+                date.day == selectedDate.day;
           }).toList();
     }
 
-    // Filter out leads that have been called (only show uncalled leads)
-    // EXCEPT for "All Calls" tab (index 0) which should show all leads
+    // Only show uncalled leads except for All Calls
     if (_selectedCallTypeIndex != 0) {
-      filteredLeads =
-          filteredLeads
+      leads =
+          leads
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
               .toList();
     }
 
-    // Convert to display models
-    return filteredLeads
-        .map((lead) => LeadDisplayModel.fromLead(lead))
-        .toList();
+    return leads.map(LeadDisplayModel.fromLead).toList();
   }
+
+  // ------------------------------------------------------------
+  // TITLE FOR APP BAR
+  // ------------------------------------------------------------
 
   String getCurrentTitle() {
     switch (_selectedCallTypeIndex) {
-      case 0:
-        return "All Calls";
       case 1:
         return "Loss of Sale";
       case 2:
@@ -240,10 +201,12 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  String? _getCategoryForIndex(int index) {
+  // ------------------------------------------------------------
+  // CATEGORY MAPPING
+  // ------------------------------------------------------------
+
+  String? _categoryForIndex(int index) {
     switch (index) {
-      case 0:
-        return null; // All Calls
       case 1:
         return LeadConstants.categoryLossOfSales;
       case 2:
@@ -255,15 +218,16 @@ class LeadScreenController extends ChangeNotifier {
       case 5:
         return LeadConstants.categoryFollowUp;
       default:
-        return null;
+        return null; // All Calls
     }
   }
 
-  void refresh() {
-    notifyListeners();
-  }
+  void refresh() => notifyListeners();
 
-  /// Fetch Loss of Sale leads from API
+  // ------------------------------------------------------------
+  // API CALLS → FETCH
+  // ------------------------------------------------------------
+
   Future<void> fetchLossOfSaleLeadsFromApi({
     String? store,
     String? enquiryFrom,
@@ -285,31 +249,105 @@ class LeadScreenController extends ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
-      print('LeadScreenController: Error fetching Loss of Sale leads: $e');
+      print("Error fetching Loss of Sale leads: $e");
       rethrow;
     }
   }
 
-  /// Fetch Booking Confirmation leads from API
   Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
     try {
       await _repository.fetchBookingConfirmationLeadsFromApi(store: store);
       notifyListeners();
     } catch (e) {
-      print(
-        'LeadScreenController: Error fetching Booking Confirmation leads: $e',
-      );
+      print("Error fetching Booking Confirmation leads: $e");
       rethrow;
     }
   }
 
-  /// Fetch Rent-Out leads from API
   Future<void> fetchRentOutLeadsFromApi({String? store}) async {
     try {
       await _repository.fetchRentOutLeadsFromApi(store: store);
       notifyListeners();
     } catch (e) {
-      print('LeadScreenController: Error fetching Rent-Out leads: $e');
+      print("Error fetching Rent-Out leads: $e");
+      rethrow;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // API CALLS → UPDATE
+  // ------------------------------------------------------------
+
+  Future<void> updateLossOfSaleLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    DateTime? followUpDate,
+    String? reasonCollectedFromStore,
+    String? remarks,
+  }) async {
+    try {
+      await _repository.updateLossOfSaleLeadFromApi(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        followUpDate: followUpDate,
+        reasonCollectedFromStore: reasonCollectedFromStore,
+        remarks: remarks,
+      );
+      notifyListeners();
+    } catch (e) {
+      print("Error updating Loss of Sale lead: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> updateRentOutLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    bool? followUpFlag,
+    DateTime? callDate,
+    int? rating,
+    String? remarks,
+  }) async {
+    try {
+      await _repository.updateRentOutLeadFromApi(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        followUpFlag: followUpFlag,
+        callDate: callDate,
+        rating: rating,
+        remarks: remarks,
+      );
+      notifyListeners();
+    } catch (e) {
+      print("Error updating Rent-Out lead: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> updateBookingConfirmationLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    bool? followUpFlag,
+    DateTime? callDate,
+    String? remarks,
+  }) async {
+    try {
+      await _repository.updateBookingConfirmationLeadFromApi(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        followUpFlag: followUpFlag,
+        callDate: callDate,
+        remarks: remarks,
+      );
+      notifyListeners();
+    } catch (e) {
+      print("Error updating Booking Confirmation lead: $e");
       rethrow;
     }
   }
