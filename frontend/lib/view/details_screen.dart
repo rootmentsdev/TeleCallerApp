@@ -9,6 +9,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
+import 'package:telecaller_app/services/phone_call_service.dart';
 import 'dart:async';
 
 class DetailsScreen extends StatefulWidget {
@@ -142,6 +143,39 @@ class _DetailsScreenState extends State<DetailsScreen>
     if (existingDuration != null && existingDuration > 0) {
       _callDurationSeconds = existingDuration;
     }
+
+    // Initialize PhoneCallService to listen for automatic call duration
+    PhoneCallService.initialize(
+      onCallEnded: (phoneNumber, duration) {
+        if (mounted && duration != null && duration > 0) {
+          // Check if the phone number matches
+          final contactPhone = widget.contact["phone"] as String? ?? "";
+          final cleanedContactPhone = contactPhone.replaceAll(
+            RegExp(r'[\s\-\(\)]'),
+            '',
+          );
+          final cleanedReceivedPhone = phoneNumber.replaceAll(
+            RegExp(r'[\s\-\(\)]'),
+            '',
+          );
+
+          // Match phone numbers (handle cases with/without country code)
+          if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
+              cleanedContactPhone.contains(cleanedReceivedPhone) ||
+              cleanedContactPhone == cleanedReceivedPhone) {
+            setState(() {
+              _callDurationSeconds = duration;
+              _isCallActive = false;
+              // Auto-set status to Connected if call had duration
+              if (selectedCallStatus == null) {
+                selectedCallStatus = "Connected";
+              }
+            });
+            _stopCallTimer();
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -541,18 +575,29 @@ class _DetailsScreenState extends State<DetailsScreen>
     }
 
     try {
-      final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
-      final launched = await launchUrl(
-        phoneUri,
-        mode: LaunchMode.externalApplication,
+      // Use PhoneCallService to make call and automatically track duration
+      final success = await PhoneCallService.makeCall(
+        phoneNumber: cleanedNumber,
+        leadId: widget.contact["id"] as String?,
       );
 
-      if (launched && mounted) {
-        // Don't start timer yet - wait for user to tap call logo when call is answered
-        // Just mark that dialer was opened
-        setState(() {
-          // Timer will start when user taps the call logo
-        });
+      if (success && mounted) {
+        // Start timer as fallback (will be updated automatically from call log)
+        _startCallTimer();
+        setState(() {});
+      } else if (mounted) {
+        // Fallback to url_launcher if PhoneCallService fails
+        final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
+        final launched = await launchUrl(
+          phoneUri,
+          mode: LaunchMode.externalApplication,
+        );
+
+        if (launched && mounted) {
+          // Start timer as fallback
+          _startCallTimer();
+          setState(() {});
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -564,15 +609,6 @@ class _DetailsScreenState extends State<DetailsScreen>
           ),
         );
       }
-    }
-  }
-
-  void _onCallLogoTap() {
-    // User taps call logo to indicate call was answered
-    // Start tracking call duration from this point
-    if (!_isCallActive) {
-      _startCallTimer();
-      setState(() {});
     }
   }
 
@@ -727,80 +763,70 @@ class _DetailsScreenState extends State<DetailsScreen>
 
                     const SizedBox(height: 24),
 
-                    // Call Logo - Tap to start tracking when call is answered
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: _onCallLogoTap,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color:
-                                  _isCallActive
-                                      ? Colors.green[50]
-                                      : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color:
-                                    _isCallActive
-                                        ? Colors.green[300]!
-                                        : Colors.grey[300]!,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _isCallActive
-                                      ? Icons.phone_in_talk
-                                      : Icons.phone,
-                                  size: 24,
-                                  color:
-                                      _isCallActive
-                                          ? Colors.green[700]
-                                          : Colors.grey[700],
-                                ),
-                                if (_isCallActive) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Call Active",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.green[700],
-                                      fontFamily: TextConstant.dmSansMedium,
-                                    ),
-                                  ),
-                                ] else ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Tap when answered",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                      fontFamily: TextConstant.dmSansRegular,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                    // Call Duration Display (automatically calculated from call log)
+                    if (_callDurationSeconds > 0 || _isCallActive) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              _isCallActive
+                                  ? Colors.green[50]
+                                  : Colors.grey[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                _isCallActive
+                                    ? Colors.green[300]!
+                                    : Colors.grey[300]!,
                           ),
                         ),
-                        if (_isCallActive) ...[
-                          const SizedBox(width: 8),
-                          TextButton(
-                            onPressed: () {
-                              _stopCallTimer();
-                              setState(() {});
-                            },
-                            child: const Text(
-                              "End Call",
-                              style: TextStyle(color: Colors.red, fontSize: 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _isCallActive
+                                  ? Icons.phone_in_talk
+                                  : Icons.call_end,
+                              size: 20,
+                              color:
+                                  _isCallActive
+                                      ? Colors.green[700]
+                                      : Colors.grey[700],
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              _isCallActive
+                                  ? "Call Active - ${_formatDuration(_callDurationSeconds)}"
+                                  : "Call Duration: ${_formatDuration(_callDurationSeconds)}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color:
+                                    _isCallActive
+                                        ? Colors.green[700]
+                                        : Colors.grey[700],
+                                fontFamily: TextConstant.dmSansMedium,
+                              ),
+                            ),
+                            if (_isCallActive) ...[
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () {
+                                  _stopCallTimer();
+                                  setState(() {});
+                                },
+                                child: const Text(
+                                  "End Call",
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Call Status Dropdown
                     _buildDropdown(
@@ -1315,5 +1341,19 @@ class _DetailsScreenState extends State<DetailsScreen>
       "Dec",
     ];
     return months[month - 1];
+  }
+
+  String _formatDuration(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+
+    if (hours > 0) {
+      return '${hours}h ${minutes}m ${secs}s';
+    } else if (minutes > 0) {
+      return '${minutes}m ${secs}s';
+    } else {
+      return '${secs}s';
+    }
   }
 }

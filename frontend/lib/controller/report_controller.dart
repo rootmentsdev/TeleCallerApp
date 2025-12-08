@@ -1,14 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/model/report_model.dart';
+import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 
 /// Controller for Report Screen
 class ReportController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
+  final ApiService _apiService = ApiService();
   HeaderController? _headerController;
   int _selectedCallTypeIndex = 0; // 0: All Calls, 1: Loss of Sale, etc.
+
+  // Reports fetched from API
+  List<ReportModel> _reports = [];
+  PaginationInfo? _pagination;
+  bool _isLoadingReports = false;
+  String? _reportsError;
+
+  // Getters for reports
+  List<ReportModel> get reports => _reports;
+  PaginationInfo? get pagination => _pagination;
+  bool get isLoadingReports => _isLoadingReports;
+  String? get reportsError => _reportsError;
 
   // Static flag to indicate navigation to Equary Calls tab after call save
   static bool _shouldNavigateToEquaryCalls = false;
@@ -321,5 +336,117 @@ class ReportController extends ChangeNotifier {
 
   void refresh() {
     notifyListeners();
+  }
+
+  /// Fetch reports from API
+  /// This fetches edited leads (reports) from the backend API
+  Future<void> fetchReportsFromApi({
+    String? leadType,
+    String? editedBy,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
+    int? limit,
+  }) async {
+    try {
+      _isLoadingReports = true;
+      _reportsError = null;
+      notifyListeners();
+
+      print('ReportController: Fetching reports from API');
+      print(
+        'ReportController: leadType=$leadType, dateFrom=$dateFrom, dateTo=$dateTo, page=$page',
+      );
+
+      final response = await _apiService.getReports(
+        leadType: leadType,
+        editedBy: editedBy,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        page: page,
+        limit: limit,
+      );
+
+      final reportsResponse = ReportsResponse.fromJson(response);
+      _reports = reportsResponse.reports;
+      _pagination = reportsResponse.pagination;
+
+      print('ReportController: Fetched ${_reports.length} reports');
+      print(
+        'ReportController: Pagination - page=${_pagination?.page}, total=${_pagination?.total}',
+      );
+
+      _isLoadingReports = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoadingReports = false;
+      _reportsError = e.toString();
+      print('ReportController: Error fetching reports: $e');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Fetch reports filtered by current header settings (store and date)
+  Future<void> fetchReportsWithCurrentFilters() async {
+    // Note: Store filter is not directly supported by reports API
+    // We'll filter by date range (same day)
+    final date = _headerController?.selectedDate ?? DateTime.now();
+
+    // Convert date to YYYY-MM-DD format for API
+    String formatDate(DateTime date) {
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
+
+    // Determine leadType based on selected call type index
+    String? leadType;
+    switch (_selectedCallTypeIndex) {
+      case 1:
+        leadType = 'lossOfSale';
+        break;
+      case 2:
+        leadType = 'rentoutFeedback';
+        break;
+      case 3:
+        leadType = 'justDial';
+        break;
+      case 5:
+        leadType = 'followUp';
+        break;
+      default:
+        leadType = null; // All types
+    }
+
+    // Note: Store filter is not directly supported by reports API
+    // We'll filter by date range (same day)
+    final dateStr = formatDate(date);
+
+    await fetchReportsFromApi(
+      leadType: leadType,
+      dateFrom: dateStr,
+      dateTo: dateStr,
+      page: 1,
+      limit: 50,
+    );
+  }
+
+  /// Get current user ID for filtering reports by editor
+  /// This can be used to fetch reports edited by the current user
+  Future<void> fetchReportsByCurrentUser({
+    String? leadType,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
+    int? limit,
+  }) async {
+    // TODO: Get current user ID from AuthService
+    // For now, fetch all reports
+    await fetchReportsFromApi(
+      leadType: leadType,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      page: page,
+      limit: limit,
+    );
   }
 }

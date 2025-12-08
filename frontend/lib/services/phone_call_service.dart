@@ -1,13 +1,8 @@
 import 'package:flutter/services.dart';
 
-/// Service to handle phone call tracking and receive call duration updates
 class PhoneCallService {
-  static const MethodChannel _methodChannel = MethodChannel(
-    'com.telecaller_app/phone',
-  );
-  static const EventChannel _eventChannel = EventChannel(
-    'com.telecaller_app/phone_events',
-  );
+  static const MethodChannel _methodChannel = MethodChannel('com.telecaller_app/phone');
+  static const EventChannel _eventChannel = EventChannel('com.telecaller_app/phone_events');
 
   static Stream<dynamic>? _callEventsStream;
   static Function(String phoneNumber, int? duration)? _onCallEndedCallback;

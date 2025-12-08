@@ -10,13 +10,27 @@ import 'package:telecaller_app/utils/store_location.dart';
 class LeadScreenController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
   HeaderController? _headerController;
-
   int _selectedCallTypeIndex = 0; // 0: All Calls, 1: Loss of Sale, etc.
 
-  // ------------------------------------------------------------
-  // INITIALIZATION & DISPOSAL
-  // ------------------------------------------------------------
+  LeadScreenController() {
+    // Listen to repository changes and forward notifications so UI updates
+    _repository.addListener(_onRepositoryChanged);
+  }
 
+  // If true, UI should show only the newly added lead (if available)
+  bool _showOnlyNewLead = false;
+  String? _focusedNewLeadId;
+
+  /// Call to explicitly clear the "show only new lead" filter
+  void clearShowOnlyNewLead() {
+    _showOnlyNewLead = false;
+    _focusedNewLeadId = null;
+    // Also clear repository marker so subsequent adds work as expected
+    _repository.clearLastAddedMarker();
+    notifyListeners();
+  }
+
+  // Initialize with header controller
   void init(HeaderController headerController) {
     if (_headerController != headerController) {
       _headerController?.removeListener(_onHeaderChanged);
@@ -25,65 +39,255 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  void _onHeaderChanged() => notifyListeners();
+  void _onHeaderChanged() {
+    // When header (store/date) changes, refresh data from API for current filters
+    notifyListeners();
+
+    // Get current store and date filters
+    final store = _headerController?.selectedStore;
+    final storeParam = (store == null || store == 'All Stores') ? null : store;
+    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+
+    // Fetch all lead types with store and date filters when header changes
+    // This ensures all tabs show filtered data
+    if (storeParam != null) {
+      // Fetch all leads (for "All Calls" tab)
+      // GET /api/pages/leads?store=Suitor Guy - Edappally&enquiryDateFrom=2024-12-08&enquiryDateTo=2024-12-08
+      fetchAllLeadsFromApi(store: storeParam, date: selectedDate).catchError((
+        e,
+      ) {
+        print(
+          'LeadScreenController: Error fetching all leads on header change: $e',
+        );
+      });
+
+      // Fetch Loss of Sale leads with store filter
+      // GET /api/pages/leads?leadType=lossOfSale&store=Suitor Guy - Edappally
+      fetchLossOfSaleLeadsFromApi(store: storeParam).catchError((e) {
+        print(
+          'LeadScreenController: Error fetching Loss of Sale leads on header change: $e',
+        );
+      });
+
+      // Fetch Rent Out leads with store filter
+      // GET /api/pages/leads?leadType=rentOutFeedback&store=Suitor Guy - Edappally
+      fetchRentOutLeadsFromApi(store: storeParam).catchError((e) {
+        print(
+          'LeadScreenController: Error fetching Rent-Out leads on header change: $e',
+        );
+      });
+
+      // Fetch Booking Confirmation leads with store filter
+      // GET /api/pages/leads?leadType=bookingConfirmation&store=Suitor Guy - Edappally
+      fetchBookingConfirmationLeadsFromApi(store: storeParam).catchError((e) {
+        print(
+          'LeadScreenController: Error fetching Booking Confirmation leads on header change: $e',
+        );
+      });
+    } else {
+      // If "All Stores" is selected, fetch without store filter but with date filter
+      fetchAllLeadsFromApi(date: selectedDate).catchError((e) {
+        print(
+          'LeadScreenController: Error fetching all leads (no store filter): $e',
+        );
+      });
+      fetchLossOfSaleLeadsFromApi().catchError((e) {
+        print(
+          'LeadScreenController: Error fetching Loss of Sale leads (no store filter): $e',
+        );
+      });
+      fetchRentOutLeadsFromApi().catchError((e) {
+        print(
+          'LeadScreenController: Error fetching Rent-Out leads (no store filter): $e',
+        );
+      });
+      fetchBookingConfirmationLeadsFromApi().catchError((e) {
+        print(
+          'LeadScreenController: Error fetching Booking Confirmation leads (no store filter): $e',
+        );
+      });
+    }
+  }
+
+  void _onRepositoryChanged() {
+    // If repository has a last-added lead id, focus on it (show only new lead)
+    final lastAdded = _repository.lastAddedLeadId;
+    if (lastAdded != null) {
+      _showOnlyNewLead = true;
+      _focusedNewLeadId = lastAdded;
+      // Auto-clear after showing the new lead once (after a short delay)
+      Future.delayed(const Duration(seconds: 2), () {
+        if (_focusedNewLeadId == lastAdded) {
+          clearShowOnlyNewLead();
+        }
+      });
+    }
+
+    // Forward repository changes to listeners of this controller
+    notifyListeners();
+  }
 
   @override
   void dispose() {
     _headerController?.removeListener(_onHeaderChanged);
+    _repository.removeListener(_onRepositoryChanged);
     super.dispose();
   }
 
-  // ------------------------------------------------------------
-  // GETTERS
-  // ------------------------------------------------------------
-
+  // Getters
   DateTime get selectedDate =>
       _headerController?.selectedDate ?? DateTime.now();
-
   String? get selectedStore => _headerController?.selectedStore;
-
   int get selectedCallTypeIndex => _selectedCallTypeIndex;
 
-  // ------------------------------------------------------------
-  // SETTERS
-  // ------------------------------------------------------------
-
+  // Setters
   void setSelectedCallTypeIndex(int index) {
     _selectedCallTypeIndex = index;
+    // Clear "show only new lead" when switching tabs so all leads are visible
+    if (_showOnlyNewLead) {
+      clearShowOnlyNewLead();
+    }
     notifyListeners();
   }
 
-  // ------------------------------------------------------------
-  // SUMMARY COUNTS (STORE + UNCALLED)
-  // ------------------------------------------------------------
+  // Get call summary data (filtered by store and date)
+  // Only count leads that haven't been called yet
+  List<Map<String, dynamic>> getCallSummary() {
+    // Note: store and date filters are handled in getUncalledLeadsCount
 
-  /// Counts uncalled leads in a category (or all)
-  int _countUncalledLeads({String? category}) {
-    List<LeadModel> leads =
-        category != null
-            ? _repository.getLeadsByCategory(category)
-            : _repository.allLeads;
+    // Helper function to count uncalled leads
+    // int getUncalledLeadsCount({String? category}) {
+    //   List<LeadModel> leads =
+    //       category != null
+    //           ? _repository.getLeadsByCategory(category)
+    //           : _repository.allLeads;
 
-    final storeFilter = selectedStore;
+    //   // Filter by store - extract location from "Brand - Location" format
+    //   if (storeFilter != null) {
+    //     final location = StoreLocations.resolveSelection(storeFilter).location;
+    //     leads = leads.where((lead) => lead.location == location).toList();
+    //   }
 
-    // Filter by selected store
-    if (storeFilter != null && storeFilter != "All Stores") {
-      final location = StoreLocations.resolveSelection(storeFilter).location;
-      leads = leads.where((lead) => lead.location == location).toList();
+    //   // Filter by date - but for Loss of Sale, count all leads (date filter is handled by API)
+    //   // For other categories, filter by selected date
+    //   if (category != LeadConstants.categoryLossOfSales) {
+    //     leads =
+    //         leads.where((lead) {
+    //           final leadDate = lead.createdAt;
+    //           return leadDate.year == date.year &&
+    //               leadDate.month == date.month &&
+    //               leadDate.day == date.day;
+    //         }).toList();
+    //   }
+
+    //   // Filter out leads that have been called
+    //   leads =
+    //       leads
+    //           .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
+    //           .toList();
+
+    //   return leads.length;
+    // }
+    int getUncalledLeadsCount({String? category}) {
+      // STEP 1: get leads by category
+      List<LeadModel> leads =
+          category != null
+              ? _repository.getLeadsByCategory(category)
+              : _repository.allLeads;
+
+      // STEP 2: filter by store using the same logic as getFilteredLeads
+      final storeFilter = _headerController?.selectedStore;
+      if (storeFilter != null && storeFilter != "All Stores") {
+        final selectedLocation =
+            StoreLocations.resolveSelection(storeFilter).location;
+        final selectedBrand =
+            StoreLocations.resolveSelection(storeFilter).brand;
+
+        // Normalize for case-insensitive comparison
+        final normalizedSelectedLocation =
+            selectedLocation.toLowerCase().trim();
+        final normalizedSelectedBrand = selectedBrand.toLowerCase().trim();
+        final normalizedStore = storeFilter.toLowerCase().trim();
+
+        leads =
+            leads.where((lead) {
+              if (lead.location == null || lead.location!.isEmpty) return false;
+
+              final leadLocation = lead.location!.toLowerCase().trim();
+
+              // Extract location from API formats like "SG-Edappally" or "SG-Edappal"
+              String extractedLeadLocation;
+              if (leadLocation.startsWith('sg-')) {
+                // Handle "SG-Edappally" format - extract location part
+                extractedLeadLocation = leadLocation.substring(
+                  3,
+                ); // Remove "sg-" prefix
+              } else if (leadLocation.contains('-')) {
+                // Handle other formats with dashes
+                final parts = leadLocation.split('-');
+                extractedLeadLocation = parts.last.trim();
+              } else {
+                // Just location name
+                extractedLeadLocation = leadLocation;
+              }
+
+              // Try exact match first
+              if (leadLocation == normalizedStore) return true;
+
+              // Try matching location part
+              if (leadLocation == normalizedSelectedLocation) return true;
+              if (extractedLeadLocation == normalizedSelectedLocation)
+                return true;
+
+              // Try contains matching
+              if (leadLocation.contains(normalizedSelectedLocation))
+                return true;
+              if (extractedLeadLocation.contains(normalizedSelectedLocation))
+                return true;
+              if (normalizedSelectedLocation.contains(leadLocation))
+                return true;
+              if (normalizedSelectedLocation.contains(extractedLeadLocation))
+                return true;
+
+              // Try brand matching
+              if (leadLocation.contains(normalizedSelectedBrand)) return true;
+
+              // Handle "Brand - Location" format extraction
+              final storeParts = normalizedStore.split(' - ');
+              if (storeParts.length > 1) {
+                final storeLocationPart = storeParts.last;
+                if (leadLocation == storeLocationPart ||
+                    leadLocation.contains(storeLocationPart) ||
+                    storeLocationPart.contains(leadLocation)) {
+                  return true;
+                }
+                if (extractedLeadLocation == storeLocationPart ||
+                    extractedLeadLocation.contains(storeLocationPart) ||
+                    storeLocationPart.contains(extractedLeadLocation)) {
+                  return true;
+                }
+              }
+
+              return false;
+            }).toList();
+      }
+
+      // STEP 3: DO NOT FILTER BY DATE
+      // (This is the reason counts were 0 before)
+
+      // STEP 4: count only uncalled
+      leads =
+          leads
+              .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
+              .toList();
+
+      return leads.length;
     }
 
-    // Count only uncalled statuses
-    return leads
-        .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-        .length;
-  }
-
-  /// Dashboard summary boxes
-  List<Map<String, dynamic>> getCallSummary() {
     return [
       {
         "title": "All Calls",
-        "count": _countUncalledLeads().toString(),
+        "count": getUncalledLeadsCount().toString(),
         "bgColor": const Color(0xFFE8E3FF),
         "iconColor": const Color(0xFF7C5DFF),
         "icon": Icons.people_alt_outlined,
@@ -91,7 +295,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Loss of Sale",
         "count":
-            _countUncalledLeads(
+            getUncalledLeadsCount(
               category: LeadConstants.categoryLossOfSales,
             ).toString(),
         "bgColor": const Color(0xFFFFE8E8),
@@ -101,7 +305,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Rent-Out Calls",
         "count":
-            _countUncalledLeads(
+            getUncalledLeadsCount(
               category: LeadConstants.categoryRentOut,
             ).toString(),
         "bgColor": const Color(0xFFFFF7CC),
@@ -111,7 +315,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Booking\nConfirmation",
         "count":
-            _countUncalledLeads(
+            getUncalledLeadsCount(
               category: LeadConstants.categoryBookingConfirmation,
             ).toString(),
         "bgColor": const Color(0xFFD4F5DA),
@@ -121,7 +325,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Just Dial\nEnquiry",
         "count":
-            _countUncalledLeads(
+            getUncalledLeadsCount(
               category: LeadConstants.categoryJustDial,
             ).toString(),
         "bgColor": const Color(0xFFFFE8D5),
@@ -131,7 +335,7 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Follow Up\nCalls",
         "count":
-            _countUncalledLeads(
+            getUncalledLeadsCount(
               category: LeadConstants.categoryFollowUp,
             ).toString(),
         "bgColor": const Color(0xFFD5E8FF),
@@ -141,51 +345,222 @@ class LeadScreenController extends ChangeNotifier {
     ];
   }
 
-  // ------------------------------------------------------------
-  // FILTERED LEADS FOR LIST VIEW
-  // ------------------------------------------------------------
-
+  // Get filtered leads based on selected call type
+  // For "All Calls" tab (index 0), show all leads regardless of call status
+  // For other tabs, only show leads that haven't been called yet
   List<LeadDisplayModel> getFilteredLeads() {
-    String? category = _categoryForIndex(_selectedCallTypeIndex);
+    String? category = _getCategoryForIndex(_selectedCallTypeIndex);
 
-    List<LeadModel> leads = _repository.getLeadsByCategory(category);
+    final store = _headerController?.selectedStore;
+    final date = _headerController?.selectedDate ?? DateTime.now();
 
-    // Filter by store
-    if (selectedStore != null && selectedStore != "All Stores") {
-      final location = StoreLocations.resolveSelection(selectedStore!).location;
-      leads = leads.where((lead) => lead.location == location).toList();
+    // Get leads filtered by category, store, and date
+    List<LeadModel> filteredLeads = _repository.getLeadsByCategory(category);
+
+    // Debug: Print initial lead count
+    print(
+      'LeadScreenController: getFilteredLeads - Initial leads count: ${filteredLeads.length}, category: $category, store: $store',
+    );
+
+    // Filter by store - match store field from API
+    // API may return store as:
+    // - "KANNUR" (just location, uppercase)
+    // - "Suitor Guy - Perinthalmanna" (full "Brand - Location" format)
+    // We need to match against the selected store which is "Brand - Location"
+    if (store != null && store != 'All Stores') {
+      // Extract location from selected store for comparison
+      final selectedLocation = StoreLocations.resolveSelection(store).location;
+      final selectedBrand = StoreLocations.resolveSelection(store).brand;
+
+      // Normalize for case-insensitive comparison
+      final normalizedSelectedLocation = selectedLocation.toLowerCase().trim();
+      final normalizedSelectedBrand = selectedBrand.toLowerCase().trim();
+      final normalizedStore = store.toLowerCase().trim();
+
+      filteredLeads =
+          filteredLeads.where((lead) {
+            if (lead.location == null || lead.location!.isEmpty) return false;
+
+            final leadLocation = lead.location!.toLowerCase().trim();
+
+            // Extract location from API formats like "SG-Edappally" or "SG-Edappal"
+            String? extractedLeadLocation;
+            if (leadLocation.startsWith('sg-')) {
+              // Handle "SG-Edappally" format - extract location part
+              extractedLeadLocation = leadLocation.substring(
+                3,
+              ); // Remove "sg-" prefix
+            } else if (leadLocation.contains('-')) {
+              // Handle other formats with dashes
+              final parts = leadLocation.split('-');
+              extractedLeadLocation = parts.last.trim();
+            } else {
+              // Just location name
+              extractedLeadLocation = leadLocation;
+            }
+
+            // Try exact match first (full "Brand - Location" format, case-insensitive)
+            if (leadLocation == normalizedStore) return true;
+
+            // Try matching just the location part (case-insensitive)
+            if (leadLocation == normalizedSelectedLocation) return true;
+            if (extractedLeadLocation == normalizedSelectedLocation)
+              return true;
+
+            // Try matching if lead.location contains the selected location (case-insensitive)
+            if (leadLocation.contains(normalizedSelectedLocation)) return true;
+            if (extractedLeadLocation.contains(normalizedSelectedLocation))
+              return true;
+
+            // Try reverse - if selected location contains lead location
+            if (normalizedSelectedLocation.contains(leadLocation)) return true;
+            if (normalizedSelectedLocation.contains(extractedLeadLocation))
+              return true;
+
+            // Try matching if lead.location contains the selected brand (case-insensitive)
+            if (leadLocation.contains(normalizedSelectedBrand)) return true;
+
+            // Handle cases where API returns formats like "SG-Edappally"
+            // and we're filtering by "Suitor Guy - Edappal" or "Suitor Guy - Edappally"
+            final storeParts = normalizedStore.split(' - ');
+            if (storeParts.length > 1) {
+              final storeLocationPart =
+                  storeParts.last; // Get "edappal" from "suitor guy - edappal"
+
+              // Match if lead location equals the location part, or contains it
+              if (leadLocation == storeLocationPart ||
+                  leadLocation.contains(storeLocationPart) ||
+                  storeLocationPart.contains(leadLocation)) {
+                return true;
+              }
+
+              // Match extracted location (e.g., "edappally" from "sg-edappally")
+              if (extractedLeadLocation == storeLocationPart ||
+                  extractedLeadLocation.contains(storeLocationPart) ||
+                  storeLocationPart.contains(extractedLeadLocation)) {
+                return true;
+              }
+            } else {
+              // If store format is just location (shouldn't happen, but handle it)
+              if (leadLocation == normalizedStore ||
+                  leadLocation.contains(normalizedStore) ||
+                  normalizedStore.contains(leadLocation)) {
+                return true;
+              }
+              if (extractedLeadLocation == normalizedStore ||
+                  extractedLeadLocation.contains(normalizedStore) ||
+                  normalizedStore.contains(extractedLeadLocation)) {
+                return true;
+              }
+            }
+
+            return false;
+          }).toList();
+
+      // Debug: Print after store filter
+      print(
+        'LeadScreenController: After store filter: ${filteredLeads.length} leads',
+      );
+      final totalLeadsBeforeFilter =
+          _repository.getLeadsByCategory(category).length;
+      if (filteredLeads.isEmpty && totalLeadsBeforeFilter > 0) {
+        // Debug: Show sample lead locations for troubleshooting
+        final sampleLeads =
+            _repository.getLeadsByCategory(category).take(5).toList();
+        print(
+          'LeadScreenController: DEBUG - Store filter returned 0 leads but ${totalLeadsBeforeFilter} leads exist',
+        );
+        print(
+          'LeadScreenController: Sample lead locations: ${sampleLeads.map((l) => l.location).join(", ")}',
+        );
+        print('LeadScreenController: Selected store: "$store"');
+        print(
+          'LeadScreenController: Extracted location: "$selectedLocation" (normalized: "$normalizedSelectedLocation")',
+        );
+        print(
+          'LeadScreenController: Extracted brand: "$selectedBrand" (normalized: "$normalizedSelectedBrand")',
+        );
+
+        // Test matching logic
+        for (var sampleLead in sampleLeads) {
+          if (sampleLead.location != null) {
+            final sampleLocation = sampleLead.location!.toLowerCase().trim();
+            final matches =
+                sampleLocation == normalizedStore ||
+                sampleLocation == normalizedSelectedLocation ||
+                sampleLocation.contains(normalizedSelectedLocation) ||
+                normalizedSelectedLocation.contains(sampleLocation);
+            print(
+              'LeadScreenController: Sample lead "${sampleLead.name}" location "${sampleLead.location}" -> matches: $matches',
+            );
+          }
+        }
+      }
     }
 
-    // Date filter only for categories other than main 4
-    bool skipDateFilter = _selectedCallTypeIndex <= 3;
-
-    if (!skipDateFilter) {
-      leads =
-          leads.where((lead) {
-            final date = lead.createdAt;
-            return date.year == selectedDate.year &&
-                date.month == selectedDate.month &&
-                date.day == selectedDate.day;
+    // Filter by date - but for All Calls, Loss of Sale, Rent-Out, and Booking Confirmation, show all leads (date filter is handled by API)
+    // For other categories, filter by selected date
+    if (_selectedCallTypeIndex != 0 &&
+        _selectedCallTypeIndex != 1 &&
+        _selectedCallTypeIndex != 2 &&
+        _selectedCallTypeIndex != 3) {
+      filteredLeads =
+          filteredLeads.where((lead) {
+            final leadDate = lead.createdAt;
+            return leadDate.year == date.year &&
+                leadDate.month == date.month &&
+                leadDate.day == date.day;
           }).toList();
     }
 
-    // Only show uncalled leads except for All Calls
+    // Filter out leads that have been called (only show uncalled leads)
+    // EXCEPT for "All Calls" tab (index 0) which should show all leads
     if (_selectedCallTypeIndex != 0) {
-      leads =
-          leads
+      final beforeCallStatusFilter = filteredLeads.length;
+      filteredLeads =
+          filteredLeads
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
               .toList();
+      print(
+        'LeadScreenController: After call status filter: ${filteredLeads.length} leads (was $beforeCallStatusFilter)',
+      );
     }
 
-    return leads.map(LeadDisplayModel.fromLead).toList();
-  }
+    // Debug: Print final count
+    print(
+      'LeadScreenController: Final filtered leads count: ${filteredLeads.length}',
+    );
 
-  // ------------------------------------------------------------
-  // TITLE FOR APP BAR
-  // ------------------------------------------------------------
+    // Convert to display models
+    // If we're showing only the newly added lead, return only that one (if present)
+    // But only for "All Calls" tab - other tabs should show all leads
+    if (_showOnlyNewLead &&
+        _focusedNewLeadId != null &&
+        _selectedCallTypeIndex == 0) {
+      final matches =
+          filteredLeads.where((l) => l.id == _focusedNewLeadId).toList();
+      if (matches.isNotEmpty) {
+        // Auto-clear after showing once
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (_focusedNewLeadId == matches.first.id) {
+            clearShowOnlyNewLead();
+          }
+        });
+        return [LeadDisplayModel.fromLead(matches.first)];
+      }
+      // If not found in filtered list, clear the flag and show all leads
+      clearShowOnlyNewLead();
+    }
+
+    return filteredLeads
+        .map((lead) => LeadDisplayModel.fromLead(lead))
+        .toList();
+  }
 
   String getCurrentTitle() {
     switch (_selectedCallTypeIndex) {
+      case 0:
+        return "All Calls";
       case 1:
         return "Loss of Sale";
       case 2:
@@ -201,12 +576,10 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  // ------------------------------------------------------------
-  // CATEGORY MAPPING
-  // ------------------------------------------------------------
-
-  String? _categoryForIndex(int index) {
+  String? _getCategoryForIndex(int index) {
     switch (index) {
+      case 0:
+        return null; // All Calls
       case 1:
         return LeadConstants.categoryLossOfSales;
       case 2:
@@ -218,16 +591,15 @@ class LeadScreenController extends ChangeNotifier {
       case 5:
         return LeadConstants.categoryFollowUp;
       default:
-        return null; // All Calls
+        return null;
     }
   }
 
-  void refresh() => notifyListeners();
+  void refresh() {
+    notifyListeners();
+  }
 
-  // ------------------------------------------------------------
-  // API CALLS → FETCH
-  // ------------------------------------------------------------
-
+  /// Fetch Loss of Sale leads from API
   Future<void> fetchLossOfSaleLeadsFromApi({
     String? store,
     String? enquiryFrom,
@@ -249,35 +621,89 @@ class LeadScreenController extends ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
-      print("Error fetching Loss of Sale leads: $e");
+      print('LeadScreenController: Error fetching Loss of Sale leads: $e');
       rethrow;
     }
   }
 
+  /// Fetch Booking Confirmation leads from API
   Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
     try {
       await _repository.fetchBookingConfirmationLeadsFromApi(store: store);
       notifyListeners();
     } catch (e) {
-      print("Error fetching Booking Confirmation leads: $e");
+      print(
+        'LeadScreenController: Error fetching Booking Confirmation leads: $e',
+      );
       rethrow;
     }
   }
 
+  /// Fetch Rent-Out leads from API
   Future<void> fetchRentOutLeadsFromApi({String? store}) async {
     try {
       await _repository.fetchRentOutLeadsFromApi(store: store);
       notifyListeners();
     } catch (e) {
-      print("Error fetching Rent-Out leads: $e");
+      print('LeadScreenController: Error fetching Rent-Out leads: $e');
       rethrow;
     }
   }
 
-  // ------------------------------------------------------------
-  // API CALLS → UPDATE
-  // ------------------------------------------------------------
+  /// Format date to YYYY-MM-DD format for API
+  String _formatDateForApi(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
 
+  /// Fetch all leads from API with store and date filters
+  /// Uses endpoint: /api/pages/leads?store=Suitor Guy - Edappal&enquiryDateFrom=2024-01-01&enquiryDateTo=2024-12-31
+  Future<void> fetchAllLeadsFromApi({
+    String? store,
+    int? page,
+    DateTime? date,
+    String? enquiryDateFrom,
+    String? enquiryDateTo,
+    String? functionDateFrom,
+    String? functionDateTo,
+    String? visitDateFrom,
+    String? visitDateTo,
+    String? dateFrom,
+    String? dateTo,
+    String? dateField,
+  }) async {
+    try {
+      // If date is provided, use it for enquiry date filtering (default behavior)
+      String? finalEnquiryDateFrom = enquiryDateFrom;
+      String? finalEnquiryDateTo = enquiryDateTo;
+
+      if (date != null && enquiryDateFrom == null && enquiryDateTo == null) {
+        // Use the provided date as both from and to (filter for that specific day)
+        final dateStr = _formatDateForApi(date);
+        finalEnquiryDateFrom = dateStr;
+        finalEnquiryDateTo = dateStr;
+      }
+
+      await _repository.fetchAllLeadsFromApi(
+        store: store,
+        page: page,
+        enquiryDateFrom: finalEnquiryDateFrom,
+        enquiryDateTo: finalEnquiryDateTo,
+        functionDateFrom: functionDateFrom,
+        functionDateTo: functionDateTo,
+        visitDateFrom: visitDateFrom,
+        visitDateTo: visitDateTo,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        dateField: dateField,
+      );
+      notifyListeners();
+    } catch (e) {
+      print('LeadScreenController: Error fetching all leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Update Loss of Sale lead via API
   Future<void> updateLossOfSaleLead({
     required String id,
     String? callStatus,
@@ -297,11 +723,12 @@ class LeadScreenController extends ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
-      print("Error updating Loss of Sale lead: $e");
+      print('LeadScreenController: Error updating Loss of Sale lead: $e');
       rethrow;
     }
   }
 
+  /// Update Rent-Out lead via API
   Future<void> updateRentOutLead({
     required String id,
     String? callStatus,
@@ -323,11 +750,12 @@ class LeadScreenController extends ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
-      print("Error updating Rent-Out lead: $e");
+      print('LeadScreenController: Error updating Rent-Out lead: $e');
       rethrow;
     }
   }
 
+  /// Update Booking Confirmation lead via API
   Future<void> updateBookingConfirmationLead({
     required String id,
     String? callStatus,
@@ -347,7 +775,9 @@ class LeadScreenController extends ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
-      print("Error updating Booking Confirmation lead: $e");
+      print(
+        'LeadScreenController: Error updating Booking Confirmation lead: $e',
+      );
       rethrow;
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
@@ -7,7 +8,7 @@ import 'package:telecaller_app/utils/store_location.dart';
 
 /// Shared repository for managing all lead data
 /// This is a singleton that all controllers can access
-class LeadRepository {
+class LeadRepository extends ChangeNotifier {
   static final LeadRepository _instance = LeadRepository._internal();
   factory LeadRepository() => _instance;
   LeadRepository._internal() {
@@ -22,6 +23,8 @@ class LeadRepository {
   static const String _storageKey = 'saved_leads';
   bool _isInitialized = false;
   final ApiService _apiService = ApiService();
+  // Track the most recently added lead id so UI can focus on it
+  String? _lastAddedLeadId;
 
   // Store booking confirmation specific data (booking number, enquiry date, function date)
   final Map<String, Map<String, dynamic>> _bookingConfirmationData = {};
@@ -87,6 +90,8 @@ class LeadRepository {
               )
               .toList(),
         );
+        // Notify listeners that leads have been loaded from persistence
+        notifyListeners();
       }
     } catch (e) {
       // If loading fails, start with empty list
@@ -112,13 +117,24 @@ class LeadRepository {
   Future<void> addLead(LeadModel lead) async {
     await ensureInitialized();
     _leads.add(lead);
+    _lastAddedLeadId = lead.id;
     await _saveLeads();
+    notifyListeners();
+  }
+
+  /// Return the id of the most recently added lead (if any).
+  String? get lastAddedLeadId => _lastAddedLeadId;
+
+  /// Clear the last-added marker (call when UI has focused the new lead).
+  void clearLastAddedMarker() {
+    _lastAddedLeadId = null;
   }
 
   Future<void> removeLead(String id) async {
     await ensureInitialized();
     _leads.removeWhere((lead) => lead.id == id);
     await _saveLeads();
+    notifyListeners();
   }
 
   Future<void> updateLead(LeadModel updatedLead) async {
@@ -127,6 +143,7 @@ class LeadRepository {
     if (index != -1) {
       _leads[index] = updatedLead;
       await _saveLeads();
+      notifyListeners();
     }
   }
 
@@ -295,7 +312,12 @@ class LeadRepository {
     try {
       await ensureInitialized();
 
-      final response = await _apiService.getBookingConfirmationLeads();
+      // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getBookingConfirmationLeads(
+        store: storeFilter,
+      );
 
       // Parse response - handle different response formats
       List<dynamic> leadsData = [];
@@ -645,9 +667,7 @@ class LeadRepository {
       // _parseDate(leadData['leadDate']) ??
       // _parseDate(leadData['lead_date']);
 
-      if (parsedCreatedAt != null) {
-        createdAt = parsedCreatedAt;
-      }
+      createdAt = parsedCreatedAt;
 
       // Validate required fields
       if (name.isEmpty || phone.isEmpty) {
@@ -655,13 +675,14 @@ class LeadRepository {
       }
 
       // Determine category - backend uses lead_type field
-      String? category =
-          LeadConstants.categoryLossOfSales; // Default for Loss of Sale API
+      String? category; // Default to null (will show in "All Calls" tab)
       if (leadData['lead_type'] != null) {
         final leadType = leadData['lead_type'].toString().toLowerCase();
         if (leadType == 'lossofsale' || leadType == 'loss of sale') {
           category = LeadConstants.categoryLossOfSales;
-        } else if (leadType == 'rentout' || leadType == 'rent out') {
+        } else if (leadType == 'rentout' ||
+            leadType == 'rent out' ||
+            leadType == 'rentoutfeedback') {
           category = LeadConstants.categoryRentOut;
         } else if (leadType == 'bookingconfirmation' ||
             leadType == 'booking confirmation') {
@@ -670,7 +691,13 @@ class LeadRepository {
           category = LeadConstants.categoryJustDial;
         } else if (leadType == 'followup' || leadType == 'follow up') {
           category = LeadConstants.categoryFollowUp;
+        } else if (leadType == 'general' ||
+            leadType == 'walkin' ||
+            leadType == 'walk-in') {
+          // General/Walk-in leads don't have a specific category - show in "All Calls"
+          category = null;
         }
+        // If leadType doesn't match any known type, category remains null
       }
 
       // if (leadData['lead_type'] != null) {
@@ -715,7 +742,10 @@ class LeadRepository {
     try {
       await ensureInitialized();
 
-      final response = await _apiService.getRentOutLeads();
+      // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getRentOutLeads(store: storeFilter);
 
       // Parse response - handle different response formats
       List<dynamic> leadsData = [];
@@ -945,6 +975,131 @@ class LeadRepository {
       }
     } catch (e) {
       print('LeadRepository: Error updating Booking Confirmation lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch all leads from API and sync with repository
+  /// This will fetch all leads (across all categories) with pagination, store filter, and date filter support
+  Future<void> fetchAllLeadsFromApi({
+    String? store,
+    int? page,
+    String? enquiryDateFrom,
+    String? enquiryDateTo,
+    String? functionDateFrom,
+    String? functionDateTo,
+    String? visitDateFrom,
+    String? visitDateTo,
+    String? dateFrom,
+    String? dateTo,
+    String? dateField,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getAllLeads(
+        store: storeFilter,
+        page: page,
+        enquiryDateFrom: enquiryDateFrom,
+        enquiryDateTo: enquiryDateTo,
+        functionDateFrom: functionDateFrom,
+        functionDateTo: functionDateTo,
+        visitDateFrom: visitDateFrom,
+        visitDateTo: visitDateTo,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        dateField: dateField,
+      );
+
+      // Parse response - handle different response formats
+      List<dynamic> leadsData = [];
+
+      if (response.containsKey('data')) {
+        final data = response['data'];
+        if (data is List) {
+          leadsData = data;
+        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
+          final leads = data['leads'];
+          if (leads is List) {
+            leadsData = leads;
+          }
+        }
+      } else if (response.containsKey('leads')) {
+        final leads = response['leads'];
+        if (leads is List) {
+          leadsData = leads;
+        }
+      } else if (response.containsKey('results')) {
+        final results = response['results'];
+        if (results is List) {
+          leadsData = results;
+        }
+      } else {
+        // If no recognized key, check if any value is a list
+        for (var entry in response.entries) {
+          if (entry.value is List) {
+            leadsData = entry.value as List;
+            break;
+          }
+        }
+      }
+
+      // Debug: Print how many leads were received
+      print('LeadRepository: Received ${leadsData.length} leads from API');
+
+      // If page is specified, we might want to merge/update existing leads
+      // Otherwise, replace all leads with fresh data from API
+      if (page == null || page == 1) {
+        // Clear existing leads when fetching first page or all leads
+        print(
+          'LeadRepository: Clearing existing ${_leads.length} leads before adding new ones',
+        );
+        _leads.clear();
+      }
+
+      // Convert API data to LeadModel and add to repository
+      int failedCount = 0;
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            // Check if lead already exists (by ID) to avoid duplicates
+            final existingIndex = _leads.indexWhere((l) => l.id == lead.id);
+            if (existingIndex != -1) {
+              // Update existing lead
+              _leads[existingIndex] = lead;
+            } else {
+              // Add new lead
+              _leads.add(lead);
+            }
+          } else {
+            failedCount++;
+          }
+        } catch (e) {
+          failedCount++;
+          print('LeadRepository: Error parsing lead: $e');
+        }
+      }
+
+      if (failedCount > 0) {
+        print('LeadRepository: Failed to parse $failedCount leads');
+      }
+
+      print(
+        'LeadRepository: Successfully added ${_leads.length} leads to repository',
+      );
+      print(
+        'LeadRepository: Sample lead - name: ${_leads.isNotEmpty ? _leads.first.name : "none"}, location: ${_leads.isNotEmpty ? _leads.first.location : "none"}, category: ${_leads.isNotEmpty ? _leads.first.category : "none"}',
+      );
+
+      await _saveLeads();
+      notifyListeners();
+    } catch (e) {
+      print('LeadRepository: Error fetching all leads: $e');
       rethrow;
     }
   }

@@ -16,7 +16,7 @@ class BookingConfirmationController extends ChangeNotifier {
   List<BookingConfirmationLead> get leads => _leads;
   String? get errorMessage => _errorMessage;
 
-  Future<void> fetchLeads() async {
+  Future<void> fetchLeads({String? store}) async {
     if (_isLoading) {
       print(
         'BookingConfirmationController: Already loading Booking Confirmation leads, skipping...',
@@ -33,7 +33,12 @@ class BookingConfirmationController extends ChangeNotifier {
         'BookingConfirmationController: Fetching Booking Confirmation leads',
       );
 
-      final res = await _apiService.getBookingConfirmationLeads();
+      // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+      final res = await _apiService.getBookingConfirmationLeads(
+        store: storeFilter,
+      );
       final List data = (res['data'] ?? []) as List;
 
       _leads =

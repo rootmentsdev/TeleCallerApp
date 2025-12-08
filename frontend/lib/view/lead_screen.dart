@@ -37,6 +37,27 @@ class _LeadScreenState extends State<LeadScreen> {
       leadController.refresh();
 
       Future.delayed(const Duration(milliseconds: 500), () {
+        // Fetch all leads with store and date filters for "All Calls" tab
+        final store = headerController.selectedStore;
+        final storeParam =
+            (store == null || store == 'All Stores') ? null : store;
+        final selectedDate = headerController.selectedDate;
+
+        if (storeParam != null) {
+          leadController
+              .fetchAllLeadsFromApi(store: storeParam, date: selectedDate)
+              .catchError((e) {
+                print('LeadScreen: Error fetching all leads: $e');
+              });
+        } else {
+          leadController.fetchAllLeadsFromApi(date: selectedDate).catchError((
+            e,
+          ) {
+            print('LeadScreen: Error fetching all leads: $e');
+          });
+        }
+
+        // Fetch category-specific leads
         _fetchLossOfSaleLeads(leadController, headerController);
         _fetchBookingConfirmationLeads(leadController, headerController);
         _fetchRentOutLeads(leadController, headerController);
