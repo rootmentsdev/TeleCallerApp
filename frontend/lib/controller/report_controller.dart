@@ -51,7 +51,17 @@ class ReportController extends ChangeNotifier {
   }
 
   void _onHeaderChanged() {
-    notifyListeners();
+    // When header (store/date) changes, fetch reports from API
+    _fetchReportsForCurrentFilters();
+  }
+
+  // Fetch reports when filters change
+  Future<void> _fetchReportsForCurrentFilters() async {
+    try {
+      await fetchReportsWithCurrentFilters();
+    } catch (e) {
+      print('ReportController: Error fetching reports on header change: $e');
+    }
   }
 
   @override
@@ -70,6 +80,8 @@ class ReportController extends ChangeNotifier {
   void setSelectedCallTypeIndex(int index) {
     _selectedCallTypeIndex = index;
     notifyListeners();
+    // Fetch reports when tab changes
+    _fetchReportsForCurrentFilters();
   }
 
   // Get call summary data (filtered by store and date)
@@ -174,114 +186,178 @@ class ReportController extends ChangeNotifier {
   }
 
   // Get filtered leads based on selected call type
-  // Only show leads that have been called (completed calls)
+  // Uses API reports instead of local repository
   List<Map<String, dynamic>> getFilteredLeads() {
     final store = _headerController?.selectedStore;
-    final date = _headerController?.selectedDate ?? DateTime.now();
 
     // Handle "All Stores" case
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
 
-    String? category;
-    switch (_selectedCallTypeIndex) {
-      case 0:
-        category = null; // All Calls
-        break;
-      case 1:
-        category = LeadConstants.categoryLossOfSales;
-        break;
-      case 2:
-        category = LeadConstants.categoryRentOut;
-        break;
-      case 3:
-        category = LeadConstants.categoryJustDial;
-        break;
-      case 4:
-        // Equary Calls (Enquiry) - Show all called leads that are general enquiries
-        // This includes leads with no category or category not matching specific types
-        category = null; // Will filter differently for Equary Calls
-        break;
-      case 5:
-        category = LeadConstants.categoryFollowUp;
-        break;
-    }
+    // Convert reports to contact format
+    List<Map<String, dynamic>> filteredReports =
+        _reports.map((report) {
+          // Get lead data from leadSnapshot (current state of the lead)
+          final leadData = report.leadData ?? {};
 
-    List<dynamic> filteredLeads;
+          // Extract lead information from leadSnapshot
+          final leadName =
+              leadData['lead_name']?.toString() ??
+              leadData['name']?.toString() ??
+              leadData['customerName']?.toString() ??
+              '';
+          final leadPhone =
+              leadData['phone_number']?.toString() ??
+              leadData['phone']?.toString() ??
+              '';
+          final leadLocation =
+              leadData['store']?.toString() ??
+              leadData['location']?.toString() ??
+              '';
+          final callStatus =
+              leadData['call_status']?.toString() ??
+              leadData['callStatus']?.toString() ??
+              '';
+          final leadStatus =
+              leadData['lead_status']?.toString() ??
+              leadData['leadStatus']?.toString();
+          final reason =
+              leadData['reason']?.toString() ??
+              leadData['reason_collected_from_store']?.toString();
+          final callDuration =
+              leadData['callDuration'] as int? ??
+              leadData['call_duration'] as int?;
 
-    // Special handling for Equary Calls (index 4) - show all called leads
-    // that are not in specific categories (Loss of Sales, Rent out, Just Dial, Booking confirmation, Follow Up)
-    if (_selectedCallTypeIndex == 4) {
-      // Get all leads and filter out specific categories
-      filteredLeads = _repository.allLeads.cast<dynamic>();
-      filteredLeads =
-          filteredLeads.where((lead) {
-            final leadCategory = lead.category;
-            // Exclude leads with specific categories
-            return leadCategory == null ||
-                (leadCategory != LeadConstants.categoryLossOfSales &&
-                    leadCategory != LeadConstants.categoryRentOut &&
-                    leadCategory != LeadConstants.categoryJustDial &&
-                    leadCategory != LeadConstants.categoryBookingConfirmation &&
-                    leadCategory != LeadConstants.categoryFollowUp);
-          }).toList();
-    } else {
-      // For other tabs, filter by category as before
-      filteredLeads = _repository.getLeadsByCategory(category).cast<dynamic>();
-    }
+          // Parse dates
+          DateTime? parseDate(dynamic dateValue) {
+            if (dateValue == null) return null;
+            try {
+              return DateTime.parse(dateValue.toString());
+            } catch (e) {
+              return null;
+            }
+          }
 
-    // Filter by store - extract location from "Brand - Location" format
-    if (storeFilter != null) {
-      final location = StoreLocations.resolveSelection(storeFilter).location;
-      filteredLeads =
-          filteredLeads.where((lead) => lead.location == location).toList();
-    }
+          final createdAt =
+              parseDate(leadData['created_at']) ??
+              parseDate(leadData['createdAt']) ??
+              report.editedAt ??
+              report.createdAt;
+          final followUpDate =
+              parseDate(leadData['follow_up_date']) ??
+              parseDate(leadData['followUpDate']);
+          final enquiryDate =
+              parseDate(leadData['enquiry_date']) ??
+              parseDate(leadData['enquiryDate']);
+          final functionDate =
+              parseDate(leadData['function_date']) ??
+              parseDate(leadData['functionDate']);
+          final visitDate =
+              parseDate(leadData['visit_date']) ??
+              parseDate(leadData['visitDate']);
 
-    // Filter by date (for Equary Calls, show all called leads regardless of creation date)
-    if (_selectedCallTypeIndex != 4) {
-      // For other tabs, filter by creation date
-      filteredLeads =
-          filteredLeads.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-    // For Equary Calls (index 4), don't filter by date - show all called leads
-
-    // Filter to only show leads that have been called (exclude uncalled leads)
-    filteredLeads =
-        filteredLeads.where((lead) {
-          final callStatus = lead.callStatus;
-          // Show leads that have been called
-          return LeadConstants.isCalledStatus(callStatus);
+          return {
+            "id": report.originalId,
+            "name": leadName,
+            "phone": leadPhone,
+            "date": _formatDate(createdAt),
+            "callDate":
+                report.editedAt != null
+                    ? _formatDate(report.editedAt!)
+                    : _formatDate(createdAt),
+            "enquiryDate":
+                enquiryDate != null
+                    ? _formatDate(enquiryDate)
+                    : "Not available",
+            "visitDate":
+                visitDate != null ? _formatDate(visitDate) : "Not available",
+            "functionDate":
+                functionDate != null
+                    ? _formatDate(functionDate)
+                    : "Not available",
+            "storeName":
+                leadLocation.isNotEmpty ? leadLocation : "Not available",
+            "type": _getTypeFromLeadType(report.leadType),
+            "callStatus": callStatus.isNotEmpty ? callStatus : "Connected",
+            "leadStatus": leadStatus,
+            "reason": reason,
+            "reasonFromStore": reason,
+            "attendedBy":
+                "Krishna - ${leadLocation.isNotEmpty ? leadLocation : 'Zorucci Edappally'}",
+            "followUpDate": followUpDate?.toIso8601String(),
+            "callDuration": callDuration,
+            "remarks": report.note ?? "",
+          };
         }).toList();
 
-    return filteredLeads.map((lead) {
-      return {
-        "id": lead.id,
-        "name": lead.name,
-        "phone": lead.phone,
-        "date": _formatDate(lead.createdAt),
-        "callDate": _formatDate(lead.createdAt),
-        "enquiryDate": _formatDate(lead.createdAt),
-        "visitDate": _formatDate(lead.createdAt),
-        "functionDate":
-            lead.followUpDate != null
-                ? _formatDate(lead.followUpDate!)
-                : "Not available",
-        "storeName": lead.location ?? "Not available",
-        "type": _getTypeFromCategory(lead.category),
-        "callStatus": lead.callStatus,
-        "leadStatus": lead.leadStatus,
-        "reason": lead.reason,
-        "reasonFromStore": lead.reason,
-        "attendedBy": "Krishna - ${lead.location ?? 'Zorucci Edappally'}",
-        "followUpDate": lead.followUpDate?.toIso8601String(),
-        "callDuration": lead.callDuration,
-        "remarks": "",
-      };
-    }).toList();
+    // Filter by store if specified
+    if (storeFilter != null) {
+      final location = StoreLocations.resolveSelection(storeFilter).location;
+      filteredReports =
+          filteredReports.where((report) {
+            final storeName = report["storeName"] as String? ?? "";
+            return storeName.toLowerCase().contains(location.toLowerCase()) ||
+                location.toLowerCase().contains(storeName.toLowerCase());
+          }).toList();
+    }
+
+    // Filter by lead type based on selected tab
+    if (_selectedCallTypeIndex != 0) {
+      String? expectedType;
+      switch (_selectedCallTypeIndex) {
+        case 1:
+          expectedType = "lossOfSale";
+          break;
+        case 2:
+          expectedType = "rentoutFeedback";
+          break;
+        case 3:
+          expectedType = "justDial";
+          break;
+        case 4:
+          // Equary Calls - show reports without specific lead types
+          filteredReports =
+              filteredReports.where((report) {
+                final leadType = report["type"] as String?;
+                return leadType == null ||
+                    (leadType != "loss" &&
+                        leadType != "hardout" &&
+                        leadType != "justdial" &&
+                        leadType != "booking");
+              }).toList();
+          return filteredReports;
+        case 5:
+          // Follow Up - handled by leadStatus or other criteria
+          break;
+      }
+
+      if (expectedType != null) {
+        filteredReports =
+            filteredReports.where((report) {
+              final reportType = report["type"] as String?;
+              return reportType == expectedType ||
+                  reportType == _getTypeFromLeadType(expectedType);
+            }).toList();
+      }
+    }
+
+    return filteredReports;
+  }
+
+  // Convert API leadType to display type
+  String _getTypeFromLeadType(String? leadType) {
+    if (leadType == null) return "all";
+    switch (leadType.toLowerCase()) {
+      case 'lossofsale':
+        return "loss";
+      case 'rentoutfeedback':
+        return "hardout";
+      case 'bookingconfirmation':
+        return "booking";
+      case 'justdial':
+        return "justdial";
+      default:
+        return "all";
+    }
   }
 
   String getCurrentTitle() {
@@ -298,21 +374,6 @@ class ReportController extends ChangeNotifier {
         return "Equary Calls";
       default:
         return "All calls";
-    }
-  }
-
-  String _getTypeFromCategory(String? category) {
-    switch (category) {
-      case LeadConstants.categoryLossOfSales:
-        return "loss";
-      case LeadConstants.categoryRentOut:
-        return "hardout";
-      case LeadConstants.categoryBookingConfirmation:
-        return "booking";
-      case LeadConstants.categoryJustDial:
-        return "justdial";
-      default:
-        return "all";
     }
   }
 
@@ -390,7 +451,7 @@ class ReportController extends ChangeNotifier {
   /// Fetch reports filtered by current header settings (store and date)
   Future<void> fetchReportsWithCurrentFilters() async {
     // Note: Store filter is not directly supported by reports API
-    // We'll filter by date range (same day)
+    // We'll filter by date range (same day) and filter by store in getFilteredLeads
     final date = _headerController?.selectedDate ?? DateTime.now();
 
     // Convert date to YYYY-MM-DD format for API
@@ -401,6 +462,9 @@ class ReportController extends ChangeNotifier {
     // Determine leadType based on selected call type index
     String? leadType;
     switch (_selectedCallTypeIndex) {
+      case 0:
+        leadType = null; // All types
+        break;
       case 1:
         leadType = 'lossOfSale';
         break;
@@ -410,23 +474,35 @@ class ReportController extends ChangeNotifier {
       case 3:
         leadType = 'justDial';
         break;
+      case 4:
+        // Equary Calls - fetch all and filter in getFilteredLeads
+        leadType = null;
+        break;
       case 5:
-        leadType = 'followUp';
+        // Follow Up - may need special handling or fetch all
+        leadType = null;
         break;
       default:
         leadType = null; // All types
     }
 
-    // Note: Store filter is not directly supported by reports API
-    // We'll filter by date range (same day)
-    final dateStr = formatDate(date);
+    // For Equary Calls, don't filter by date - show all reports
+    // For other tabs, filter by edited date (same day)
+    String? dateFrom;
+    String? dateTo;
+
+    if (_selectedCallTypeIndex != 4) {
+      final dateStr = formatDate(date);
+      dateFrom = dateStr;
+      dateTo = dateStr;
+    }
 
     await fetchReportsFromApi(
       leadType: leadType,
-      dateFrom: dateStr,
-      dateTo: dateStr,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
       page: 1,
-      limit: 50,
+      limit: 100, // Increased limit to get more reports
     );
   }
 

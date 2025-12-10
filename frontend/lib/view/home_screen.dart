@@ -48,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 AppHeader(
-                  userName: "Shafna",
                   showDate: true,
                   fullWidthStore: true,
                   onNotificationTap: () {

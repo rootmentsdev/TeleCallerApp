@@ -656,7 +656,7 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   /// Fetch all leads from API with store and date filters
-  /// Uses endpoint: /api/pages/leads?store=Suitor Guy - Edappal&enquiryDateFrom=2024-01-01&enquiryDateTo=2024-12-31
+  /// Uses endpoint: /api/pages/leads?store=Suitor Guy - Edappal&createdAt=2025-12-04
   Future<void> fetchAllLeadsFromApi({
     String? store,
     int? page,
@@ -670,24 +670,22 @@ class LeadScreenController extends ChangeNotifier {
     String? dateFrom,
     String? dateTo,
     String? dateField,
+    String? createdAt,
   }) async {
     try {
-      // If date is provided, use it for enquiry date filtering (default behavior)
-      String? finalEnquiryDateFrom = enquiryDateFrom;
-      String? finalEnquiryDateTo = enquiryDateTo;
+      // If date is provided, use it for createdAt filtering (primary date filter)
+      String? finalCreatedAt = createdAt;
 
-      if (date != null && enquiryDateFrom == null && enquiryDateTo == null) {
-        // Use the provided date as both from and to (filter for that specific day)
-        final dateStr = _formatDateForApi(date);
-        finalEnquiryDateFrom = dateStr;
-        finalEnquiryDateTo = dateStr;
+      if (date != null && createdAt == null) {
+        // Use the provided date for createdAt filter (format: YYYY-MM-DD)
+        finalCreatedAt = _formatDateForApi(date);
       }
 
       await _repository.fetchAllLeadsFromApi(
         store: store,
         page: page,
-        enquiryDateFrom: finalEnquiryDateFrom,
-        enquiryDateTo: finalEnquiryDateTo,
+        enquiryDateFrom: enquiryDateFrom,
+        enquiryDateTo: enquiryDateTo,
         functionDateFrom: functionDateFrom,
         functionDateTo: functionDateTo,
         visitDateFrom: visitDateFrom,
@@ -695,6 +693,7 @@ class LeadScreenController extends ChangeNotifier {
         dateFrom: dateFrom,
         dateTo: dateTo,
         dateField: dateField,
+        createdAt: finalCreatedAt,
       );
       notifyListeners();
     } catch (e) {

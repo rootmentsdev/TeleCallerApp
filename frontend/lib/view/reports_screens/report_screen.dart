@@ -21,7 +21,7 @@ class _ReportScreenState extends State<ReportScreen> {
   void initState() {
     super.initState();
     // Initialize controller with header controller
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final headerController = Provider.of<HeaderController>(
         context,
         listen: false,
@@ -35,8 +35,12 @@ class _ReportScreenState extends State<ReportScreen> {
       headerController.setSelectedDate(DateTime.now());
       // Check if we should navigate to Equary Calls tab (after call save)
       reportController.checkNavigationFlag();
-      // Refresh to show updated leads
-      reportController.refresh();
+      // Fetch reports from API
+      try {
+        await reportController.fetchReportsWithCurrentFilters();
+      } catch (e) {
+        print('ReportScreen: Error fetching reports: $e');
+      }
     });
   }
 
@@ -44,14 +48,19 @@ class _ReportScreenState extends State<ReportScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Refresh when screen becomes visible
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final reportController = Provider.of<ReportController>(
         context,
         listen: false,
       );
       // Check if we should navigate to Equary Calls tab (after call save)
       reportController.checkNavigationFlag();
-      reportController.refresh();
+      // Fetch reports from API when screen becomes visible
+      try {
+        await reportController.fetchReportsWithCurrentFilters();
+      } catch (e) {
+        print('ReportScreen: Error fetching reports on screen change: $e');
+      }
     });
   }
 
@@ -63,7 +72,8 @@ class _ReportScreenState extends State<ReportScreen> {
         final tabs = [
           "All Calls",
           "Loss of Sale",
-          "Feedback Calls",
+          "rent out calls",
+          "booking calls",
           "Just Dial",
           "Equary Calls",
         ];
@@ -74,7 +84,6 @@ class _ReportScreenState extends State<ReportScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AppHeader(
-                userName: "Shafna",
                 onNotificationTap: () {
                   // Handle notification tap
                 },
@@ -87,14 +96,14 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
                 child: Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(
-                        Icons.arrow_back_ios,
-                        size: 20,
-                        color: Colors.black87,
-                      ),
-                    ),
+                    // GestureDetector(
+                    //   onTap: () => Navigator.pop(context),
+                    //   child: const Icon(
+                    //     Icons.arrow_back_ios,
+                    //     size: 20,
+                    //     color: Colors.black87,
+                    //   ),
+                    // ),
                     const SizedBox(width: 16),
                     const Text(
                       "Call Completed",
@@ -154,10 +163,56 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Show horizontal list for Just Dial, vertical list for others
+              // Show loading, error, or content
               Expanded(
                 child:
-                    reportController.selectedCallTypeIndex == 3
+                    reportController.isLoadingReports
+                        ? const Center(child: CircularProgressIndicator())
+                        : reportController.reportsError != null
+                        ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: Colors.red[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Error loading reports',
+                                style: TextStyle(
+                                  fontFamily: TextConstant.dmSansMedium,
+                                  fontSize: 16,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                reportController.reportsError ?? '',
+                                style: TextStyle(
+                                  fontFamily: TextConstant.dmSansRegular,
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  try {
+                                    await reportController
+                                        .fetchReportsWithCurrentFilters();
+                                  } catch (e) {
+                                    // Error handled by controller
+                                  }
+                                },
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                        : reportController.selectedCallTypeIndex == 3
                         ? _buildJustDialHorizontalList(
                           currentCallList,
                           reportController,

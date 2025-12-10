@@ -275,6 +275,71 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    // Call Duration Display Section
+                    if (widget.contact["callDuration"] != null &&
+                        (widget.contact["callDuration"] as int?) != null &&
+                        (widget.contact["callDuration"] as int?)! > 0)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.green[300]!,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.green[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.timer,
+                                size: 24,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Call Duration",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green[600],
+                                      fontFamily: TextConstant.dmSansRegular,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatCallDuration(
+                                      widget.contact["callDuration"] as int?,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[700],
+                                      fontFamily: TextConstant.dmSansMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    if (widget.contact["callDuration"] != null &&
+                        (widget.contact["callDuration"] as int?) != null &&
+                        (widget.contact["callDuration"] as int?)! > 0)
+                      const SizedBox(height: 24),
+
                     // Lead Details Section - Dynamic based on call type
                     _buildDetailsSection(),
 

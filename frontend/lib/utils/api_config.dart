@@ -1,7 +1,12 @@
 class ApiConfig {
   // Base URL
-  static const String baseUrl =
-      "https://telecallerappbackend.onrender.com/api/pages/leads";
+  static const String baseUrl = "https://telecallerappbackend.onrender.com";
+
+  // API endpoints paths
+  static const String leadsEndpoint = "$baseUrl/api/pages/leads";
+  static const String authEndpoint = "$baseUrl/api/auth";
+  static const String pagesEndpoint = "$baseUrl/api/pages";
+  static const String reportsEndpoint = "$baseUrl/api/reports";
 
   // Lead types
   static const String lossOfSale = "lossOfSale";
@@ -23,7 +28,7 @@ class ApiConfig {
     String? visitFrom,
     String? visitTo,
   }) {
-    String url = "$baseUrl?leadType=$lossOfSale";
+    String url = "$leadsEndpoint?leadType=$lossOfSale";
 
     if (store != null && store.isNotEmpty) {
       url += "&store=${Uri.encodeComponent(store)}";
@@ -45,11 +50,11 @@ class ApiConfig {
   }
 
   static String walkInLeads() {
-    return "$baseUrl?leadType=$walkIn&source=$sourceWalkIn";
+    return "$leadsEndpoint?leadType=$walkIn&source=$sourceWalkIn";
   }
 
   static String bookingConfirmationLeads({String? store}) {
-    String url = "$baseUrl?leadType=$bookingConfirmation";
+    String url = "$leadsEndpoint?leadType=$bookingConfirmation";
 
     if (store != null && store.isNotEmpty) {
       url += "&store=${Uri.encodeComponent(store)}";
@@ -59,7 +64,7 @@ class ApiConfig {
   }
 
   static String rentOutLeads({String? store}) {
-    String url = "$baseUrl?leadType=$rentOut";
+    String url = "$leadsEndpoint?leadType=$rentOut";
 
     if (store != null && store.isNotEmpty) {
       url += "&store=${Uri.encodeComponent(store)}";
@@ -70,7 +75,7 @@ class ApiConfig {
 
   /// Get all leads endpoint with pagination, store filter, and date filter support
   /// Format: /api/pages/leads?store=Suitor Guy - Edappal
-  /// Or: /api/pages/leads?page=1&store=Suitor Guy - Edappal&enquiryDateFrom=2024-01-01&enquiryDateTo=2024-12-31
+  /// Or: /api/pages/leads?page=1&store=Suitor Guy - Edappal&createdAt=2025-12-04
   static String getAllLeads({
     String? store,
     int? page,
@@ -83,8 +88,9 @@ class ApiConfig {
     String? dateFrom,
     String? dateTo,
     String? dateField,
+    String? createdAt,
   }) {
-    String url = "$baseUrl";
+    String url = "$leadsEndpoint";
     List<String> queryParams = [];
 
     // Add page parameter if provided
@@ -95,6 +101,11 @@ class ApiConfig {
     // Add store filter if provided
     if (store != null && store.isNotEmpty) {
       queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+
+    // Add createdAt date filter (primary date filter)
+    if (createdAt != null && createdAt.isNotEmpty) {
+      queryParams.add("createdAt=${Uri.encodeComponent(createdAt)}");
     }
 
     // Add enquiry date filters
@@ -145,28 +156,27 @@ class ApiConfig {
   }
 
   static String login() {
-    return "https://telecallerappbackend.onrender.com/api/auth/login";
+    return "$authEndpoint/login";
   }
 
   static String updateLossOfSale(String id) {
-    return "https://telecallerappbackend.onrender.com/api/pages/loss-of-sale/$id";
+    return "$pagesEndpoint/loss-of-sale/$id";
   }
 
   static String addLead() {
-    return "https://telecallerappbackend.onrender.com/api/pages/add-lead";
+    return "$pagesEndpoint/add-lead";
   }
 
   static String updateRentOut(String id) {
-    return "https://telecallerappbackend.onrender.com/api/pages/rent-out/$id";
+    return "$pagesEndpoint/rent-out/$id";
   }
 
   static String updateBookingConfirmation(String id) {
-    return "https://telecallerappbackend.onrender.com/api/pages/booking-confirmation/$id";
+    return "$pagesEndpoint/booking-confirmation/$id";
   }
 
   /// Reports API endpoint
-  static String reportsBaseUrl =
-      "https://telecallerappbackend.onrender.com/api/reports";
+  static String get reportsBaseUrl => reportsEndpoint;
 
   /// Get reports endpoint with filtering and pagination support
   static String getReports({

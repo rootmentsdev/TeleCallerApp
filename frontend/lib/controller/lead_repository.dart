@@ -993,6 +993,7 @@ class LeadRepository extends ChangeNotifier {
     String? dateFrom,
     String? dateTo,
     String? dateField,
+    String? createdAt,
   }) async {
     try {
       await ensureInitialized();
@@ -1012,6 +1013,7 @@ class LeadRepository extends ChangeNotifier {
         dateFrom: dateFrom,
         dateTo: dateTo,
         dateField: dateField,
+        createdAt: createdAt,
       );
 
       // Parse response - handle different response formats
@@ -1052,12 +1054,25 @@ class LeadRepository extends ChangeNotifier {
 
       // If page is specified, we might want to merge/update existing leads
       // Otherwise, replace all leads with fresh data from API
+      // BUT: Preserve called leads so they remain available for reports screen
       if (page == null || page == 1) {
-        // Clear existing leads when fetching first page or all leads
+        // Store called leads before clearing
+        final calledLeads =
+            _leads
+                .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+                .toList();
+
         print(
           'LeadRepository: Clearing existing ${_leads.length} leads before adding new ones',
         );
+        print(
+          'LeadRepository: Preserving ${calledLeads.length} called leads for reports',
+        );
+
         _leads.clear();
+
+        // Restore called leads so they remain available for reports
+        _leads.addAll(calledLeads);
       }
 
       // Convert API data to LeadModel and add to repository

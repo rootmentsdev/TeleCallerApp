@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
+import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 
 class AppHeader extends StatelessWidget {
-  final String userName;
+  final String? userName; // Made optional - will load from AuthService if null
   final bool showFilters;
   final bool showDate;
   final bool fullWidthStore;
@@ -13,7 +14,7 @@ class AppHeader extends StatelessWidget {
 
   const AppHeader({
     super.key,
-    required this.userName,
+    this.userName,
     this.showFilters = true,
     this.showDate = true,
     this.fullWidthStore = false,
@@ -59,13 +60,20 @@ class AppHeader extends StatelessWidget {
                           style: TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          userName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                        FutureBuilder<String?>(
+                          future: AuthService.getUserName(),
+                          builder: (context, snapshot) {
+                            final displayName =
+                                userName ?? snapshot.data ?? 'User';
+                            return Text(
+                              displayName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),

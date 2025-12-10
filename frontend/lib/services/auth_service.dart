@@ -6,6 +6,7 @@ class AuthService {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
   static const String _empIdKey = 'emp_id';
+  static const String _userNameKey = 'user_name';
 
   /// Get the stored authentication token
   static Future<String?> getToken() async {
@@ -95,6 +96,28 @@ class AuthService {
     }
   }
 
+  /// Save user name
+  static Future<bool> saveUserName(String userName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return await prefs.setString(_userNameKey, userName);
+    } catch (e) {
+      print('Error saving user name: $e');
+      return false;
+    }
+  }
+
+  /// Get user name
+  static Future<String?> getUserName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_userNameKey);
+    } catch (e) {
+      print('Error getting user name: $e');
+      return null;
+    }
+  }
+
   /// Clear all authentication data
   static Future<bool> clearAuth() async {
     try {
@@ -103,6 +126,7 @@ class AuthService {
       await prefs.remove(_refreshTokenKey);
       await prefs.remove(_userIdKey);
       await prefs.remove(_empIdKey);
+      await prefs.remove(_userNameKey);
       return true;
     } catch (e) {
       print('Error clearing auth: $e');

@@ -3,6 +3,7 @@ class ReportModel {
   final String originalId;
   final Map<String, dynamic>? beforeSnapshot;
   final Map<String, dynamic>? afterSnapshot;
+  final Map<String, dynamic>? leadSnapshot; // API uses leadSnapshot
   final Map<String, dynamic>? listSnapshot;
   final String? leadType;
   final Map<String, dynamic>? editedBy;
@@ -10,12 +11,14 @@ class ReportModel {
   final String? note;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? editedAt;
 
   ReportModel({
     required this.id,
     required this.originalId,
     this.beforeSnapshot,
     this.afterSnapshot,
+    this.leadSnapshot,
     this.listSnapshot,
     this.leadType,
     this.editedBy,
@@ -23,6 +26,7 @@ class ReportModel {
     this.note,
     required this.createdAt,
     required this.updatedAt,
+    this.editedAt,
   });
 
   // Create from JSON/Map
@@ -37,10 +41,14 @@ class ReportModel {
     }
 
     return ReportModel(
-      id: json['id']?.toString() ?? '',
-      originalId: json['originalId']?.toString() ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      originalId:
+          json['originalLeadId']?.toString() ??
+          json['originalId']?.toString() ??
+          '',
       beforeSnapshot: json['beforeSnapshot'] as Map<String, dynamic>?,
       afterSnapshot: json['afterSnapshot'] as Map<String, dynamic>?,
+      leadSnapshot: json['leadSnapshot'] as Map<String, dynamic>?,
       listSnapshot: json['listSnapshot'] as Map<String, dynamic>?,
       leadType: json['leadType']?.toString(),
       editedBy: json['editedBy'] as Map<String, dynamic>?,
@@ -51,6 +59,7 @@ class ReportModel {
       note: json['note']?.toString(),
       createdAt: parseDate(json['createdAt']) ?? DateTime.now(),
       updatedAt: parseDate(json['updatedAt']) ?? DateTime.now(),
+      editedAt: parseDate(json['editedAt']),
     );
   }
 
@@ -61,6 +70,7 @@ class ReportModel {
       'originalId': originalId,
       'beforeSnapshot': beforeSnapshot,
       'afterSnapshot': afterSnapshot,
+      'leadSnapshot': leadSnapshot,
       'listSnapshot': listSnapshot,
       'leadType': leadType,
       'editedBy': editedBy,
@@ -68,8 +78,12 @@ class ReportModel {
       'note': note,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'editedAt': editedAt?.toIso8601String(),
     };
   }
+
+  // Get lead data from leadSnapshot (the current state of the lead)
+  Map<String, dynamic>? get leadData => leadSnapshot ?? afterSnapshot;
 }
 
 class ReportsResponse {
@@ -109,11 +123,32 @@ class PaginationInfo {
   });
 
   factory PaginationInfo.fromJson(Map<String, dynamic> json) {
+    // Handle both direct values and nested structure
     return PaginationInfo(
-      page: json['page'] as int? ?? 1,
-      limit: json['limit'] as int? ?? 50,
-      total: json['total'] as int? ?? 0,
-      pages: json['pages'] as int? ?? 0,
+      page:
+          json['page'] as int? ??
+          (json['pagination'] != null
+              ? (json['pagination'] as Map)['page'] as int?
+              : null) ??
+          1,
+      limit:
+          json['limit'] as int? ??
+          (json['pagination'] != null
+              ? (json['pagination'] as Map)['limit'] as int?
+              : null) ??
+          50,
+      total:
+          json['total'] as int? ??
+          (json['pagination'] != null
+              ? (json['pagination'] as Map)['total'] as int?
+              : null) ??
+          0,
+      pages:
+          json['pages'] as int? ??
+          (json['pagination'] != null
+              ? (json['pagination'] as Map)['pages'] as int?
+              : null) ??
+          0,
     );
   }
 }

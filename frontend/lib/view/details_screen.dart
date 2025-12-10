@@ -46,6 +46,7 @@ class _DetailsScreenState extends State<DetailsScreen>
   bool _wasAppInBackground = false;
   DateTime? _backgroundTime;
   Timer? _autoStopTimer;
+  bool _hasCalled = false; // Track if call was initiated from lead screen
 
   final List<Map<String, dynamic>> callSummary = [
     {
@@ -146,6 +147,53 @@ class _DetailsScreenState extends State<DetailsScreen>
 
     // Initialize PhoneCallService to listen for automatic call duration
     PhoneCallService.initialize(
+      onCallStarted: (phoneNumber) {
+        // Call initiated - set state but don't start timer yet
+        final contactPhone = widget.contact["phone"] as String? ?? "";
+        final cleanedContactPhone = contactPhone.replaceAll(
+          RegExp(r'[\s\-\(\)]'),
+          '',
+        );
+        final cleanedReceivedPhone = phoneNumber.replaceAll(
+          RegExp(r'[\s\-\(\)]'),
+          '',
+        );
+
+        if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
+            cleanedContactPhone.contains(cleanedReceivedPhone) ||
+            cleanedContactPhone == cleanedReceivedPhone) {
+          if (mounted) {
+            setState(() {
+              _isCallActive = true; // Show call is active but not answered yet
+              _callDurationSeconds = 0; // Reset duration
+            });
+          }
+        }
+      },
+      onCallAnswered: (phoneNumber) {
+        // Call answered - NOW start the timer
+        final contactPhone = widget.contact["phone"] as String? ?? "";
+        final cleanedContactPhone = contactPhone.replaceAll(
+          RegExp(r'[\s\-\(\)]'),
+          '',
+        );
+        final cleanedReceivedPhone = phoneNumber.replaceAll(
+          RegExp(r'[\s\-\(\)]'),
+          '',
+        );
+
+        if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
+            cleanedContactPhone.contains(cleanedReceivedPhone) ||
+            cleanedContactPhone == cleanedReceivedPhone) {
+          if (mounted) {
+            // Start timer only when call is answered
+            _startCallTimer();
+            setState(() {
+              _isCallActive = true;
+            });
+          }
+        }
+      },
       onCallEnded: (phoneNumber, duration) {
         if (mounted && duration != null && duration > 0) {
           // Check if the phone number matches
@@ -170,6 +218,27 @@ class _DetailsScreenState extends State<DetailsScreen>
               if (selectedCallStatus == null) {
                 selectedCallStatus = "Connected";
               }
+            });
+            _stopCallTimer();
+          }
+        } else if (mounted && duration != null && duration == 0) {
+          // Call ended but was not answered (missed/rejected)
+          final contactPhone = widget.contact["phone"] as String? ?? "";
+          final cleanedContactPhone = contactPhone.replaceAll(
+            RegExp(r'[\s\-\(\)]'),
+            '',
+          );
+          final cleanedReceivedPhone = phoneNumber.replaceAll(
+            RegExp(r'[\s\-\(\)]'),
+            '',
+          );
+
+          if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
+              cleanedContactPhone.contains(cleanedReceivedPhone) ||
+              cleanedContactPhone == cleanedReceivedPhone) {
+            setState(() {
+              _isCallActive = false;
+              _callDurationSeconds = 0;
             });
             _stopCallTimer();
           }
@@ -485,6 +554,11 @@ class _DetailsScreenState extends State<DetailsScreen>
             print('Error updating Booking Confirmation lead via API: $e');
           }
         }
+
+        // Note: We don't remove leads from repository after calling
+        // The lead screen filters by call status (isUncalledStatus) so called leads
+        // won't appear there, but they'll still be available for reports screen
+        // This ensures leads persist in reports even after screen changes
       }
     }
 
@@ -582,21 +656,54 @@ class _DetailsScreenState extends State<DetailsScreen>
       );
 
       if (success && mounted) {
-        // Start timer as fallback (will be updated automatically from call log)
-        _startCallTimer();
-        setState(() {});
+        // Don't start timer here - wait for callAnswered event
+        // Just set state to show call is being initiated
+        setState(() {
+          _isCallActive = true; // Will be updated when call is answered
+          _callDurationSeconds = 0;
+          _hasCalled = true; // Enable form fields after call is initiated
+        });
       } else if (mounted) {
-        // Fallback to url_launcher if PhoneCallService fails
+        // If PhoneCallService returns false, it might be waiting for permission
+        // Try fallback to url_launcher which will also request permission
         final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
-        final launched = await launchUrl(
-          phoneUri,
-          mode: LaunchMode.externalApplication,
-        );
+        try {
+          final launched = await launchUrl(
+            phoneUri,
+            mode: LaunchMode.externalApplication,
+          );
 
-        if (launched && mounted) {
-          // Start timer as fallback
-          _startCallTimer();
-          setState(() {});
+          if (launched && mounted) {
+            // For url_launcher fallback, we can't detect when call is answered
+            // So start timer immediately as fallback
+            _startCallTimer();
+            setState(() {
+              _isCallActive = true;
+              _hasCalled = true; // Enable form fields after call is initiated
+            });
+          } else if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Unable to make call. Please grant phone call permission in settings.',
+                ),
+                backgroundColor: Colors.orange,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } catch (launchError) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Unable to make call. Please grant phone call permission in settings.',
+                ),
+                backgroundColor: Colors.orange,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       }
     } catch (e) {
@@ -763,71 +870,6 @@ class _DetailsScreenState extends State<DetailsScreen>
 
                     const SizedBox(height: 24),
 
-                    // Call Duration Display (automatically calculated from call log)
-                    if (_callDurationSeconds > 0 || _isCallActive) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color:
-                              _isCallActive
-                                  ? Colors.green[50]
-                                  : Colors.grey[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color:
-                                _isCallActive
-                                    ? Colors.green[300]!
-                                    : Colors.grey[300]!,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _isCallActive
-                                  ? Icons.phone_in_talk
-                                  : Icons.call_end,
-                              size: 20,
-                              color:
-                                  _isCallActive
-                                      ? Colors.green[700]
-                                      : Colors.grey[700],
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _isCallActive
-                                  ? "Call Active - ${_formatDuration(_callDurationSeconds)}"
-                                  : "Call Duration: ${_formatDuration(_callDurationSeconds)}",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color:
-                                    _isCallActive
-                                        ? Colors.green[700]
-                                        : Colors.grey[700],
-                                fontFamily: TextConstant.dmSansMedium,
-                              ),
-                            ),
-                            if (_isCallActive) ...[
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () {
-                                  _stopCallTimer();
-                                  setState(() {});
-                                },
-                                child: const Text(
-                                  "End Call",
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
                     // Call Status Dropdown
                     _buildDropdown(
                       label:
@@ -836,7 +878,7 @@ class _DetailsScreenState extends State<DetailsScreen>
                               : "Call Status",
                       value: selectedCallStatus,
                       items: callStatusOptions,
-                      enabled: true,
+                      enabled: _hasCalled,
                       onChanged: (value) {
                         setState(() {
                           selectedCallStatus = value;
@@ -852,7 +894,7 @@ class _DetailsScreenState extends State<DetailsScreen>
                         value: selectedReason,
                         items: reasonOptions,
                         hint: "Add reason",
-                        enabled: true,
+                        enabled: _hasCalled,
                         onChanged: (value) {
                           setState(() {
                             selectedReason = value;
@@ -867,7 +909,7 @@ class _DetailsScreenState extends State<DetailsScreen>
                         const SizedBox(height: 16),
                         TextField(
                           controller: customReasonController,
-                          enabled: true,
+                          enabled: _hasCalled,
                           decoration: InputDecoration(
                             hintText: "Enter custom reason",
                             hintStyle: TextStyle(
@@ -907,7 +949,7 @@ class _DetailsScreenState extends State<DetailsScreen>
                         value: selectedLeadStatus,
                         items: leadStatusOptions,
                         hint: "No Status",
-                        enabled: true,
+                        enabled: _hasCalled,
                         onChanged: (value) {
                           setState(() {
                             selectedLeadStatus = value;
@@ -926,16 +968,20 @@ class _DetailsScreenState extends State<DetailsScreen>
                       children: [
                         Checkbox(
                           value: markAsFollowUp,
-                          onChanged: (value) {
-                            setState(() {
-                              markAsFollowUp = value ?? false;
-                              if (markAsFollowUp && followUpDate == null) {
-                                followUpDate = DateTime.now().add(
-                                  const Duration(days: 7),
-                                );
-                              }
-                            });
-                          },
+                          onChanged:
+                              _hasCalled
+                                  ? (value) {
+                                    setState(() {
+                                      markAsFollowUp = value ?? false;
+                                      if (markAsFollowUp &&
+                                          followUpDate == null) {
+                                        followUpDate = DateTime.now().add(
+                                          const Duration(days: 7),
+                                        );
+                                      }
+                                    });
+                                  }
+                                  : null,
                           activeColor: ColorConstant.primaryColor,
                         ),
                         Text(
@@ -949,19 +995,24 @@ class _DetailsScreenState extends State<DetailsScreen>
                         if (markAsFollowUp) ...[
                           const Spacer(),
                           GestureDetector(
-                            onTap: () async {
-                              DateTime? pickedDate = await showDatePicker(
-                                context: context,
-                                initialDate: followUpDate ?? DateTime.now(),
-                                firstDate: DateTime.now(),
-                                lastDate: DateTime(2101),
-                              );
-                              if (pickedDate != null) {
-                                setState(() {
-                                  followUpDate = pickedDate;
-                                });
-                              }
-                            },
+                            onTap:
+                                _hasCalled
+                                    ? () async {
+                                      DateTime? pickedDate =
+                                          await showDatePicker(
+                                            context: context,
+                                            initialDate:
+                                                followUpDate ?? DateTime.now(),
+                                            firstDate: DateTime.now(),
+                                            lastDate: DateTime(2101),
+                                          );
+                                      if (pickedDate != null) {
+                                        setState(() {
+                                          followUpDate = pickedDate;
+                                        });
+                                      }
+                                    }
+                                    : null,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -1002,7 +1053,7 @@ class _DetailsScreenState extends State<DetailsScreen>
                     const SizedBox(height: 8),
                     TextField(
                       controller: remarksController,
-                      enabled: true,
+                      enabled: _hasCalled,
                       maxLines: 2,
                       decoration: InputDecoration(
                         hintText: "Enter your remarks",
@@ -1058,11 +1109,17 @@ class _DetailsScreenState extends State<DetailsScreen>
                         const SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () async {
-                              await _saveCallUpdate();
-                            },
+                            onPressed:
+                                _hasCalled
+                                    ? () async {
+                                      await _saveCallUpdate();
+                                    }
+                                    : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: ColorConstant.primaryColor,
+                              backgroundColor:
+                                  _hasCalled
+                                      ? ColorConstant.primaryColor
+                                      : Colors.grey[400],
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -1308,14 +1365,20 @@ class _DetailsScreenState extends State<DetailsScreen>
         Row(
           children: List.generate(5, (index) {
             return GestureDetector(
-              onTap: () {
-                setState(() {
-                  rating = index + 1;
-                });
-              },
+              onTap:
+                  _hasCalled
+                      ? () {
+                        setState(() {
+                          rating = index + 1;
+                        });
+                      }
+                      : null,
               child: Icon(
                 index < rating ? Icons.star : Icons.star_border,
-                color: index < rating ? Colors.amber : Colors.grey[400],
+                color:
+                    index < rating
+                        ? (_hasCalled ? Colors.amber : Colors.grey[300])
+                        : Colors.grey[400],
                 size: 32,
               ),
             );
@@ -1341,19 +1404,5 @@ class _DetailsScreenState extends State<DetailsScreen>
       "Dec",
     ];
     return months[month - 1];
-  }
-
-  String _formatDuration(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-
-    if (hours > 0) {
-      return '${hours}h ${minutes}m ${secs}s';
-    } else if (minutes > 0) {
-      return '${minutes}m ${secs}s';
-    } else {
-      return '${secs}s';
-    }
   }
 }

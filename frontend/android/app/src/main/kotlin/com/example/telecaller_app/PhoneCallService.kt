@@ -7,35 +7,50 @@ import android.provider.CallLog
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.util.Log
-import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
 
 class PhoneCallService(private val context: Context) {
 
     private var callStartTime: Long = 0L
-    private var eventSink: ((Int) -> Unit)? = null
+    private var eventSink: ((Map<String, Any>) -> Unit)? = null
+    private var currentPhoneNumber: String? = null
 
-    // Set the event listener callback for returning the call duration
-    fun setEventSink(listener: (Int) -> Unit) {
+    // Set the event listener callback for returning call events
+    fun setEventSink(listener: (Map<String, Any>) -> Unit) {
         eventSink = listener
     }
 
     // Start making the call
     fun makeCall(phoneNumber: String) {
         // Check if the permission is granted before making the call
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
             Log.e("CALL", "Permission not granted for CALL_PHONE")
             return
         }
 
-        val callIntent = Intent(Intent.ACTION_CALL)
-        callIntent.data = Uri.parse("tel:$phoneNumber")
-        callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(callIntent)
+        try {
+            currentPhoneNumber = phoneNumber
+            val callIntent = Intent(Intent.ACTION_CALL)
+            callIntent.data = Uri.parse("tel:$phoneNumber")
+            callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(callIntent)
+            Log.d("CALL", "Call intent started for: $phoneNumber")
 
-        // Register the call state listener
-        registerCallStateListener()
+            // Send call started event
+            eventSink?.invoke(mapOf(
+                "event" to "callStarted",
+                "phoneNumber" to phoneNumber
+            ))
+
+            // Register the call state listener
+            registerCallStateListener()
+        } catch (e: SecurityException) {
+            Log.e("CALL", "SecurityException: Permission denied for making call", e)
+        } catch (e: Exception) {
+            Log.e("CALL", "Error making call: ${e.message}", e)
+        }
     }
 
     // Register a listener to detect when the call state changes (answered, ended, ringing)
@@ -48,9 +63,15 @@ class PhoneCallService(private val context: Context) {
 
                 when (state) {
                     TelephonyManager.CALL_STATE_OFFHOOK -> {
-                        // Call has been answered
+                        // Call has been answered - start tracking duration
                         callStartTime = System.currentTimeMillis()
                         Log.d("CALL", "Call Answered.")
+                        
+                        // Send call answered event to Flutter
+                        eventSink?.invoke(mapOf(
+                            "event" to "callAnswered",
+                            "phoneNumber" to (currentPhoneNumber ?: phoneNumber ?: "")
+                        ))
                     }
 
                     TelephonyManager.CALL_STATE_IDLE -> {
@@ -59,17 +80,34 @@ class PhoneCallService(private val context: Context) {
                             val durationSeconds = ((System.currentTimeMillis() - callStartTime) / 1000).toInt()
                             Log.d("CALL", "Call Ended. Duration: $durationSeconds seconds")
 
-                            // Send the call duration to Flutter via eventSink
-                            eventSink?.invoke(durationSeconds)
+                            // Send the call ended event with duration to Flutter
+                            eventSink?.invoke(mapOf(
+                                "event" to "callEnded",
+                                "phoneNumber" to (currentPhoneNumber ?: phoneNumber ?: ""),
+                                "duration" to durationSeconds
+                            ))
                             callStartTime = 0L
 
-                            // Optionally fetch the call log for further details (optional)
-                            getCallDurationFromCallLog(phoneNumber)
+                            // Fetch from call log for more accurate duration
+                            getCallDurationFromCallLog(currentPhoneNumber ?: phoneNumber)
+                        } else {
+                            // Call ended but was never answered (missed/rejected)
+                            eventSink?.invoke(mapOf(
+                                "event" to "callEnded",
+                                "phoneNumber" to (currentPhoneNumber ?: phoneNumber ?: ""),
+                                "duration" to 0
+                            ))
                         }
+                        currentPhoneNumber = null
                     }
 
                     TelephonyManager.CALL_STATE_RINGING -> {
                         Log.d("CALL", "Phone ringing.")
+                        // Send call ringing event
+                        eventSink?.invoke(mapOf(
+                            "event" to "callRinging",
+                            "phoneNumber" to (currentPhoneNumber ?: phoneNumber ?: "")
+                        ))
                     }
                 }
             }
@@ -78,6 +116,13 @@ class PhoneCallService(private val context: Context) {
 
     // Fetch the last call duration from the call log for the given phone number
     private fun getCallDurationFromCallLog(phoneNumber: String?) {
+        // Check permission first
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) 
+            != PackageManager.PERMISSION_GRANTED) {
+            Log.d("CALL", "READ_CALL_LOG permission not granted, skipping call log fetch")
+            return
+        }
+        
         val callLogUri = CallLog.Calls.CONTENT_URI
         val cursor = context.contentResolver.query(
             callLogUri,
@@ -92,8 +137,14 @@ class PhoneCallService(private val context: Context) {
                 val duration = it.getInt(it.getColumnIndex(CallLog.Calls.DURATION))
                 Log.d("CALL", "Fetched duration from call log: $duration seconds")
 
-                // Send this duration to Flutter via eventSink
-                eventSink?.invoke(duration)
+                // Send call log duration if it's valid and greater than calculated duration
+                if (duration > 0) {
+                    eventSink?.invoke(mapOf(
+                        "event" to "callEnded",
+                        "phoneNumber" to (phoneNumber ?: ""),
+                        "duration" to duration
+                    ))
+                }
             }
             it.close()
         }

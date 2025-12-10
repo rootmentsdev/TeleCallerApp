@@ -186,6 +186,7 @@ class ApiService {
     String? dateFrom,
     String? dateTo,
     String? dateField,
+    String? createdAt,
   }) async {
     final url = Uri.parse(
       ApiConfig.getAllLeads(
@@ -200,6 +201,7 @@ class ApiService {
         dateFrom: dateFrom,
         dateTo: dateTo,
         dateField: dateField,
+        createdAt: createdAt,
       ),
     );
 
@@ -296,6 +298,11 @@ class ApiService {
           }
           if (user.containsKey('empId')) {
             await AuthService.saveEmpId(user['empId'].toString());
+          }
+          // Save user name if present
+          if (user.containsKey('name')) {
+            await AuthService.saveUserName(user['name'].toString());
+            print('ApiService: User name saved: ${user['name']}');
           }
         } else if (responseData.containsKey('userId')) {
           await AuthService.saveUserId(responseData['userId'].toString());

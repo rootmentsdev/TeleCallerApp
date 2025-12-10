@@ -193,7 +193,7 @@ class _LeadScreenState extends State<LeadScreen> {
           backgroundColor: Colors.white,
           body: Column(
             children: [
-              AppHeader(userName: "Shafna", onNotificationTap: () {}),
+              AppHeader(onNotificationTap: () {}),
 
               // ================= Summary Cards =================
               Padding(
