@@ -3090,8 +3090,10 @@ androidx.core.app.ActivityCompat$Api23Impl:
     private void <init>()
 androidx.core.app.ActivityCompat$Api28Impl
 androidx.core.app.ActivityCompat$Api30Impl
-androidx.core.app.ActivityCompat$Api31Impl
-androidx.core.app.ActivityCompat$Api32Impl
+androidx.core.app.ActivityCompat$Api31Impl:
+    private void <init>()
+androidx.core.app.ActivityCompat$Api32Impl:
+    private void <init>()
 androidx.core.app.ActivityCompat$PermissionCompatDelegate:
     public abstract boolean onActivityResult(android.app.Activity,int,int,android.content.Intent)
 androidx.core.app.ActivityCompat$SharedElementCallback21Impl
@@ -3112,7 +3114,6 @@ androidx.core.app.ActivityCompat:
     public static void setExitSharedElementCallback(android.app.Activity,androidx.core.app.SharedElementCallback)
     public static void setLocusContext(android.app.Activity,androidx.core.content.LocusIdCompat,android.os.Bundle)
     public static void setPermissionCompatDelegate(androidx.core.app.ActivityCompat$PermissionCompatDelegate)
-    public static boolean shouldShowRequestPermissionRationale(android.app.Activity,java.lang.String)
     public static void startActivityForResult(android.app.Activity,android.content.Intent,int,android.os.Bundle)
     public static void startIntentSenderForResult(android.app.Activity,android.content.IntentSender,int,android.content.Intent,int,int,int,android.os.Bundle)
     public static void startPostponedEnterTransition(android.app.Activity)
@@ -9813,6 +9814,18 @@ androidx.window.reflection.ReflectionUtils:
     public final boolean validateImplementation$window_release(java.lang.Class,java.lang.Class)
     public static synthetic boolean validateReflection$window_release$default(java.lang.String,kotlin.jvm.functions.Function0,int,java.lang.Object)
 androidx.window.reflection.WindowExtensionsConstants
+com.baseflow.permissionhandler.PermissionConstants$PermissionGroup
+com.baseflow.permissionhandler.PermissionConstants$PermissionStatus
+com.baseflow.permissionhandler.PermissionConstants$ServiceStatus
+com.baseflow.permissionhandler.PermissionConstants
+com.baseflow.permissionhandler.PermissionUtils:
+    static final java.lang.String SHARED_PREFERENCES_PERMISSION_WAS_DENIED_BEFORE_KEY
+    public void <init>()
+com.baseflow.permissionhandler.R
+com.example.telecaller_app.CallTrackingReceiver:
+    private static final java.lang.String TAG
+com.example.telecaller_app.PhoneCallService:
+    public final void setEventSink(kotlin.jvm.functions.Function1)
 com.example.telecaller_app.R$drawable
 com.example.telecaller_app.R$mipmap
 com.example.telecaller_app.R$style
@@ -10018,14 +10031,12 @@ io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineActivit
     public void addOnSaveStateListener(io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding$OnSaveInstanceStateListener)
     public void addOnUserLeaveHintListener(io.flutter.plugin.common.PluginRegistry$UserLeaveHintListener)
     public void addOnWindowFocusChangedListener(io.flutter.plugin.common.PluginRegistry$WindowFocusChangedListener)
-    public void addRequestPermissionsResultListener(io.flutter.plugin.common.PluginRegistry$RequestPermissionsResultListener)
     public java.lang.Object getLifecycle()
     void onWindowFocusChanged(boolean)
     public void removeOnNewIntentListener(io.flutter.plugin.common.PluginRegistry$NewIntentListener)
     public void removeOnSaveStateListener(io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding$OnSaveInstanceStateListener)
     public void removeOnUserLeaveHintListener(io.flutter.plugin.common.PluginRegistry$UserLeaveHintListener)
     public void removeOnWindowFocusChangedListener(io.flutter.plugin.common.PluginRegistry$WindowFocusChangedListener)
-    public void removeRequestPermissionsResultListener(io.flutter.plugin.common.PluginRegistry$RequestPermissionsResultListener)
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineBroadcastReceiverPluginBinding:
     private final android.content.BroadcastReceiver broadcastReceiver
     void <init>(android.content.BroadcastReceiver)
@@ -10118,6 +10129,7 @@ io.flutter.embedding.engine.dart.DartExecutor$DartCallback
 io.flutter.embedding.engine.dart.DartExecutor$DefaultBinaryMessenger:
     public void disableBufferingIncomingMessages()
     public void enableBufferingIncomingMessages()
+    public void send(java.lang.String,java.nio.ByteBuffer)
 io.flutter.embedding.engine.dart.DartExecutor:
     private static final java.lang.String TAG
     public void disableBufferingIncomingMessages()
@@ -10126,12 +10138,14 @@ io.flutter.embedding.engine.dart.DartExecutor:
     public void executeDartEntrypoint(io.flutter.embedding.engine.dart.DartExecutor$DartEntrypoint)
     public java.lang.String getIsolateServiceId()
     public int getPendingChannelResponseCount()
+    public void send(java.lang.String,java.nio.ByteBuffer)
     public void setIsolateServiceIdListener(io.flutter.embedding.engine.dart.DartExecutor$IsolateServiceIdListener)
 io.flutter.embedding.engine.dart.DartMessenger:
     private static final java.lang.String TAG
     public void disableBufferingIncomingMessages()
     public void enableBufferingIncomingMessages()
     public int getPendingChannelResponseCount()
+    public void send(java.lang.String,java.nio.ByteBuffer)
 io.flutter.embedding.engine.deferredcomponents.DeferredComponentManager:
     public abstract void loadAssets(int,java.lang.String)
     public abstract void loadDartLibrary(int,java.lang.String)
@@ -10235,13 +10249,11 @@ io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding:
     public abstract void addOnSaveStateListener(io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding$OnSaveInstanceStateListener)
     public abstract void addOnUserLeaveHintListener(io.flutter.plugin.common.PluginRegistry$UserLeaveHintListener)
     public abstract void addOnWindowFocusChangedListener(io.flutter.plugin.common.PluginRegistry$WindowFocusChangedListener)
-    public abstract void addRequestPermissionsResultListener(io.flutter.plugin.common.PluginRegistry$RequestPermissionsResultListener)
     public abstract java.lang.Object getLifecycle()
     public abstract void removeOnNewIntentListener(io.flutter.plugin.common.PluginRegistry$NewIntentListener)
     public abstract void removeOnSaveStateListener(io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding$OnSaveInstanceStateListener)
     public abstract void removeOnUserLeaveHintListener(io.flutter.plugin.common.PluginRegistry$UserLeaveHintListener)
     public abstract void removeOnWindowFocusChangedListener(io.flutter.plugin.common.PluginRegistry$WindowFocusChangedListener)
-    public abstract void removeRequestPermissionsResultListener(io.flutter.plugin.common.PluginRegistry$RequestPermissionsResultListener)
 io.flutter.embedding.engine.plugins.broadcastreceiver.BroadcastReceiverControlSurface
 io.flutter.embedding.engine.plugins.broadcastreceiver.BroadcastReceiverPluginBinding:
     public abstract android.content.BroadcastReceiver getBroadcastReceiver()
@@ -10343,15 +10355,14 @@ io.flutter.plugin.common.BinaryMessenger$TaskQueueOptions:
 io.flutter.plugin.common.BinaryMessenger:
     public void disableBufferingIncomingMessages()
     public void enableBufferingIncomingMessages()
+    public abstract void send(java.lang.String,java.nio.ByteBuffer)
 io.flutter.plugin.common.ErrorLogResult
-io.flutter.plugin.common.EventChannel$EventSink:
-    public abstract void endOfStream()
-    public abstract void error(java.lang.String,java.lang.String,java.lang.Object)
-io.flutter.plugin.common.EventChannel$IncomingStreamRequestHandler$EventSinkImplementation:
-    public void endOfStream()
-    public void error(java.lang.String,java.lang.String,java.lang.Object)
-io.flutter.plugin.common.EventChannel:
-    private static final java.lang.String TAG
+io.flutter.plugin.common.EventChannel$1
+io.flutter.plugin.common.EventChannel$EventSink
+io.flutter.plugin.common.EventChannel$IncomingStreamRequestHandler$EventSinkImplementation
+io.flutter.plugin.common.EventChannel$IncomingStreamRequestHandler
+io.flutter.plugin.common.EventChannel$StreamHandler
+io.flutter.plugin.common.EventChannel
 io.flutter.plugin.common.FlutterException:
     private static final java.lang.String TAG
 io.flutter.plugin.common.JSONUtil:
@@ -18642,16 +18653,15 @@ androidx.core.app.ActivityCompat$1
 androidx.core.app.ActivityCompat$OnRequestPermissionsResultCallback
 androidx.core.app.ActivityCompat$PermissionCompatDelegate
 androidx.core.app.ActivityCompat$RequestPermissionsRequestCodeValidator
-androidx.core.app.ActivityCompat
+androidx.core.app.ActivityCompat:
+    public static androidx.core.app.ActivityCompat$PermissionCompatDelegate sDelegate
 androidx.core.app.AppOpsManagerCompat
 androidx.core.app.CoreComponentFactory$$InternalSyntheticThrowCCEIfNotNull$8$28d6d52be828bd520f37653069cdb0fd59ddc413967dd43deec606fddf5e864e$0
 androidx.core.app.CoreComponentFactory$CompatWrapped
 androidx.core.app.NotificationManagerCompat:
-    public final android.content.Context mContext
     public static java.util.Set sEnabledNotificationListenerPackages
     public static final java.lang.Object sEnabledNotificationListenersLock
     public static final java.lang.Object sLock
-    public static boolean areNotificationsEnabled()
 androidx.core.content.ContextCompat:
     public static final java.lang.Object sSync
     static void <clinit>()
@@ -21986,17 +21996,65 @@ androidx.window.reflection.ReflectionUtils:
     static void <clinit>()
     public static boolean checkIsPresent$window_release()
     public static boolean isPublic$window_release(java.lang.reflect.Method)
-com.example.telecaller_app.MainActivity$configureFlutterEngine$2:
-    public final void onCancel()
-    public static void onListen()
-com.example.telecaller_app.MainActivity$makePhoneCall$1:
-    public static void invoke$3()
+com.baseflow.permissionhandler.AppSettingsManager$OpenAppSettingsSuccessCallback
+com.baseflow.permissionhandler.AppSettingsManager:
+    public static void openAppSettings()
+com.baseflow.permissionhandler.ErrorCallback
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$0
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$1
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$2
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$3:
+    public final void onSuccess(java.util.HashMap)
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$4
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$5
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$6
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$7
+com.baseflow.permissionhandler.MethodCallHandlerImpl$$InternalSyntheticLambda$2$6db0f880606ae1cc2343941bff4af89a49d7f265b76fd211ec34e428c3826699$8
+com.baseflow.permissionhandler.MethodCallHandlerImpl:
+    public final com.baseflow.permissionhandler.AppSettingsManager appSettingsManager
+    public final com.baseflow.permissionhandler.ServiceManager serviceManager
+com.baseflow.permissionhandler.PermissionHandlerPlugin:
+    public com.baseflow.permissionhandler.MethodCallHandlerImpl methodCallHandler
+    public static void deregisterListeners()
+    public static void registerListeners()
+    public static void startListening()
+    public static void startListeningToActivity()
+    public static void stopListening()
+    public static void stopListeningToActivity()
+com.baseflow.permissionhandler.PermissionManager$CheckPermissionsSuccessCallback
+com.baseflow.permissionhandler.PermissionManager$RequestPermissionsSuccessCallback
+com.baseflow.permissionhandler.PermissionManager$ShouldShowRequestPermissionRationaleSuccessCallback
+com.baseflow.permissionhandler.PermissionManager:
+    public final int checkBluetoothPermissionStatus()
+    public static int checkNotificationPermissionStatus()
+    public static void checkPermissionStatus()
+    public static boolean onRequestPermissionsResult()
+    public static void requestPermissions()
+    public static void setActivity()
+    public static void shouldShowRequestPermissionRationale()
+com.baseflow.permissionhandler.PermissionUtils:
+    public static java.lang.Integer strictestStatus(java.lang.Integer,java.lang.Integer)
+com.baseflow.permissionhandler.ServiceManager$SuccessCallback
+com.baseflow.permissionhandler.ServiceManager:
+    public static void checkServiceStatus()
+    public static java.util.List getCallAppsList()
+    public static boolean isBluetoothServiceEnabled()
+    public static boolean isLocationServiceEnablePreKitKat()
+    public static boolean isLocationServiceEnabled()
+com.example.telecaller_app.CallTrackingReceiver$Companion
+com.example.telecaller_app.CallTrackingReceiver:
+    public static final com.example.telecaller_app.CallTrackingReceiver$Companion Companion
+    static void <clinit>()
+    public static void handleOutgoingCall()
+    public static void handlePhoneState()
 com.example.telecaller_app.MainActivity:
     public final void configureFlutterEngine()
+    public static void ensurePermissions()
 com.example.telecaller_app.PhoneCallService:
+    public kotlin.jvm.functions.Function1 eventSink
+    public static final synthetic kotlin.jvm.functions.Function1 access$getEventSink$p()
     public static void getCallDurationFromCallLog()
     public static void makeCall()
-    public static void setEventSink()
 com.getkeepsafe.relinker.ApkLibraryInstaller:
     public static long copy()
     public static void installLibrary()
@@ -22304,20 +22362,21 @@ io.flutter.embedding.engine.FlutterEngineConnectionRegistry$1
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$DefaultFlutterAssets
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineActivityPluginBinding$$InternalSyntheticThrowCCEIfNotNull$10$0a8f37833972bd2a3a49bbc5fb55a4e444bfd05a2959ea9ca88757463eeb4f49$0
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineActivityPluginBinding$$InternalSyntheticThrowCCEIfNotNull$10$2df0fb8075eb856222c90931a75dd7e6ce4cd2bebd0dee90cecd45848c60b165$0
-io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineActivityPluginBinding$$InternalSyntheticThrowCCEIfNotNull$10$5ab05570981bf150e0f0448c2a3af487b36ba5285b0c1c88837e3207a00de33f$0
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineActivityPluginBinding$$InternalSyntheticThrowCCEIfNotNull$10$889c5ed9820251563e531267a5623ec88854ad8a8f2a46cdc4ef0bad04b6119e$0
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineActivityPluginBinding$$InternalSyntheticThrowCCEIfNotNull$10$8cb5f82775f3d78a8677a1dbe71b47712c162867e1c71fef046073ef64fe1bd4$0
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineActivityPluginBinding:
     public final io.flutter.embedding.engine.plugins.lifecycle.HiddenLifecycleReference hiddenLifecycleReference
     public final java.util.Set onWindowFocusChangedListeners
-    public final void addActivityResultListener(io.flutter.plugin.text.ProcessTextPlugin)
+    public final void addActivityResultListener(io.flutter.plugin.common.PluginRegistry$ActivityResultListener)
+    public static void addRequestPermissionsResultListener()
     public static android.app.Activity getActivity()
+    public static boolean onActivityResult()
     public static void onNewIntent()
-    public static boolean onRequestPermissionsResult()
     public static void onRestoreInstanceState()
     public static void onSaveInstanceState()
     public static void onUserLeaveHint()
-    public final void removeActivityResultListener(io.flutter.plugin.text.ProcessTextPlugin)
+    public final void removeActivityResultListener(io.flutter.plugin.common.PluginRegistry$ActivityResultListener)
+    public static void removeRequestPermissionsResultListener()
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineBroadcastReceiverPluginBinding
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineContentProviderPluginBinding
 io.flutter.embedding.engine.FlutterEngineConnectionRegistry$FlutterEngineServicePluginBinding
@@ -22390,7 +22449,6 @@ io.flutter.embedding.engine.dart.DartExecutor:
     public static void notifyLowMemoryWarning()
     public static void onAttachedToJNI()
     public static void onDetachedFromJNI()
-    public final void send(java.lang.String,java.nio.ByteBuffer)
 io.flutter.embedding.engine.dart.DartMessenger$1
 io.flutter.embedding.engine.dart.DartMessenger$ConcurrentTaskQueue
 io.flutter.embedding.engine.dart.DartMessenger$DefaultTaskQueueFactory:
@@ -22405,7 +22463,6 @@ io.flutter.embedding.engine.dart.DartMessenger:
     public final void handlePlatformMessageResponse()
     public static void invokeHandler()
     public static void lambda$dispatchMessageToQueue$0()
-    public final void send(java.lang.String,java.nio.ByteBuffer)
 io.flutter.embedding.engine.dart.PlatformMessageHandler:
     public abstract void handleMessageFromDart()
     public abstract void handlePlatformMessageResponse()
@@ -22771,18 +22828,6 @@ io.flutter.plugin.common.BinaryMessenger$TaskQueueOptions:
     public static boolean getIsSerial()
 io.flutter.plugin.common.BinaryMessenger:
     public abstract io.flutter.embedding.engine.dart.DartMessenger$TaskQueueToken makeBackgroundTaskQueue(io.flutter.plugin.common.BinaryMessenger$TaskQueueOptions)
-    public abstract void send(java.lang.String,java.nio.ByteBuffer)
-io.flutter.plugin.common.EventChannel$1
-io.flutter.plugin.common.EventChannel$EventSink
-io.flutter.plugin.common.EventChannel$IncomingStreamRequestHandler$EventSinkImplementation:
-    public static void success()
-io.flutter.plugin.common.EventChannel$IncomingStreamRequestHandler:
-    public static void onCancel()
-    public static void onListen()
-io.flutter.plugin.common.EventChannel$StreamHandler
-io.flutter.plugin.common.EventChannel:
-    public final io.flutter.embedding.engine.dart.DartMessenger$TaskQueueToken taskQueue
-    public static void setStreamHandler()
 io.flutter.plugin.common.JSONMethodCodec:
     public static java.lang.Object unwrapNull(java.lang.Object)
 io.flutter.plugin.common.MethodCall:
@@ -22794,7 +22839,6 @@ io.flutter.plugin.common.MethodChannel$Result:
 io.flutter.plugin.common.MethodChannel:
     public final io.flutter.embedding.engine.dart.DartMessenger$TaskQueueToken taskQueue
     public static void invokeMethod()
-io.flutter.plugin.common.PluginRegistry$ActivityResultListener
 io.flutter.plugin.common.PluginRegistry$NewIntentListener
 io.flutter.plugin.common.PluginRegistry$RequestPermissionsResultListener
 io.flutter.plugin.common.PluginRegistry$UserLeaveHintListener
@@ -23008,7 +23052,7 @@ io.flutter.plugin.platform.PlatformViewsController$1$$InternalSyntheticThrowCCEI
 io.flutter.plugin.platform.PlatformViewsController$1$$InternalSyntheticThrowCCEIfNotNull$16$b7402152dbac454f789d6284ac4c13a4d99f1794a8bc8c1a826abf95f847eb7b$0
 io.flutter.plugin.platform.PlatformViewsController$1$$InternalSyntheticThrowCCEIfNotNull$176$29b7272c508bc127e7e97e729a31661d1cde222dd950db799cf2c4cd46b9c655$0
 io.flutter.plugin.platform.PlatformViewsController$1$$InternalSyntheticThrowCCEIfNotNull$176$29b7272c508bc127e7e97e729a31661d1cde222dd950db799cf2c4cd46b9c655$1
-io.flutter.plugin.platform.PlatformViewsController$1$$InternalSyntheticThrowCCEIfNotNull$254$2c079d00ce5126776fe1355136a6954acdc6876e2b3c39390573ebb3c0aa4ac4$0
+io.flutter.plugin.platform.PlatformViewsController$1$$InternalSyntheticThrowCCEIfNotNull$258$2c079d00ce5126776fe1355136a6954acdc6876e2b3c39390573ebb3c0aa4ac4$0
 io.flutter.plugin.platform.PlatformViewsController$1:
     public static void createForPlatformViewLayer()
     public static void lambda$resize$0()
@@ -23112,7 +23156,6 @@ io.flutter.plugin.platform.VirtualDisplayController:
 io.flutter.plugin.text.ProcessTextPlugin:
     public final io.flutter.embedding.engine.systemchannels.ProcessTextChannel processTextChannel
     public static void cacheResolveInfos()
-    public static boolean onActivityResult()
 io.flutter.plugins.sharedpreferences.LegacySharedPreferencesPlugin:
     public static java.util.Map getAllPrefs()
     public static java.lang.Boolean remove()
@@ -24235,7 +24278,7 @@ kotlinx.coroutines.internal.SystemPropsKt__SystemProps_commonKt
 kotlinx.coroutines.internal.ThreadContextKt$countAll$1:
     public static java.lang.Object invoke$15()
 kotlinx.coroutines.internal.ThreadContextKt$findOne$1:
-    public static void invoke$4()
+    public static void invoke$3()
 kotlinx.coroutines.internal.ThreadContextKt$updateState$1$$InternalSyntheticThrowCCEIfNotNull$271$3ff7ef4e574584d34e294bf8ac548819e9de353a79a9bbbdd8ea1b7dd939fd97$0
 kotlinx.coroutines.internal.ThreadContextKt$updateState$1:
     public static kotlinx.coroutines.internal.ThreadState invoke()

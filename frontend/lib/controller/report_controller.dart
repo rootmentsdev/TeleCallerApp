@@ -37,7 +37,7 @@ class ReportController extends ChangeNotifier {
   void checkNavigationFlag() {
     if (_shouldNavigateToEquaryCalls) {
       _shouldNavigateToEquaryCalls = false;
-      setSelectedCallTypeIndex(4); // Equary Calls tab
+      setSelectedCallTypeIndex(5); // Equary Calls tab
     }
   }
 
@@ -95,10 +95,13 @@ class ReportController extends ChangeNotifier {
 
     // Helper function to count called leads
     int getCalledLeadsCount({String? category}) {
+      final date = _headerController?.selectedDate ?? DateTime.now();
       List<dynamic> leads =
           category != null
-              ? _repository.getLeadsByCategory(category).cast<dynamic>()
-              : _repository.allLeads.cast<dynamic>();
+              ? _repository
+                  .getLeadsByCategory(category, date: date)
+                  .cast<dynamic>()
+              : _repository.getLeadsByDate(date).cast<dynamic>();
 
       // Filter by store - extract location from "Brand - Location" format
       if (storeFilter != null) {
@@ -302,41 +305,43 @@ class ReportController extends ChangeNotifier {
 
     // Filter by lead type based on selected tab
     if (_selectedCallTypeIndex != 0) {
-      String? expectedType;
       switch (_selectedCallTypeIndex) {
         case 1:
-          expectedType = "lossOfSale";
-          break;
-        case 2:
-          expectedType = "rentoutFeedback";
-          break;
-        case 3:
-          expectedType = "justDial";
-          break;
-        case 4:
-          // Equary Calls - show reports without specific lead types
           filteredReports =
-              filteredReports.where((report) {
-                final leadType = report["type"] as String?;
-                return leadType == null ||
-                    (leadType != "loss" &&
-                        leadType != "hardout" &&
-                        leadType != "justdial" &&
-                        leadType != "booking");
-              }).toList();
-          return filteredReports;
-        case 5:
-          // Follow Up - handled by leadStatus or other criteria
+              filteredReports.where((r) => r["type"] == "loss").toList();
           break;
-      }
 
-      if (expectedType != null) {
-        filteredReports =
-            filteredReports.where((report) {
-              final reportType = report["type"] as String?;
-              return reportType == expectedType ||
-                  reportType == _getTypeFromLeadType(expectedType);
-            }).toList();
+        case 2:
+          filteredReports =
+              filteredReports.where((r) => r["type"] == "rent-out").toList();
+          break;
+
+        case 3:
+          filteredReports =
+              filteredReports.where((r) => r["type"] == "booking").toList();
+          break;
+
+        case 4:
+          filteredReports =
+              filteredReports.where((r) => r["type"] == "justdial").toList();
+          break;
+
+        case 5:
+          // EQUARY → leads where type is null or unknown
+          filteredReports =
+              filteredReports
+                  .where(
+                    (r) =>
+                        r["type"] == null ||
+                        ![
+                          "loss",
+                          "rent-out",
+                          "booking",
+                          "justdial",
+                        ].contains(r["type"]),
+                  )
+                  .toList();
+          break;
       }
     }
 
@@ -345,18 +350,19 @@ class ReportController extends ChangeNotifier {
 
   // Convert API leadType to display type
   String _getTypeFromLeadType(String? leadType) {
-    if (leadType == null) return "all";
+    if (leadType == null) return "general";
+
     switch (leadType.toLowerCase()) {
-      case 'lossofsale':
+      case "lossofsale":
         return "loss";
-      case 'rentoutfeedback':
+      case "rentoutfeedback":
         return "hardout";
-      case 'bookingconfirmation':
+      case "bookingconfirmation":
         return "booking";
-      case 'justdial':
+      case "justdial":
         return "justdial";
       default:
-        return "all";
+        return "general";
     }
   }
 
@@ -461,29 +467,32 @@ class ReportController extends ChangeNotifier {
 
     // Determine leadType based on selected call type index
     String? leadType;
+
     switch (_selectedCallTypeIndex) {
       case 0:
-        leadType = null; // All types
+        leadType = null; // ALL CALLS
         break;
+
       case 1:
-        leadType = 'lossOfSale';
+        leadType = "lossOfSale";
         break;
+
       case 2:
-        leadType = 'rentoutFeedback';
+        leadType = "rentoutFeedback";
         break;
+
       case 3:
-        leadType = 'justDial';
+        leadType = "bookingConfirmation";
         break;
+
       case 4:
-        // Equary Calls - fetch all and filter in getFilteredLeads
-        leadType = null;
+        leadType = "justDial";
         break;
+
       case 5:
-        // Follow Up - may need special handling or fetch all
+        // Equary Calls → No leadType filter
         leadType = null;
         break;
-      default:
-        leadType = null; // All types
     }
 
     // For Equary Calls, don't filter by date - show all reports
@@ -491,10 +500,11 @@ class ReportController extends ChangeNotifier {
     String? dateFrom;
     String? dateTo;
 
-    if (_selectedCallTypeIndex != 4) {
+    // Apply date filter for all tabs except Equary Calls
+    if (_selectedCallTypeIndex != 5) {
       final dateStr = formatDate(date);
-      dateFrom = dateStr;
-      dateTo = dateStr;
+      dateFrom = null;
+      dateTo = null;
     }
 
     await fetchReportsFromApi(

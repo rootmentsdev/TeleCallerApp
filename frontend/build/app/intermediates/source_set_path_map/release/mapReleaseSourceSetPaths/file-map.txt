@@ -43,5 +43,6 @@ com.example.telecaller_app-packageReleaseResources-41 C:\flutter_apps\telecaller
 com.example.telecaller_app-packageReleaseResources-42 C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\incremental\release\packageReleaseResources\stripped.dir
 com.example.telecaller_app-merged-not-compiled-resources-43 C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\merged-not-compiled-resources\release
 com.example.telecaller_app-release-44 C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\merged_res\release\mergeReleaseResources
-com.example.telecaller_app-release-45 C:\flutter_apps\telecaller_app\frontend\build\shared_preferences_android\intermediates\packaged_res\release\packageReleaseResources
-com.example.telecaller_app-release-46 C:\flutter_apps\telecaller_app\frontend\build\url_launcher_android\intermediates\packaged_res\release\packageReleaseResources
+com.example.telecaller_app-release-45 C:\flutter_apps\telecaller_app\frontend\build\permission_handler_android\intermediates\packaged_res\release\packageReleaseResources
+com.example.telecaller_app-release-46 C:\flutter_apps\telecaller_app\frontend\build\shared_preferences_android\intermediates\packaged_res\release\packageReleaseResources
+com.example.telecaller_app-release-47 C:\flutter_apps\telecaller_app\frontend\build\url_launcher_android\intermediates\packaged_res\release\packageReleaseResources

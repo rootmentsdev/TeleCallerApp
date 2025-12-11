@@ -7,24 +7,30 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
     private val METHOD_CHANNEL = "com.telecaller_app/phone"
-    private val EVENT_CHANNEL = "com.telecaller_app/phone_events"
     private val CALL_PHONE_PERMISSION_REQUEST_CODE = 100
+    private val PERMISSIONS_REQUEST = 200
 
     private lateinit var phoneCallService: PhoneCallService
-    private var eventSink: EventChannel.EventSink? = null
     private var pendingPhoneNumber: String? = null
+
+    private val PHONE_STATE_PERMISSION = Manifest.permission.READ_PHONE_STATE
+    private val CALL_LOG_PERMISSION = Manifest.permission.READ_CALL_LOG
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Initialize call tracking receiver with FlutterEngine
+        CallTrackingReceiver.setFlutterEngine(flutterEngine)
+        Log.d("MainActivity", "CallTrackingReceiver initialized with FlutterEngine")
+
         phoneCallService = PhoneCallService(this)
 
+        // Set up method channel for making phone calls
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .setMethodCallHandler { call, result ->
                 if (call.method == "callPhone") {
@@ -40,7 +46,7 @@ class MainActivity : FlutterActivity() {
                             arrayOf(Manifest.permission.CALL_PHONE),
                             CALL_PHONE_PERMISSION_REQUEST_CODE
                         )
-                        result.success(false) // Permission not granted yet
+                        result.success(false)
                     } else {
                         // Permission already granted, make the call
                         makePhoneCall(phoneNumber)
@@ -51,16 +57,8 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL)
-            .setStreamHandler(object : EventChannel.StreamHandler {
-                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                    eventSink = events
-                }
-
-                override fun onCancel(arguments: Any?) {
-                    eventSink = null
-                }
-            })
+        // Request necessary permissions on startup
+        ensurePermissions()
     }
 
     override fun onRequestPermissionsResult(
@@ -72,22 +70,35 @@ class MainActivity : FlutterActivity() {
         
         if (requestCode == CALL_PHONE_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, make the call
                 pendingPhoneNumber?.let { phoneNumber ->
                     makePhoneCall(phoneNumber)
                     pendingPhoneNumber = null
                 }
             } else {
-                Log.e("CALL", "CALL_PHONE permission denied by user")
+                Log.e("MainActivity", "CALL_PHONE permission denied by user")
             }
         }
     }
 
     private fun makePhoneCall(phoneNumber: String) {
-        phoneCallService.setEventSink { eventMap ->
-            // Forward the event map directly to Flutter
-            eventSink?.success(eventMap)
-        }
         phoneCallService.makeCall(phoneNumber)
+    }
+
+    private fun ensurePermissions() {
+        val neededPermissions = mutableListOf<String>()
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(Manifest.permission.CALL_PHONE)
+        }
+        if (ContextCompat.checkSelfPermission(this, PHONE_STATE_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(PHONE_STATE_PERMISSION)
+        }
+        if (ContextCompat.checkSelfPermission(this, CALL_LOG_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(CALL_LOG_PERMISSION)
+        }
+
+        if (neededPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, neededPermissions.toTypedArray(), PERMISSIONS_REQUEST)
+        }
     }
 }

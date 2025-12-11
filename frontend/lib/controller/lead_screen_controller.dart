@@ -127,6 +127,10 @@ class LeadScreenController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _removeLeadFromActiveLists(String id) {
+    _repository.allLeads.removeWhere((lead) => lead.id == id);
+  }
+
   @override
   void dispose() {
     _headerController?.removeListener(_onHeaderChanged);
@@ -189,11 +193,13 @@ class LeadScreenController extends ChangeNotifier {
     //   return leads.length;
     // }
     int getUncalledLeadsCount({String? category}) {
-      // STEP 1: get leads by category
+      final date = _headerController?.selectedDate ?? DateTime.now();
+
+      // STEP 1: get leads by category with date filter
       List<LeadModel> leads =
           category != null
-              ? _repository.getLeadsByCategory(category)
-              : _repository.allLeads;
+              ? _repository.getLeadsByCategory(category, date: date)
+              : _repository.getLeadsByDate(date);
 
       // STEP 2: filter by store using the same logic as getFilteredLeads
       final storeFilter = _headerController?.selectedStore;
@@ -355,7 +361,10 @@ class LeadScreenController extends ChangeNotifier {
     final date = _headerController?.selectedDate ?? DateTime.now();
 
     // Get leads filtered by category, store, and date
-    List<LeadModel> filteredLeads = _repository.getLeadsByCategory(category);
+    List<LeadModel> filteredLeads = _repository.getLeadsByCategory(
+      category,
+      date: date,
+    );
 
     // Debug: Print initial lead count
     print(
@@ -462,11 +471,14 @@ class LeadScreenController extends ChangeNotifier {
         'LeadScreenController: After store filter: ${filteredLeads.length} leads',
       );
       final totalLeadsBeforeFilter =
-          _repository.getLeadsByCategory(category).length;
+          _repository.getLeadsByCategory(category, date: date).length;
       if (filteredLeads.isEmpty && totalLeadsBeforeFilter > 0) {
         // Debug: Show sample lead locations for troubleshooting
         final sampleLeads =
-            _repository.getLeadsByCategory(category).take(5).toList();
+            _repository
+                .getLeadsByCategory(category, date: date)
+                .take(5)
+                .toList();
         print(
           'LeadScreenController: DEBUG - Store filter returned 0 leads but ${totalLeadsBeforeFilter} leads exist',
         );
@@ -720,6 +732,9 @@ class LeadScreenController extends ChangeNotifier {
         reasonCollectedFromStore: reasonCollectedFromStore,
         remarks: remarks,
       );
+
+      _removeLeadFromActiveLists(id);
+
       notifyListeners();
     } catch (e) {
       print('LeadScreenController: Error updating Loss of Sale lead: $e');
@@ -747,6 +762,7 @@ class LeadScreenController extends ChangeNotifier {
         rating: rating,
         remarks: remarks,
       );
+      _removeLeadFromActiveLists(id);
       notifyListeners();
     } catch (e) {
       print('LeadScreenController: Error updating Rent-Out lead: $e');
@@ -772,6 +788,7 @@ class LeadScreenController extends ChangeNotifier {
         callDate: callDate,
         remarks: remarks,
       );
+      _removeLeadFromActiveLists(id);
       notifyListeners();
     } catch (e) {
       print(

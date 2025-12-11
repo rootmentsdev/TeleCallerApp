@@ -4,6 +4,9 @@
       jars="C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\flutter\release\libs.jar"
       resolved="__local_aars__:C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\flutter\release\libs.jar:unspecified"/>
   <library
+      name=":@@:permission_handler_android::release"
+      project=":permission_handler_android"/>
+  <library
       name=":@@:shared_preferences_android::release"
       project=":shared_preferences_android"/>
   <library
@@ -369,70 +372,6 @@
       externalAnnotations="annotations.zip"
       proguardRules="proguard.txt"/>
   <library
-      name="androidx.datastore:datastore-preferences-external-protobuf:1.1.7@jar"
-      jars="C:\Users\parva\.gradle\caches\modules-2\files-2.1\androidx.datastore\datastore-preferences-external-protobuf\1.1.7\ddd0a2d64e3c928359c993d1291e535d5d7fc9a3\datastore-preferences-external-protobuf-1.1.7.jar"
-      resolved="androidx.datastore:datastore-preferences-external-protobuf:1.1.7"/>
-  <library
-      name="androidx.datastore:datastore-preferences-proto:1.1.7@jar"
-      jars="C:\Users\parva\.gradle\caches\modules-2\files-2.1\androidx.datastore\datastore-preferences-proto\1.1.7\6d7430ed8d2b5f2b8675dad8d196ba5dd710921b\datastore-preferences-proto-1.1.7.jar"
-      resolved="androidx.datastore:datastore-preferences-proto:1.1.7"/>
-  <library
-      name="androidx.datastore:datastore-preferences-core-android:1.1.7@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\2abfebe021f39b05484ee694f1e660b0\transformed\jetified-datastore-preferences-core-release\jars\classes.jar"
-      resolved="androidx.datastore:datastore-preferences-core-android:1.1.7"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\2abfebe021f39b05484ee694f1e660b0\transformed\jetified-datastore-preferences-core-release"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
-      name="androidx.datastore:datastore-core-okio-jvm:1.1.7@jar"
-      jars="C:\Users\parva\.gradle\caches\modules-2\files-2.1\androidx.datastore\datastore-core-okio-jvm\1.1.7\ce08f132812044a9778547b299fd812e34dbd602\datastore-core-okio-jvm-1.1.7.jar"
-      resolved="androidx.datastore:datastore-core-okio-jvm:1.1.7"/>
-  <library
-      name="androidx.datastore:datastore-core-android:1.1.7@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\3753b0badff9963704fafd34c527cdde\transformed\jetified-datastore-core-release\jars\classes.jar"
-      resolved="androidx.datastore:datastore-core-android:1.1.7"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\3753b0badff9963704fafd34c527cdde\transformed\jetified-datastore-core-release"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
-      name="androidx.datastore:datastore-preferences-android:1.1.7@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\8e3abcce0b05969218d430128eca7d41\transformed\jetified-datastore-preferences-release\jars\classes.jar"
-      resolved="androidx.datastore:datastore-preferences-android:1.1.7"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\8e3abcce0b05969218d430128eca7d41\transformed\jetified-datastore-preferences-release"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
-      name="androidx.datastore:datastore-android:1.1.7@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\20049948d50ca570abd72438ffc7c5e9\transformed\jetified-datastore-release\jars\classes.jar"
-      resolved="androidx.datastore:datastore-android:1.1.7"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\20049948d50ca570abd72438ffc7c5e9\transformed\jetified-datastore-release"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
       name="androidx.preference:preference:1.2.1@aar"
       jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\0098a6e93522fecc805d8900172003dc\transformed\preference-1.2.1\jars\classes.jar"
       resolved="androidx.preference:preference:1.2.1"
@@ -450,19 +389,6 @@
       jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\308a2e77faa557d0bd706972416bde6a\transformed\browser-1.8.0\jars\classes.jar"
       resolved="androidx.browser:browser:1.8.0"
       folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\308a2e77faa557d0bd706972416bde6a\transformed\browser-1.8.0"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
-      name="androidx.appcompat:appcompat:1.1.0@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\3a4dcd3e8c92efa77cfa193b658940d9\transformed\appcompat-1.1.0\jars\classes.jar"
-      resolved="androidx.appcompat:appcompat:1.1.0"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\3a4dcd3e8c92efa77cfa193b658940d9\transformed\appcompat-1.1.0"
       manifest="AndroidManifest.xml"
       resFolder="res"
       assetsFolder="assets"
@@ -511,23 +437,10 @@
       externalAnnotations="annotations.zip"
       proguardRules="proguard.txt"/>
   <library
-      name="androidx.appcompat:appcompat-resources:1.1.0@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\30b0283ed69cc5a036226586199afb07\transformed\jetified-appcompat-resources-1.1.0\jars\classes.jar"
-      resolved="androidx.appcompat:appcompat-resources:1.1.0"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\30b0283ed69cc5a036226586199afb07\transformed\jetified-appcompat-resources-1.1.0"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
-      name="androidx.drawerlayout:drawerlayout:1.0.0@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\fd3810ce99ffe1cc26d54f0b91968d35\transformed\drawerlayout-1.0.0\jars\classes.jar"
-      resolved="androidx.drawerlayout:drawerlayout:1.0.0"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\fd3810ce99ffe1cc26d54f0b91968d35\transformed\drawerlayout-1.0.0"
+      name="androidx.appcompat:appcompat:1.1.0@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\3a4dcd3e8c92efa77cfa193b658940d9\transformed\appcompat-1.1.0\jars\classes.jar"
+      resolved="androidx.appcompat:appcompat:1.1.0"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\3a4dcd3e8c92efa77cfa193b658940d9\transformed\appcompat-1.1.0"
       manifest="AndroidManifest.xml"
       resFolder="res"
       assetsFolder="assets"
@@ -541,32 +454,6 @@
       jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\2e4c2e4e231b6a1dd462fb9cdc4ff977\transformed\jetified-fragment-ktx-1.7.1\jars\classes.jar"
       resolved="androidx.fragment:fragment-ktx:1.7.1"
       folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\2e4c2e4e231b6a1dd462fb9cdc4ff977\transformed\jetified-fragment-ktx-1.7.1"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
-      name="androidx.coordinatorlayout:coordinatorlayout:1.0.0@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\58a0920e123e93dd6aa702d27ab7530e\transformed\coordinatorlayout-1.0.0\jars\classes.jar"
-      resolved="androidx.coordinatorlayout:coordinatorlayout:1.0.0"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\58a0920e123e93dd6aa702d27ab7530e\transformed\coordinatorlayout-1.0.0"
-      manifest="AndroidManifest.xml"
-      resFolder="res"
-      assetsFolder="assets"
-      lintJar="lint.jar"
-      publicResources="public.txt"
-      symbolFile="R.txt"
-      externalAnnotations="annotations.zip"
-      proguardRules="proguard.txt"/>
-  <library
-      name="androidx.transition:transition:1.4.1@aar"
-      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\45af1ebc35cbf9d2d2886a132166b73a\transformed\transition-1.4.1\jars\classes.jar"
-      resolved="androidx.transition:transition:1.4.1"
-      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\45af1ebc35cbf9d2d2886a132166b73a\transformed\transition-1.4.1"
       manifest="AndroidManifest.xml"
       resFolder="res"
       assetsFolder="assets"
@@ -593,6 +480,58 @@
       jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\6d6ee565ab495ccfff8140c2f79bcdec\transformed\legacy-support-core-utils-1.0.0\jars\classes.jar"
       resolved="androidx.legacy:legacy-support-core-utils:1.0.0"
       folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\6d6ee565ab495ccfff8140c2f79bcdec\transformed\legacy-support-core-utils-1.0.0"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.appcompat:appcompat-resources:1.1.0@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\30b0283ed69cc5a036226586199afb07\transformed\jetified-appcompat-resources-1.1.0\jars\classes.jar"
+      resolved="androidx.appcompat:appcompat-resources:1.1.0"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\30b0283ed69cc5a036226586199afb07\transformed\jetified-appcompat-resources-1.1.0"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.drawerlayout:drawerlayout:1.0.0@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\fd3810ce99ffe1cc26d54f0b91968d35\transformed\drawerlayout-1.0.0\jars\classes.jar"
+      resolved="androidx.drawerlayout:drawerlayout:1.0.0"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\fd3810ce99ffe1cc26d54f0b91968d35\transformed\drawerlayout-1.0.0"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.coordinatorlayout:coordinatorlayout:1.0.0@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\58a0920e123e93dd6aa702d27ab7530e\transformed\coordinatorlayout-1.0.0\jars\classes.jar"
+      resolved="androidx.coordinatorlayout:coordinatorlayout:1.0.0"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\58a0920e123e93dd6aa702d27ab7530e\transformed\coordinatorlayout-1.0.0"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.transition:transition:1.4.1@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\45af1ebc35cbf9d2d2886a132166b73a\transformed\transition-1.4.1\jars\classes.jar"
+      resolved="androidx.transition:transition:1.4.1"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\45af1ebc35cbf9d2d2886a132166b73a\transformed\transition-1.4.1"
       manifest="AndroidManifest.xml"
       resFolder="res"
       assetsFolder="assets"
@@ -684,6 +623,70 @@
       jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\ebca0abd79b4e189ce4efe6f41f957a4\transformed\jetified-savedstate-ktx-1.2.1\jars\classes.jar"
       resolved="androidx.savedstate:savedstate-ktx:1.2.1"
       folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\ebca0abd79b4e189ce4efe6f41f957a4\transformed\jetified-savedstate-ktx-1.2.1"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.datastore:datastore-preferences-external-protobuf:1.1.7@jar"
+      jars="C:\Users\parva\.gradle\caches\modules-2\files-2.1\androidx.datastore\datastore-preferences-external-protobuf\1.1.7\ddd0a2d64e3c928359c993d1291e535d5d7fc9a3\datastore-preferences-external-protobuf-1.1.7.jar"
+      resolved="androidx.datastore:datastore-preferences-external-protobuf:1.1.7"/>
+  <library
+      name="androidx.datastore:datastore-preferences-proto:1.1.7@jar"
+      jars="C:\Users\parva\.gradle\caches\modules-2\files-2.1\androidx.datastore\datastore-preferences-proto\1.1.7\6d7430ed8d2b5f2b8675dad8d196ba5dd710921b\datastore-preferences-proto-1.1.7.jar"
+      resolved="androidx.datastore:datastore-preferences-proto:1.1.7"/>
+  <library
+      name="androidx.datastore:datastore-preferences-core-android:1.1.7@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\2abfebe021f39b05484ee694f1e660b0\transformed\jetified-datastore-preferences-core-release\jars\classes.jar"
+      resolved="androidx.datastore:datastore-preferences-core-android:1.1.7"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\2abfebe021f39b05484ee694f1e660b0\transformed\jetified-datastore-preferences-core-release"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.datastore:datastore-core-okio-jvm:1.1.7@jar"
+      jars="C:\Users\parva\.gradle\caches\modules-2\files-2.1\androidx.datastore\datastore-core-okio-jvm\1.1.7\ce08f132812044a9778547b299fd812e34dbd602\datastore-core-okio-jvm-1.1.7.jar"
+      resolved="androidx.datastore:datastore-core-okio-jvm:1.1.7"/>
+  <library
+      name="androidx.datastore:datastore-core-android:1.1.7@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\3753b0badff9963704fafd34c527cdde\transformed\jetified-datastore-core-release\jars\classes.jar"
+      resolved="androidx.datastore:datastore-core-android:1.1.7"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\3753b0badff9963704fafd34c527cdde\transformed\jetified-datastore-core-release"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.datastore:datastore-preferences-android:1.1.7@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\8e3abcce0b05969218d430128eca7d41\transformed\jetified-datastore-preferences-release\jars\classes.jar"
+      resolved="androidx.datastore:datastore-preferences-android:1.1.7"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\8e3abcce0b05969218d430128eca7d41\transformed\jetified-datastore-preferences-release"
+      manifest="AndroidManifest.xml"
+      resFolder="res"
+      assetsFolder="assets"
+      lintJar="lint.jar"
+      publicResources="public.txt"
+      symbolFile="R.txt"
+      externalAnnotations="annotations.zip"
+      proguardRules="proguard.txt"/>
+  <library
+      name="androidx.datastore:datastore-android:1.1.7@aar"
+      jars="C:\Users\parva\.gradle\caches\8.10.2\transforms\20049948d50ca570abd72438ffc7c5e9\transformed\jetified-datastore-release\jars\classes.jar"
+      resolved="androidx.datastore:datastore-android:1.1.7"
+      folder="C:\Users\parva\.gradle\caches\8.10.2\transforms\20049948d50ca570abd72438ffc7c5e9\transformed\jetified-datastore-release"
       manifest="AndroidManifest.xml"
       resFolder="res"
       assetsFolder="assets"

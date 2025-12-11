@@ -1,6 +1,6 @@
 -- Merging decision tree log ---
 application
-INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:12:5-45:19
+INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:18:5-63:19
 INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\debug\AndroidManifest.xml
 MERGED from [:url_launcher_android] C:\flutter_apps\telecaller_app\frontend\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-12:19
 MERGED from [:url_launcher_android] C:\flutter_apps\telecaller_app\frontend\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-12:19
@@ -23,12 +23,13 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\pa
 	android:name
 		INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml
 manifest
-ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:1:1-59:12
-MERGED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:1:1-59:12
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:1:1-77:12
+MERGED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:1:1-77:12
 INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\debug\AndroidManifest.xml:1:1-7:12
 INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\debug\AndroidManifest.xml:1:1-7:12
 INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\debug\AndroidManifest.xml:1:1-7:12
 MERGED from [:shared_preferences_android] C:\flutter_apps\telecaller_app\frontend\build\shared_preferences_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:permission_handler_android] C:\flutter_apps\telecaller_app\frontend\build\permission_handler_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:url_launcher_android] C:\flutter_apps\telecaller_app\frontend\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-14:12
 MERGED from [androidx.preference:preference:1.2.1] C:\Users\parva\.gradle\caches\8.10.2\transforms\0098a6e93522fecc805d8900172003dc\transformed\preference-1.2.1\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.browser:browser:1.8.0] C:\Users\parva\.gradle\caches\8.10.2\transforms\308a2e77faa557d0bd706972416bde6a\transformed\browser-1.8.0\AndroidManifest.xml:2:1-7:12
@@ -114,28 +115,42 @@ uses-permission#android.permission.READ_CALL_LOG
 ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:10:5-72
 	android:name
 		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:10:22-69
-queries
-ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:51:5-58:15
-intent#action:name:android.intent.action.PROCESS_TEXT+data:mimeType:text/plain
-ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:52:9-55:18
-action#android.intent.action.PROCESS_TEXT
-ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:53:13-72
+uses-permission#android.permission.WRITE_CALL_LOG
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:12:5-73
 	android:name
-		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:53:21-70
+		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:12:22-70
+uses-permission#android.permission.READ_PHONE_NUMBERS
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:14:5-77
+	android:name
+		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:14:22-74
+uses-permission#android.permission.SYSTEM_ALERT_WINDOW
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:16:5-78
+	android:name
+		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:16:22-75
+queries
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:69:5-76:15
+intent#action:name:android.intent.action.PROCESS_TEXT+data:mimeType:text/plain
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:70:9-73:18
+action#android.intent.action.PROCESS_TEXT
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:71:13-72
+	android:name
+		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:71:21-70
 data
-ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:54:13-50
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:72:13-50
 	android:mimeType
-		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:54:19-48
+		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:72:19-48
 provider
-ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:57:9-74
+ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:75:9-74
 	android:authorities
-		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:57:19-71
+		ADDED from C:\flutter_apps\telecaller_app\frontend\android\app\src\main\AndroidManifest.xml:75:19-71
 uses-sdk
 INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\debug\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\debug\AndroidManifest.xml
 INJECTED from C:\flutter_apps\telecaller_app\frontend\android\app\src\debug\AndroidManifest.xml
 MERGED from [:shared_preferences_android] C:\flutter_apps\telecaller_app\frontend\build\shared_preferences_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:shared_preferences_android] C:\flutter_apps\telecaller_app\frontend\build\shared_preferences_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:permission_handler_android] C:\flutter_apps\telecaller_app\frontend\build\permission_handler_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:permission_handler_android] C:\flutter_apps\telecaller_app\frontend\build\permission_handler_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:url_launcher_android] C:\flutter_apps\telecaller_app\frontend\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:url_launcher_android] C:\flutter_apps\telecaller_app\frontend\build\url_launcher_android\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [androidx.preference:preference:1.2.1] C:\Users\parva\.gradle\caches\8.10.2\transforms\0098a6e93522fecc805d8900172003dc\transformed\preference-1.2.1\AndroidManifest.xml:20:5-22:41

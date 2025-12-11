@@ -10,6 +10,11 @@ class HomeController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
   HeaderController? _headerController;
 
+  // API calls overview data
+  Map<String, dynamic>? _apiCallsOverview;
+  bool _isLoadingCallsOverview = false;
+  String? _callsOverviewError;
+
   // Initialize with header controller
   void init(HeaderController headerController) {
     if (_headerController != headerController) {
@@ -17,9 +22,13 @@ class HomeController extends ChangeNotifier {
       _headerController = headerController;
       _headerController?.addListener(_onHeaderChanged);
     }
+    // Fetch calls overview when initialized
+    fetchCallsOverviewFromApi();
   }
 
   void _onHeaderChanged() {
+    // Fetch new data when header (date/store) changes
+    fetchCallsOverviewFromApi();
     notifyListeners();
   }
 
@@ -29,9 +38,40 @@ class HomeController extends ChangeNotifier {
     super.dispose();
   }
 
-  // Get call summary data (same logic as Lead Screen)
+  /// Fetch calls overview from API
+  Future<void> fetchCallsOverviewFromApi() async {
+    try {
+      _isLoadingCallsOverview = true;
+      _callsOverviewError = null;
+      notifyListeners();
+
+      final store = _headerController?.selectedStore;
+      final date = _headerController?.selectedDate ?? DateTime.now();
+
+      // Pass store in "Brand - Location" format if not "All Stores"
+      final storeParam =
+          (store == null || store == 'All Stores') ? null : store;
+
+      final response = await _repository.fetchCallSummaryFromApi(
+        store: storeParam,
+        date: date,
+      );
+
+      _apiCallsOverview = response;
+      _isLoadingCallsOverview = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoadingCallsOverview = false;
+      _callsOverviewError = e.toString();
+      print('HomeController: Error fetching calls overview: $e');
+      notifyListeners();
+    }
+  }
+
+  // Get call summary data (calculated locally, not from API)
   List<Map<String, dynamic>> getCallSummary() {
-    final allLeads = _repository.allLeads;
+    final date = _headerController?.selectedDate ?? DateTime.now();
+    final allLeads = _repository.getLeadsByDate(date);
 
     final store = _headerController?.selectedStore;
 
@@ -107,8 +147,74 @@ class HomeController extends ChangeNotifier {
     ];
   }
 
-  // Get call list data (filtered by store and date)
+  // Get call list data (calls overview from API)
   List<Map<String, dynamic>> getCallList() {
+    // If API data is available, use it
+    if (_apiCallsOverview != null) {
+      return _buildCallListFromApi(_apiCallsOverview!);
+    }
+
+    // Fallback to local calculation if API fails
+    return _buildCallListFromLocal();
+  }
+
+  /// Build calls overview from API response
+  List<Map<String, dynamic>> _buildCallListFromApi(
+    Map<String, dynamic> apiData,
+  ) {
+    // Extract counts from API response
+    final connected = apiData['connected']?.toString() ?? '0';
+    final notConnected = apiData['not_connected']?.toString() ?? '0';
+    final callBackLater = apiData['call_back_later']?.toString() ?? '0';
+    final confirmed = apiData['confirmed']?.toString() ?? '0';
+    final cancelled = apiData['cancelled']?.toString() ?? '0';
+
+    return [
+      {
+        "icon": Icons.phone_outlined,
+        "title": "Connected Calls",
+        "subtitle": "Customer Answered",
+        "count": connected,
+        "bgColor": const Color(0xffD4F5DA),
+        "iconColor": const Color(0xff56BE6B),
+      },
+      {
+        "icon": Icons.call_end_outlined,
+        "title": "Not Connected",
+        "subtitle": "Busy / Switched Off",
+        "count": notConnected,
+        "bgColor": const Color(0xffFFD8D8),
+        "iconColor": const Color(0xffFF0000),
+      },
+      {
+        "icon": Icons.access_time,
+        "title": "Call Back Later",
+        "subtitle": "Follow-up pending",
+        "count": callBackLater,
+        "bgColor": const Color(0xffFFF7CC),
+        "iconColor": const Color(0xffFFCC00),
+      },
+      {
+        "icon": Icons.task_alt_outlined,
+        "title": "Confirmed / Converted",
+        "subtitle": "Customer Booked",
+        "count": confirmed,
+        "bgColor": const Color(0xffD4F5DA),
+        "iconColor": const Color(0xff56BE6B),
+      },
+      {
+        "icon": Icons.block_outlined,
+        "title": "Cancelled / Rejected",
+        "subtitle": "Customer Declined",
+        "count": cancelled,
+        "bgColor": const Color(0xffE7E7E7),
+        "iconColor": const Color(0xff797979),
+      },
+    ];
+  }
+
+  /// Fallback: Build calls overview from local data
+  List<Map<String, dynamic>> _buildCallListFromLocal() {
     final store = _headerController?.selectedStore;
     final date = _headerController?.selectedDate ?? DateTime.now();
 
@@ -197,8 +303,14 @@ class HomeController extends ChangeNotifier {
     ];
   }
 
+  // Getters for API state
+  bool get isLoadingCallsOverview => _isLoadingCallsOverview;
+  String? get callsOverviewError => _callsOverviewError;
+  bool get hasApiData => _apiCallsOverview != null;
+
   // Refresh data (notify listeners when repository data changes)
   void refresh() {
+    fetchCallsOverviewFromApi();
     notifyListeners();
   }
 }

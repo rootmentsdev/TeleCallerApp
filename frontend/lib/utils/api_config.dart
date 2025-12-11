@@ -230,4 +230,24 @@ class ApiConfig {
   static String getReportById(String id) {
     return "$reportsBaseUrl/$id";
   }
+
+  /// Get call summary/dashboard statistics
+  static String getCallSummary({String? store, String? date}) {
+    String url = "$reportsEndpoint/call-summary";
+    List<String> queryParams = [];
+
+    if (date != null && date.isNotEmpty) {
+      queryParams.add("date=${Uri.encodeComponent(date)}");
+    }
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+
+    return url;
+  }
 }

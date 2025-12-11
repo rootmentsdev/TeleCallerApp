@@ -835,6 +835,50 @@ class ApiService {
     }
   }
 
+  /// Get call summary/dashboard statistics from API
+  Future<Map<String, dynamic>> getCallSummary({
+    String? store,
+    String? date,
+  }) async {
+    final url = Uri.parse(ApiConfig.getCallSummary(store: store, date: date));
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching call summary');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print('ApiService: Call summary response status: ${response.statusCode}');
+      print('ApiService: Call summary response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+
+        // Handle both Map and List responses
+        if (decodedResponse is Map<String, dynamic>) {
+          return decodedResponse;
+        } else {
+          throw Exception('Unexpected response format from server');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load call summary: Status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('ApiService: Error fetching call summary: $e');
+      rethrow;
+    }
+  }
+
   /// Get authentication headers for API requests
   Future<Map<String, String>> _getAuthHeaders() async {
     final headers = <String, String>{

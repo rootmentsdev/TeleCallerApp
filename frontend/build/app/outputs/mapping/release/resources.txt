@@ -2,12 +2,12 @@ Marking string:androidx_startup:2131558427 reachable: referenced from C:\flutter
 Marking attr:preferenceStyle:2130903294 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking layout:preference:2131427369 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking layout:abc_action_menu_item_layout:2131427330 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking dimen:abc_dropdownitem_icon_width:2131099689 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking dimen:abc_dropdownitem_text_padding_left:2131099690 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:tag_window_insets_animation_callback:2131230917 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:tag_on_apply_window_listener:2131230909 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:browser_actions_context_menu_min_padding:2131099727 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:browser_actions_context_menu_max_width:2131099726 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking dimen:abc_dropdownitem_icon_width:2131099689 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking dimen:abc_dropdownitem_text_padding_left:2131099690 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:preferenceCategoryStyle:2130903286 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:tag_screen_reader_focusable:2131230912 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:tag_accessibility_heading:2131230907 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
@@ -20,21 +20,21 @@ Marking attr:dialogPreferenceStyle:2130903154 reachable: referenced from C:\flut
 Marking id:split_action_bar:2131230896 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:action_bar:2131230759 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:action_context_bar:2131230767 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking layout:abc_tooltip:2131427355 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking id:message:2131230845 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking style:Animation_AppCompat_Tooltip:2131623940 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:actionBarSize:2130903043 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:action_bar_activity_content:2131230760 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:action_bar_container:2131230761 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:abc_config_prefDialogWidth:2131099671 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking layout:abc_cascading_menu_item_layout:2131427339 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking layout:abc_popup_menu_header_item_layout:2131427346 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:dropDownListViewStyle:2130903174 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:fastscroll_default_thickness:2131099737 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:fastscroll_minimum_range:2131099739 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:fastscroll_margin:2131099738 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:preferenceScreenStyle:2130903293 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:nestedScrollViewStyle:2130903268 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking layout:abc_tooltip:2131427355 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking id:message:2131230845 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking style:Animation_AppCompat_Tooltip:2131623940 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:dropDownListViewStyle:2130903174 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:searchViewStyle:2130903310 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking layout:abc_search_view:2131427353 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:search_src_text:2131230884 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
@@ -50,64 +50,13 @@ Marking string:abc_searchview_description_search:2131558421 reachable: reference
 Marking layout:abc_search_dropdown_item_icons_2line:2131427352 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:abc_search_view_preferred_height:2131099702 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking dimen:abc_search_view_preferred_width:2131099703 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking id:edit_query:2131230814 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:switchPreferenceCompatStyle:2130903357 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:topPanel:2131230927 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:buttonPanel:2131230796 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:contentPanel:2131230807 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:customPanel:2131230809 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:toolbarNavigationButtonStyle:2130903396 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_textfield_default_mtrl_alpha:2131165265 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_ab_share_pack_mtrl_alpha:2131165184 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_textfield_search_default_mtrl_alpha:2131165267 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_cab_background_internal_bg:2131165199 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_menu_hardkey_panel_mtrl_mult:2131165238 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_popup_background_mtrl_mult:2131165239 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_tab_indicator_material:2131165255 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_textfield_search_material:2131165268 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_btn_check_material_anim:2131165188 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_btn_radio_material_anim:2131165194 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_btn_check_material:2131165187 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_btn_radio_material:2131165193 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_ic_commit_search_api_mtrl_alpha:2131165208 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_seekbar_tick_mark_material:2131165249 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_ic_menu_share_mtrl_alpha:2131165215 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_ic_menu_copy_mtrl_am_alpha:2131165210 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_ic_menu_cut_mtrl_alpha:2131165211 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_ic_menu_selectall_mtrl_alpha:2131165214 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_ic_menu_paste_mtrl_am_alpha:2131165213 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_textfield_activated_mtrl_alpha:2131165264 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_textfield_search_activated_mtrl_alpha:2131165266 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_cab_background_top_mtrl_alpha:2131165201 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_text_cursor_material:2131165257 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_text_select_handle_left_mtrl_dark:2131165258 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_text_select_handle_middle_mtrl_dark:2131165260 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_text_select_handle_right_mtrl_dark:2131165262 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_text_select_handle_left_mtrl_light:2131165259 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_text_select_handle_middle_mtrl_light:2131165261 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_text_select_handle_right_mtrl_light:2131165263 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:colorControlHighlight:2130903130 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:colorButtonNormal:2130903128 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_edit_text_material:2131165204 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking color:abc_tint_edittext:2131034132 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_switch_track_mtrl_alpha:2131165254 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking color:abc_tint_switch_track:2131034135 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_switch_thumb_material:2131165253 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:colorSwitchThumbNormal:2130903135 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:colorControlActivated:2130903129 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_btn_default_mtrl_shape:2131165192 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_btn_borderless_material:2131165186 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_btn_colored_material:2131165191 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:colorAccent:2130903126 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_spinner_mtrl_am_alpha:2131165251 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_spinner_textfield_background_material:2131165252 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:colorControlNormal:2130903131 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking color:abc_tint_default:2131034131 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking color:abc_tint_btn_checkable:2131034130 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking drawable:abc_seekbar_thumb_material:2131165248 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking color:abc_tint_seek_thumb:2131034133 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking color:abc_tint_spinner:2131034134 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:tag_unhandled_key_listeners:2131230916 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking id:edit_query:2131230814 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:toolbarStyle:2130903397 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:actionBarStyle:2130903045 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking string:abc_action_bar_up_description:2131558401 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
@@ -140,20 +89,27 @@ Marking attr:checkBoxPreferenceStyle:2130903117 reachable: referenced from C:\fl
 Marking attr:switchPreferenceStyle:2130903358 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:actionOverflowButtonStyle:2130903069 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:actionOverflowMenuStyle:2130903070 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking dimen:tooltip_precise_anchor_threshold:2131099776 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking dimen:tooltip_precise_anchor_extra_offset:2131099775 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking dimen:tooltip_y_offset_touch:2131099779 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking dimen:tooltip_y_offset_non_touch:2131099778 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking id:spacer:2131230893 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:toolbarNavigationButtonStyle:2130903396 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_cab_background_top_material:2131165200 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_cab_background_internal_bg:2131165199 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_cab_background_top_mtrl_alpha:2131165201 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_vector_test:2131165269 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_switch_thumb_material:2131165253 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_seekbar_track_material:2131165250 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:colorControlActivated:2130903129 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:colorControlNormal:2130903131 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_ratingbar_material:2131165241 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_ratingbar_indicator_material:2131165240 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_ratingbar_small_material:2131165242 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_list_divider_mtrl_alpha:2131165227 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking drawable:abc_dialog_material_background:2131165203 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking id:spacer:2131230893 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking layout:abc_popup_menu_item_layout:2131427347 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking dimen:tooltip_precise_anchor_threshold:2131099776 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking dimen:tooltip_precise_anchor_extra_offset:2131099775 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking dimen:tooltip_y_offset_touch:2131099779 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking dimen:tooltip_y_offset_non_touch:2131099778 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:textColorSearchUrl:2130903374 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:dropdownPreferenceStyle:2130903176 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:autoCompleteTextViewStyle:2130903091 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:actionModeStyle:2130903067 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
@@ -162,13 +118,57 @@ Marking layout:abc_action_mode_close_item_material:2131427333 reachable: referen
 Marking layout:abc_action_bar_title_item:2131427328 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:action_bar_title:2131230765 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking id:action_bar_subtitle:2131230764 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
-Marking attr:textColorSearchUrl:2130903374 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_textfield_default_mtrl_alpha:2131165265 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_ab_share_pack_mtrl_alpha:2131165184 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_textfield_search_default_mtrl_alpha:2131165267 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_menu_hardkey_panel_mtrl_mult:2131165238 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_popup_background_mtrl_mult:2131165239 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_tab_indicator_material:2131165255 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_textfield_search_material:2131165268 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_btn_check_material_anim:2131165188 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_btn_radio_material_anim:2131165194 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_btn_check_material:2131165187 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_btn_radio_material:2131165193 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_ic_commit_search_api_mtrl_alpha:2131165208 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_seekbar_tick_mark_material:2131165249 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_ic_menu_share_mtrl_alpha:2131165215 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_ic_menu_copy_mtrl_am_alpha:2131165210 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_ic_menu_cut_mtrl_alpha:2131165211 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_ic_menu_selectall_mtrl_alpha:2131165214 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_ic_menu_paste_mtrl_am_alpha:2131165213 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_textfield_activated_mtrl_alpha:2131165264 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_textfield_search_activated_mtrl_alpha:2131165266 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_text_cursor_material:2131165257 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_text_select_handle_left_mtrl_dark:2131165258 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_text_select_handle_middle_mtrl_dark:2131165260 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_text_select_handle_right_mtrl_dark:2131165262 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_text_select_handle_left_mtrl_light:2131165259 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_text_select_handle_middle_mtrl_light:2131165261 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_text_select_handle_right_mtrl_light:2131165263 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:colorControlHighlight:2130903130 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:colorButtonNormal:2130903128 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_edit_text_material:2131165204 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking color:abc_tint_edittext:2131034132 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_switch_track_mtrl_alpha:2131165254 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking color:abc_tint_switch_track:2131034135 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:colorSwitchThumbNormal:2130903135 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_btn_default_mtrl_shape:2131165192 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_btn_borderless_material:2131165186 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_btn_colored_material:2131165191 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking attr:colorAccent:2130903126 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_spinner_mtrl_am_alpha:2131165251 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_spinner_textfield_background_material:2131165252 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking color:abc_tint_default:2131034131 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking color:abc_tint_btn_checkable:2131034130 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking drawable:abc_seekbar_thumb_material:2131165248 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking color:abc_tint_seek_thumb:2131034133 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
+Marking color:abc_tint_spinner:2131034134 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 Marking attr:switchStyle:2130903359 reachable: referenced from C:\flutter_apps\telecaller_app\frontend\build\app\intermediates\dex\release\minifyReleaseWithR8\classes.dex
 android.content.res.Resources#getIdentifier present: true
 Web content present: true
 Referenced Strings:
+android.settings.MANAGE_APP_ALL_FILES...
 exception
-cancel
 STRING_LIST
 http://
 callerContext
@@ -194,21 +194,24 @@ GeneratedPluginsRegister
 java.lang.CharSequence
 _handled
 givenName
+PermissionHandler.AppSettingsManager
 click
 keyframe
 0
 ACTION_PRESS_AND_HOLD
+kotlinx.coroutines.DefaultExecutor
 left
 kotlin.jvm.functions.
-kotlinx.coroutines.DefaultExecutor
 kotlinx.coroutines.scheduler.default....
-callRinging
 TextInputClient.updateEditingStateWit...
 registerWith
 SystemSoundType.alert
 removeItemAt
+android.permission.READ_CONTACTS
 S_RESUMING_BY_RCV
+ringing
 DECREASE
+android.settings.action.MANAGE_OVERLA...
 touchOffset
 android.intent.extra.PROCESS_TEXT_REA...
 VectorDrawableCompat
@@ -228,8 +231,8 @@ a
 b
 address
 ACTION_CLEAR_ACCESSIBILITY_FOCUS
-user_query
 c
+user_query
 SystemUiOverlay.top
 f
 RESULT_PARSE_EXCEPTION
@@ -241,9 +244,10 @@ kotlin.String
 sidecarDeviceState
 o
 r
-SUSPEND
 java.lang.Module
+SUSPEND
 GridLayoutManager
+package:
 TypefaceCompatApi26Impl
 this$0
 x
@@ -285,11 +289,12 @@ AppLifecycleState.
 SystemChrome.setSystemUIOverlayStyle
 strokeWidth
 androidx.view.accessibility.Accessibi...
+outgoing
 addWindowLayoutInfoListener
-TextInput.setEditableSizeAndTransform
 repeatMode
-enable_state_restoration
+TextInput.setEditableSizeAndTransform
 ACTION_CLEAR_FOCUS
+enable_state_restoration
 COMPLETING_WAITING_CHILDREN
 RESULT_BASELINE_PROFILE_NOT_FOUND
 _invoked
@@ -297,6 +302,7 @@ getDouble
 ACTION_SCROLL_BACKWARD
 locale
 FIXED32
+android.permission.WRITE_EXTERNAL_STO...
 RESULT_DELETE_SKIP_FILE_SUCCESS
 SDK_INT
 KeyEmbedderResponder
@@ -306,25 +312,28 @@ android.graphics.drawable.VectorDrawable
 SET_SELECTION
 strokeLineCap
 kotlinx.coroutines.main.delay
+android.permission.WRITE_CONTACTS
 _delayed
 FIXED32_LIST_PACKED
 ACTION_SCROLL_UP
 io.flutter.embedding.android.OldGenHe...
+android.permission.RECEIVE_SMS
 BITMAP_MASKABLE
 MOVE_CURSOR_BACKWARD_BY_CHARACTER
-deqIdx
 kotlin.collections.List
+deqIdx
 androidx.view.accessibility.Accessibi...
 label
 MOVE_CURSOR_FORWARD_BY_CHARACTER
 message
 scanCode
 FlutterJNI
-java.util.function.Consumer
 args
+java.util.function.Consumer
 ACTION_DRAG_DROP
 resizeUpLeft
 SearchView
+android.intent.extra.PHONE_NUMBER
 setDisplayFeatures
 HapticFeedbackType.lightImpact
 TextInputType.emailAddress
@@ -339,24 +348,27 @@ Dispatchers.IO
 grantResults
 centerX
 UNDEFINED
+requestPermissions
 focus
+android.settings.REQUEST_SCHEDULE_EXA...
 ACTION_CONTEXT_CLICK
-PAUSED
 number
+PAUSED
 androidx.profileinstaller.action.SAVE...
 android.os.Build$VERSION
 dexopt/baseline.prof
 executor
 androidx.window.extensions.WindowExte...
 TooltipCompatHandler
+android.settings.NOTIFICATION_POLICY_...
 property
 kotlinx.coroutines.internal.StackTrac...
 androidx.view.accessibility.Accessibi...
 createSegment
 write
+flow
 onStop
 TextInputType.none
-flow
 UINT64_LIST_PACKED
 TextInputAction.none
 dev.flutter.pigeon.shared_preferences...
@@ -374,8 +386,8 @@ io.flutter.Entrypoint
 MAP
 .xml
 RESULT_INSTALL_SKIP_FILE_SUCCESS
-wait
 other
+wait
 FlutterActivityAndFragmentDelegate
 birthDateYear
 ACTION_SCROLL_IN_DIRECTION
@@ -387,9 +399,9 @@ FlutterTextureView
 TypefaceCompatApi24Impl
 suggest_text_1
 suggest_text_2
-top
 androidx.view.accessibility.Accessibi...
 ACTION_PAGE_UP
+top
 io.flutter.embedding.android.EnableVu...
 kotlin.Long
 androidx.view.accessibility.Accessibi...
@@ -398,9 +410,11 @@ java.lang.String
 addressRegion
 resizeDown
 TextInput.setClient
+android.settings.APPLICATION_DETAILS_...
 _resumed
 TextInputType.multiline
 getChildId
+android.permission.RECEIVE_MMS
 FIXED64
 framework
 messenger
@@ -409,6 +423,7 @@ DESTROYED
 selectionExtent
 SystemChrome.setEnabledSystemUIOverlays
 New
+onCallEnded
 kotlin.collections.Collection
 ReflectionGuard
 TextInputAction.send
@@ -424,9 +439,9 @@ setEpicenterBounds
 HapticFeedback.vibrate
 repeatCount
 noDrop
-flutter/keydata
 read
 void
+flutter/keydata
 memoryPressure
 flutter/restoration
 touch
@@ -435,6 +450,7 @@ _cur
 mStableInsets
 onResume
 mOverlapAnchor
+android.permission.MANAGE_EXTERNAL_ST...
 java.util.List
 hybrid
 BYTES_LIST
@@ -448,6 +464,7 @@ parkedWorkersStack
 OP_POST_NOTIFICATION
 android.permission.CALL_PHONE
 FLOAT
+android.permission.GET_ACCOUNTS
 handleLifecycleEvent
 COMPLETING_ALREADY
 systemNavigationBarColor
@@ -459,14 +476,17 @@ readException
 SFIXED64_LIST_PACKED
 kotlinx.coroutines.DefaultExecutor.ke...
 kotlin.Annotation
+android.permission.NEARBY_WIFI_DEVICES
 synchronizeToNativeViewHierarchy
 info.displayFeatures
 enableJavaScript
 direction
 dev.flutter.pigeon.shared_preferences...
 arrayBaseOffset
+android.permission.RECEIVE_WAP_PUSH
 android.intent.action.SEARCH
 BITMAP
+android.permission.WRITE_CALL_LOG
 windowConfiguration
 resizeUpRight
 androidx.window.extensions.layout.Win...
@@ -476,23 +496,27 @@ TextInputType.number
 layout_inflater
 /proc/self/fd/
 UNKNOWN
+android.permission.CAMERA
 getParentNodeId
 fileName
 getByte
 endColor
 accessibility
+android.permission.READ_PHONE_NUMBERS
 JSON_ENCODED
 suggest_intent_extra_data
 getAppBounds
+PermissionHandler.PermissionManager
 SystemChrome.setEnabledSystemUIMode
+permissions_handler
 UINT32
 AppCompatCustomView
 suggest_flags
-receiveSegment
 android.widget.HorizontalScrollView
+receiveSegment
 centerColor
-password
 preferences.all
+password
 NO_CLOSE_CAUSE
 kotlinx.coroutines.scheduler.keep.ali...
 INCREASE
@@ -504,6 +528,7 @@ element
 config_viewMaxRotaryEncoderFlingVelocity
 cache
 creditCardExpirationMonth
+android.permission.BLUETOOTH_SCAN
 deltaText
 zoomIn
 ACTION_SCROLL_DOWN
@@ -533,9 +558,11 @@ objectFieldOffset
 cached_engine_id
 ACTION_SELECT
 setRemoveOnCancelPolicy
+android.permission.BODY_SENSORS_BACKG...
 receive
 NO_ACTIVITY
 viewportWidth
+android.permission.READ_MEDIA_IMAGES
 gradient
 forbidden
 checkOpNoThrow
@@ -544,12 +571,12 @@ onTrimMemory
 blockingTasksInBuffer
 getSourceNodeId
 call
-streetAddress
 android.permission.READ_CALL_LOG
+streetAddress
 kotlin.Char
 RecyclerView
-flutter/isolate
 ACTION_ARGUMENT_EXTEND_SELECTION_BOOLEAN
+flutter/isolate
 grab
 animator
 _decisionAndIndex
@@ -568,20 +595,20 @@ allScroll
 java.lang.Short
 SystemChrome.systemUIChange
 android.widget.Button
-_closeCause
 NewApi
+_closeCause
 has
 androidx.view.accessibility.Accessibi...
 androidx.recyclerview.widget.Recycler...
-addressCity
 AvdcInflateDelegate
+addressCity
 suggest_intent_query
 CustomTabsClient
 UINT32_LIST_PACKED
 includeSubdomains
 unreachable
-androidx.datastore.preferences.protob...
 search_suggest_query
+androidx.datastore.preferences.protob...
 android.intent.action.CALL
 creditCardSecurityCode
 UINT64
@@ -595,9 +622,9 @@ startOffset
 peekByte
 composingBase
 name
-DartExecutor
 NestedScrollView
 fields
+DartExecutor
 INTERRUPTED_RCV
 getDescriptor
 MESSAGE_LIST
@@ -612,21 +639,22 @@ kotlin.coroutines.jvm.internal.BaseCo...
 android
 platformViewId
 java.lang.module.ModuleDescriptor
-nameSuffix
 description
-callEnded
+nameSuffix
 _isTerminated
 libcore.io.Memory
 tint
-status_bar_height
 SEALED
+status_bar_height
 CREATED
 textScaleFactor
 NO_OWNER
 androidx.view.accessibility.Accessibi...
 namePrefix
+PermissionHandler.ServiceManager
 SharedPreferencesPlugin
 io.flutter.embedding.android.NormalTheme
+flutter.baseflow.com/permissions/methods
 SUSPEND_NO_WAITER
 Dispatchers.Main
 EXTRA_SKIP_FILE_OPERATION
@@ -635,8 +663,8 @@ _windowInsetsCompat
 FlutterSurfaceView
 Cancelled
 getEmptyRegistry
-getPosture
 pair
+getPosture
 target
 BOOL_LIST
 getLayoutDirection
@@ -663,20 +691,20 @@ TextInput.clearClient
 SCROLL_RIGHT
 android.widget.ImageView
 android.widget.RadioButton
-textCapitalization
 _isCompleted
-dev.flutter.pigeon.url_launcher_andro...
+textCapitalization
 ACCESSIBILITY_CLICKABLE_SPAN_ID
+dev.flutter.pigeon.url_launcher_andro...
 hybridFallback
 getBounds
-put
 ACTION_PAGE_LEFT
-EmptyCoroutineContext
+put
 TextInputType.text
+EmptyCoroutineContext
 ACTION_ARGUMENT_SELECTION_END_INT
 in_progress
-callAnswered
 pokeLong
+shouldShowRequestPermissionRationale
 FAILED
 POISONED
 font_ttc_index
@@ -693,6 +721,7 @@ item
 dart_entrypoint
 kotlinx.coroutines.scheduler.core.poo...
 kotlinx.coroutines.scheduler.max.pool...
+android.permission.ACCESS_BACKGROUND_...
 double
 newPassword
 closeHandler
@@ -700,14 +729,15 @@ smsOTPCode
 com.android.browser.headers
 flutter_deeplinking_enabled
 removeWindowLayoutInfoListener
-dev.flutter.pigeon.shared_preferences...
 flutterEngine
+dev.flutter.pigeon.shared_preferences...
 strokeLineJoin
 BUFFERED
 phone
 light
 kotlin.Short
 .apk
+android.settings.MANAGE_UNKNOWN_APP_S...
 CHANNEL_CLOSED
 getDisplayFeatures
 UrlLauncherPlugin
@@ -719,27 +749,31 @@ PrivateApi
 SystemSound.play
 tel:
 onPause
-ViewConfigCompat
 SystemUiOverlay.bottom
+ViewConfigCompat
 ImageReaderSurfaceProducer
+enabled
 kotlinx.coroutines.bufferedChannel.ex...
 androidx.browser.customtabs.extra.SHA...
-enabled
 android.widget.SeekBar
 android.intent.action.RUN
+android.permission.ACCESS_FINE_LOCATION
+android.permission.ACCESS_NOTIFICATIO...
 INITIALIZED
+CallTrackingReceiver
+android.permission.REQUEST_IGNORE_BAT...
 mContentInsets
-resuming_sender
 KeyEventChannel
 android.support.v13.view.inputmethod....
+resuming_sender
 producerIndex
 flutter/settings
 stackTrace
 addressLocality
 setDirection
 ENUM_LIST
-value.stringSet.stringsList
 java.util.Map$Entry
+value.stringSet.stringsList
 ACTION_DRAG_START
 display
 SpellCheck.initiateSpellCheck
@@ -764,7 +798,6 @@ kotlin.Any
 Brightness.dark
 file.canonicalFile.absolutePath
 listString
-listen
 RESULT_INSTALL_SUCCESS
 Bytes
 SettingsChannel
@@ -788,40 +821,43 @@ kind
 android.speech.extra.RESULTS_PENDINGI...
 GeneratedPluginRegistrant
 io.flutter.embedding.android.EnableIm...
+android.permission.REQUEST_INSTALL_PA...
 _consensus
 CANCELLED
 SCROLL_UP
 WrongConstant
 setWindowLayoutType
-kotlin.collections.Iterator
 CLOSED_EMPTY
+kotlin.collections.Iterator
 res/
 PreferenceGroup
+android.permission.ACTIVITY_RECOGNITION
 job
 TextInputClient.requestExistingInputS...
 setLocale
 Clipboard.setData
 TextInput.sendAppPrivateCommand
-TextInputType.phone
 wm.defaultDisplay
+TextInputType.phone
 SET_TEXT
 CLOSED
 SystemChrome.restoreSystemUIOverlays
 unexpected
 preferencesMap
 NO_RECEIVE_RESULT
+MainActivity
 INT32_LIST_PACKED
 consumerIndex
 INT
-_removedRef
 kotlin.Enum
+_removedRef
 fillType
 alias
 dev.flutter.pigeon.shared_preferences...
 SINT64_LIST_PACKED
 deltas
-uniqueIdentifier
 kotlin.String.Companion
+uniqueIdentifier
 ACTION_PREVIOUS_HTML_ELEMENT
 move
 http://schemas.android.com/apk/res/an...
@@ -834,6 +870,7 @@ setPosture
 addFontFromAssetManager
 doBeforeTextChanged
 ensureImeVisible
+android.permission.ANSWER_PHONE_CALLS
 WindowInsetsCompat
 android.intent.action.PROCESS_TEXT
 PopupWindowCompatApi21
@@ -843,15 +880,18 @@ mIsChildViewEnabled
 mAttachInfo
 value.string
 suggestions
+com.telecaller.app/call_tracking
 classes.dex
+android.permission.READ_PHONE_STATE
 extent
 getModule
 gradientRadius
-resizeColumn
 sidecarCompat
+resizeColumn
 plugins
-tooltip
+openAppSettings
 kotlin.Cloneable
+tooltip
 dev.flutter.pigeon.shared_preferences...
 PlatformViewsController
 path
@@ -879,14 +919,14 @@ SINT32
 MOVE_CURSOR_BACKWARD_BY_WORD
 kotlin.Unit
 kotlinx.coroutines.scheduler.resoluti...
-route
 web_search
+route
 ON_PAUSE
 interpolator
 getType
 birthdayDay
-kotlin.jvm.internal.StringCompanionOb...
 domain
+kotlin.jvm.internal.StringCompanionOb...
 viewType
 ACTION_CLICK
 editingValue
@@ -906,6 +946,9 @@ popRoute
 defaultDisplay
 androidx.window.extensions.WindowExte...
 RESULT_DESIRED_FORMAT_UNSUPPORTED
+android.permission.SEND_SMS
+android.permission.USE_SIP
+android.permission.READ_MEDIA_VIDEO
 androidx.view.accessibility.Accessibi...
 set
 clearFocus
@@ -920,10 +963,11 @@ flutter/scribe
 hintText
 INACTIVE
 personNamePrefix
+ACTION_NEXT_AT_MOVEMENT_GRANULARITY
 VGhpcyBpcyB0aGUgcHJlZml4IGZvciBhIGxpc3Qu
 enableOnBackInvokedCallbackState
-ACTION_NEXT_AT_MOVEMENT_GRANULARITY
 toString
+android.permission.BLUETOOTH
 font
 feature.rect
 setTouchModal
@@ -945,22 +989,27 @@ configurationId
 Override
 info
 android.speech.extra.MAX_RESULTS
+android.permission.READ_MEDIA_AUDIO
 coordinator
 SCROLL_TO_OFFSET
 preferences_
 Failed
 NonDisposableHandle
+android.permission.RECORD_AUDIO
+android.intent.action.PHONE_STATE
 TextInputType.name
 navigation_bar_height
 java.lang.annotation.Annotation
 ACTION_ACCESSIBILITY_FOCUS
 countryName
 FlutterImageView
+android.permission.BLUETOOTH_CONNECT
 nodeId
 inputAction
 _preferences
 frame
 font_weight
+android.permission.ACCESS_MEDIA_LOCATION
 ACTION_LONG_CLICK
 TERMINATED
 ACTION_SET_SELECTION
@@ -972,8 +1021,8 @@ putLong
 androidx.view.accessibility.Accessibi...
 extendedAddress
 wm.currentWindowMetrics.bounds
-timeout
 content
+timeout
 duration
 kotlin.collections.Map
 ProcessText.queryTextActions
@@ -989,8 +1038,8 @@ java.lang.Boolean
 selector
 contentCommitMimeTypes
 owner
-classSimpleName
 strings_
+classSimpleName
 pathData
 DeviceOrientation.landscapeRight
 Scribe.isStylusHandwritingAvailable
@@ -1002,7 +1051,7 @@ keydown
 workerCtl
 activateSystemCursor
 trimPathStart
-eventMap
+onCallStateChanged
 TextInputClient.updateEditingState
 flutter/accessibility
 obj
@@ -1013,10 +1062,11 @@ resize
 androidx.window.extensions.layout.Fol...
 TextEditingDelta
 ACTION_MOVE_WINDOW
-setInitialRoute
 TextInputAction.next
+setInitialRoute
 strokeMiterLimit
 DROP_OLDEST
+android.permission.WRITE_CALENDAR
 lastScheduledTask
 viewportHeight
 clipboard
@@ -1034,20 +1084,21 @@ action
 text
 id
 birthdayYear
-TextInput.finishAutofillContext
 ENUM
+TextInput.finishAutofillContext
 primary.prof
+checkServiceStatus
 io.flutter.embedding.android.EnableOp...
 signed
 it
-params
 getLayoutAlignment
+params
 FlutterView
-UNDECIDED
 announce
+UNDECIDED
 getInt
-TextInputType.address
 PLAIN_TEXT
+TextInputType.address
 applicationContext
 getResId
 TextInputType.url
@@ -1095,6 +1146,7 @@ instance
 flutter/processtext
 android.speech.action.RECOGNIZE_SPEECH
 newUsername
+android.permission.READ_CALENDAR
 main
 tintMode
 commitBackGesture
@@ -1107,8 +1159,8 @@ android.resource://
 strokeColor
 DID_GAIN_ACCESSIBILITY_FOCUS
 pokeInt
-android.support.customtabs.extra.SESSION
 kotlin.Number
+android.support.customtabs.extra.SESSION
 DeviceOrientation.portraitDown
 NULL
 TOO_LATE_TO_CANCEL
@@ -1121,8 +1173,8 @@ separator
 personMiddleName
 io.flutter.embedding.android.Impeller...
 entry
-grabbing
 font_italic
+grabbing
 null
 alwaysUse24HourFormat
 true
@@ -1141,21 +1193,23 @@ ACTION_SCROLL_RIGHT
 addFontFromBuffer
 statusBarIconBrightness
 peekLong
-sendersAndCloseStatus
 ViewUtils
+sendersAndCloseStatus
 UINT32_LIST
-head
 asyncTraceEnd
-transform
+android.permission.BLUETOOTH_ADVERTISE
+head
 getWindowLayoutComponentMethod
+transform
 receivers
 ACTION_SCROLL_LEFT
 STARTED
 kotlin.Comparable
 show_password
 consumer
-baseKey
 nativeSpellCheckServiceDefined
+android.intent.action.NEW_OUTGOING_CALL
+baseKey
 DONE_RCV
 currentDisplay
 Clipboard.getData
@@ -1167,8 +1221,8 @@ DOUBLE_LIST
 ListPreference
 ResourceManagerInternal
 COROUTINE_SUSPENDED
-dev.flutter.pigeon.shared_preferences...
 config_viewMinRotaryEncoderFlingVelocity
+dev.flutter.pigeon.shared_preferences...
 Trace
 Share.invoke
 MenuItemImpl
@@ -1181,21 +1235,23 @@ Completed
 callback
 RESUME_TOKEN
 thumbPos
+android.permission.READ_EXTERNAL_STORAGE
 ACTION_PASTE
-ProcessText.processTextAction
 android.graphics.FontFamily
+ProcessText.processTextAction
 SINT32_LIST
 valueTo
 suggest_icon_1
 suggest_icon_2
-callStarted
 io.flutter.embedding.android.DisableM...
 TextInput.hide
 createAsync
-telephoneNumberNational
 .Companion
+telephoneNumberNational
+sp_permission_handler_permission_was_...
 character
 freeze
+Unknown
 java.lang.Long
 metaState
 valueType
@@ -1221,8 +1277,8 @@ dev.flutter.pigeon.shared_preferences...
 CONDITION_FALSE
 androidx.datastore.preferences.protob...
 activity
-INT32
 kotlin.Function
+INT32
 fillAlpha
 androidx.datastore.preferences.protob...
 long
@@ -1241,34 +1297,36 @@ key
 email
 FIXED64_LIST
 LONG
+kotlin.Enum.Companion
 android.type.verbatim
 RESOURCE
-kotlin.Enum.Companion
 profileinstaller_profileWrittenFor_la...
 creditCardExpirationDate
 obscureText
 ACTION_EXPAND
+android.intent.category.DEFAULT
 WRITE_SKIP_FILE
 kotlin.Float
 androidx.core.view.inputmethod.Editor...
+checkPermissionStatus
 systemNavigationBarIconBrightness
-contextMenu
 propertyName
+contextMenu
 android.speech.action.WEB_SEARCH
 handled
+STRING
 resizeRight
 SystemNavigator.pop
-STRING
 progress
 TextInputAction.newline
 compressed
 autofill
-TextCapitalization.none
 io.flutter.embedding.android.EnableVu...
+TextCapitalization.none
 _prev
 android.widget.EditText
-Scribe.startStylusHandwriting
 NO_DECISION
+Scribe.startStylusHandwriting
 SINT32_LIST_PACKED
 loader
 postalCode
@@ -1303,17 +1361,17 @@ NOT_IN_STACK
 TextInputAction.previous
 it.key
 _next
+incoming_number
 android.graphics.Insets
-ON_DESTROY
 destination
+ON_DESTROY
 enableDeltaModel
 FLOAT_LIST
 abortCreation
-com.telecaller_app/phone_events
 ViewParentCompat
 RESULT_ALREADY_INSTALLED
-flutter/mousecursor
 getTypeMethod
+flutter/mousecursor
 textservices
 FontsProvider
 setClipToScreenEnabled
@@ -1322,6 +1380,7 @@ text/plain
 getMaxAvailableHeight
 android.support.customtabs.extra.EXTR...
 WrappedDrawableApi21
+answered
 INT64
 creditCardExpirationYear
 flutter/system
@@ -1336,8 +1395,8 @@ dev.flutter.pigeon.url_launcher_andro...
 dev.flutter.pigeon.shared_preferences...
 PLATFORM_ENCODED
 location
-TextInputType.webSearch
 java.lang.Object
+TextInputType.webSearch
 getInstance
 SystemChrome.setSystemUIChangeListener
 ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY
@@ -1353,6 +1412,7 @@ prefix
 Index:
 binding
 zoomOut
+location_mode
 none
 type
 state1
@@ -1360,11 +1420,12 @@ actionLabel
 TextCapitalization.sentences
 getViewRootImpl
 appops
-permissions
 delimiter
+permissions
+tel:123123
 HapticFeedbackType.mediumImpact
-cont
 NONE
+cont
 getTextDirectionHeuristic
 dev.flutter.pigeon.shared_preferences...
 ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT
@@ -1376,8 +1437,8 @@ CONSUMED
 hints
 systemNavigationBarContrastEnforced
 keyup
-onWindowLayoutChangeListenerAdded
 java.util.Set
+onWindowLayoutChangeListenerAdded
 ACTION_ARGUMENT_SELECTION_START_INT
 push
 dev.flutter.pigeon.shared_preferences...
@@ -1385,33 +1446,38 @@ intent_extra_data_key
 _state
 result_code
 SHOW_ON_SCREEN
-ACTION_FOCUS
 brieflyShowPassword
+ACTION_FOCUS
 getOpticalInsets
 newDeviceState
 DELETE_SKIP_FILE
+android.permission.READ_SMS
 gender
 java.lang.Double
 createFromFamiliesWithDefault
 FOCUS
+android.permission.BODY_SENSORS
 binding.binaryMessenger
 resizeRow
+addListenerMethod
 flutter/spellcheck
 usesVirtualDisplay
-addListenerMethod
+com.android.voicemail.permission.ADD_...
 feature
 NO_THREAD_ELEMENTS
 get
 INTERRUPTED_SEND
-oneTimeCode
 dark
+oneTimeCode
 FLAT
 getDisplayInfo
+DOUBLE
 copy
 precise
-DOUBLE
+power
 event
 java.lang.Number
+BanUncheckedReflection
 resizeDownRight
 suggest_intent_data_id
 _availablePermits
@@ -1427,6 +1493,7 @@ phoneNumberDevice
 outState
 flutter/deferredcomponent
 elements
+android.settings.REQUEST_IGNORE_BATTE...
 ACTION_SET_TEXT
 java.lang.Comparable
 strokeAlpha
@@ -1443,9 +1510,11 @@ float
 getWindowExtensionsMethod
 postalAddressExtended
 asyncTraceBegin
-TextCapitalization.characters
 SINT64
+TextCapitalization.characters
 java.lang.Enum
+android.permission.ACCESS_COARSE_LOCA...
+android.permission.READ_MEDIA_VISUAL_...
 enableIMEPersonalizedLearning
 familyName
 create
@@ -1458,8 +1527,8 @@ tap
 android.speech.extra.PROMPT
 offset
 bottom
-SystemChrome.setApplicationSwitcherDe...
 DrawableUtils
+SystemChrome.setApplicationSwitcherDe...
 kotlin.jvm.internal.EnumCompanionObject
 ACTION_COPY
 RESULT_UNSUPPORTED_ART_VERSION
@@ -1469,9 +1538,10 @@ transition_animation_scale
 keyCode
 swipeEdge
 Active
+android.permission.SCHEDULE_EXACT_ALARM
 postalAddress
-telephoneNumberDevice
 kotlin.collections.Iterable
+telephoneNumberDevice
 DATA
 UTF8
 file_id
@@ -1488,6 +1558,7 @@ mChildNodeIds
 kotlin.collections.Map.Entry
 .font
 ACTION_CUT
+android.permission.SYSTEM_ALERT_WINDOW
 Brightness.light
 error
 getBoundsMethod
@@ -1495,23 +1566,25 @@ kotlin.Byte
 mAccessibilityDelegate
 bufferEnd
 array
+alarm
 kotlin.collections.Set
 postfix
 android.intent.action.SEND
 value
 getWindowLayoutInfo
-opaque
 REUSABLE_CLAIMED
+opaque
 java.util.Iterator
 0x%08x
+TextInputClient.performAction
 dart_entrypoint_args
 onWindowFocusChanged
-TextInputClient.performAction
 org.robolectric.Robolectric
 appcompat_skip_skip
 Parcelizer
 addressState
 ON_STOP
+android.hardware.telephony
 kotlin.CharSequence
 RESULT_IO_EXCEPTION
 int
@@ -1519,6 +1592,7 @@ personName
 AppCompatResources
 getState
 boolean
+bluetooth
 migrations
 FLOAT_LIST_PACKED
 trimPathOffset
@@ -1527,7 +1601,6 @@ emit
 java.util.Arrays$ArrayList
 AccessibilityBridge
 SCROLL_DOWN
-Marking integer:cancel_button_image_alpha:2131296258 used because it matches string pool constant cancel
 Marking id:left:2131230838 used because it matches string pool constant left
 Marking id:left:2131230838 used because it matches string pool constant left
 Marking color:accent_material_dark:2131034136 used because it matches string pool constant acc
@@ -3071,7 +3144,7 @@ Marking color:error_color_material_light:2131034163 used because it matches stri
 @id/wrap_content : reachable=false
 @integer/abc_config_activityDefaultDur : reachable=false
 @integer/abc_config_activityShortDur : reachable=false
-@integer/cancel_button_image_alpha : reachable=true
+@integer/cancel_button_image_alpha : reachable=false
 @integer/config_tooltipAnimTime : reachable=false
 @integer/preferences_detail_pane_weight : reachable=true
 @integer/preferences_header_pane_weight : reachable=true
@@ -5316,7 +5389,6 @@ The root reachable resources are:
  id:view_tree_on_back_pressed_dispatcher_owner:2131230939
  id:view_tree_saved_state_registry_owner:2131230940
  id:view_tree_view_model_store_owner:2131230941
- integer:cancel_button_image_alpha:2131296258
  integer:preferences_detail_pane_weight:2131296260
  integer:preferences_header_pane_weight:2131296261
  layout:abc_action_bar_title_item:2131427328
@@ -5671,6 +5743,7 @@ Unused resources are:
  id:wrap_content:2131230944
  integer:abc_config_activityDefaultDur:2131296256
  integer:abc_config_activityShortDur:2131296257
+ integer:cancel_button_image_alpha:2131296258
  integer:status_bar_notification_info_maxnum:2131296262
  layout:abc_action_bar_up_container:2131427329
  layout:abc_action_menu_layout:2131427331

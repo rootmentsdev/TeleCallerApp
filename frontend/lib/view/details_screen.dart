@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
+import 'package:telecaller_app/controller/call_tracking_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
+import 'package:telecaller_app/services/call_tracking_service.dart';
 import 'dart:async';
 
 class DetailsScreen extends StatefulWidget {
@@ -245,6 +247,104 @@ class _DetailsScreenState extends State<DetailsScreen>
         }
       },
     );
+
+    // Set up call tracking listener
+    _setupCallTrackingListener();
+  }
+
+  /// Set up call tracking listener for automatic call duration detection
+  void _setupCallTrackingListener() {
+    final callTrackingController = Provider.of<CallTrackingController>(
+      context,
+      listen: false,
+    );
+
+    // Set up callback for call state changes
+    callTrackingController.setOnCallStateChangedCallback((callData) {
+      final contactPhone = widget.contact["phone"] as String? ?? "";
+
+      // Check if this call matches our contact
+      if (_isPhoneNumberMatch(callData.phoneNumber, contactPhone)) {
+        if (mounted) {
+          setState(() {
+            switch (callData.callState) {
+              case CallState.ringing:
+                _isCallActive = true;
+                _callDurationSeconds = 0;
+                break;
+              case CallState.answered:
+                _isCallActive = true;
+                _callStartTime = callData.startTime;
+                _startCallTimer();
+                break;
+              case CallState.ended:
+                _isCallActive = false;
+                _callDurationSeconds = callData.duration;
+                _stopCallTimer();
+                // Auto-set call status based on duration
+                if (selectedCallStatus == null) {
+                  selectedCallStatus =
+                      callData.duration > 0
+                          ? LeadConstants.callStatusConnected
+                          : LeadConstants.callStatusNotConnected;
+                }
+                break;
+            }
+          });
+        }
+      }
+    });
+  }
+
+  /// Listen to call tracking updates for current call
+  void _listenToCallTracking() {
+    final callTrackingController = Provider.of<CallTrackingController>(
+      context,
+      listen: false,
+    );
+
+    // Check if there's already an active call for this number
+    final contactPhone = widget.contact["phone"] as String? ?? "";
+    if (callTrackingController.isPhoneNumberFromRecentCall(contactPhone)) {
+      final callData = callTrackingController.currentCall;
+      if (callData != null && mounted) {
+        setState(() {
+          _isCallActive = callTrackingController.isCallActive;
+          _callDurationSeconds = callTrackingController.currentCallDuration;
+          if (_isCallActive && callData.callState == CallState.answered) {
+            _callStartTime = callData.startTime;
+            _startCallTimer();
+          }
+        });
+      }
+    }
+  }
+
+  /// Check if phone numbers match (handles different formats)
+  bool _isPhoneNumberMatch(String phone1, String phone2) {
+    // Clean both numbers
+    String clean1 = phone1.replaceAll(RegExp(r'[^\d]'), '');
+    String clean2 = phone2.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Handle country codes
+    if (clean1.startsWith('91') && clean1.length == 12) {
+      clean1 = clean1.substring(2);
+    }
+    if (clean2.startsWith('91') && clean2.length == 12) {
+      clean2 = clean2.substring(2);
+    }
+
+    // Handle leading zeros
+    if (clean1.startsWith('0') && clean1.length == 11) {
+      clean1 = clean1.substring(1);
+    }
+    if (clean2.startsWith('0') && clean2.length == 11) {
+      clean2 = clean2.substring(1);
+    }
+
+    return clean1 == clean2 ||
+        clean1.contains(clean2) ||
+        clean2.contains(clean1);
   }
 
   @override
@@ -649,6 +749,13 @@ class _DetailsScreenState extends State<DetailsScreen>
     }
 
     try {
+      // Start call tracking for outgoing call
+      final callTrackingController = Provider.of<CallTrackingController>(
+        context,
+        listen: false,
+      );
+      callTrackingController.startOutgoingCall(cleanedNumber);
+
       // Use PhoneCallService to make call and automatically track duration
       final success = await PhoneCallService.makeCall(
         phoneNumber: cleanedNumber,
@@ -656,16 +763,16 @@ class _DetailsScreenState extends State<DetailsScreen>
       );
 
       if (success && mounted) {
-        // Don't start timer here - wait for callAnswered event
-        // Just set state to show call is being initiated
         setState(() {
-          _isCallActive = true; // Will be updated when call is answered
+          _isCallActive = true;
           _callDurationSeconds = 0;
           _hasCalled = true; // Enable form fields after call is initiated
         });
+
+        // Listen to call tracking updates
+        _listenToCallTracking();
       } else if (mounted) {
-        // If PhoneCallService returns false, it might be waiting for permission
-        // Try fallback to url_launcher which will also request permission
+        // Fallback to url_launcher
         final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
         try {
           final launched = await launchUrl(
@@ -674,8 +781,14 @@ class _DetailsScreenState extends State<DetailsScreen>
           );
 
           if (launched && mounted) {
-            // For url_launcher fallback, we can't detect when call is answered
-            // So start timer immediately as fallback
+            setState(() {
+              _isCallActive = true;
+              _callDurationSeconds = 0;
+              _hasCalled = true;
+            });
+
+            // Listen to call tracking updates
+            _listenToCallTracking();
             _startCallTimer();
             setState(() {
               _isCallActive = true;

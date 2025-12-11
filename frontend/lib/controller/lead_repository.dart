@@ -141,7 +141,22 @@ class LeadRepository extends ChangeNotifier {
     await ensureInitialized();
     final index = _leads.indexWhere((lead) => lead.id == updatedLead.id);
     if (index != -1) {
+      final oldLead = _leads[index];
       _leads[index] = updatedLead;
+
+      // Check if lead should be moved to reports
+      // Move to reports if the lead status changed from uncalled to called
+      final wasUncalled = LeadConstants.isUncalledStatus(oldLead.callStatus);
+      final isNowCalled = LeadConstants.isCalledStatus(updatedLead.callStatus);
+
+      if (wasUncalled && isNowCalled) {
+        print(
+          'LeadRepository: Lead ${updatedLead.id} (${updatedLead.name}) status changed from "${oldLead.callStatus}" to "${updatedLead.callStatus}", moving to reports',
+        );
+        // Remove from active leads (move to reports)
+        _leads.removeAt(index);
+      }
+
       await _saveLeads();
       notifyListeners();
     }
@@ -162,22 +177,51 @@ class LeadRepository extends ChangeNotifier {
 
   // ========== Filtered Queries ==========
 
-  List<LeadModel> getLeadsByCategory(String? category) {
-    if (category == null || category == 'All') return allLeads;
-    return _leads.where((lead) => lead.category == category).toList();
+  List<LeadModel> getLeadsByCategory(String? category, {DateTime? date}) {
+    List<LeadModel> filtered = _leads;
+
+    // Apply date filter if provided
+    if (date != null) {
+      filtered =
+          filtered.where((lead) {
+            final leadDate = lead.createdAt;
+            return leadDate.year == date.year &&
+                leadDate.month == date.month &&
+                leadDate.day == date.day;
+          }).toList();
+    }
+
+    // Apply category filter
+    if (category == null || category == 'All') return filtered;
+    return filtered.where((lead) => lead.category == category).toList();
   }
 
-  List<LeadModel> getLeadsByStore(String? store) {
-    if (store == null || store == 'All Stores') return allLeads;
+  List<LeadModel> getLeadsByStore(String? store, {DateTime? date}) {
+    List<LeadModel> filtered = _leads;
+
+    // Apply date filter if provided
+    if (date != null) {
+      filtered =
+          filtered.where((lead) {
+            final leadDate = lead.createdAt;
+            return leadDate.year == date.year &&
+                leadDate.month == date.month &&
+                leadDate.day == date.day;
+          }).toList();
+    }
+
+    // Apply store filter
+    if (store == null || store == 'All Stores') return filtered;
     // Extract location from "Brand - Location" format, or use as-is if already a location
     final location =
         store.contains(' - ')
             ? StoreLocations.resolveSelection(store).location
             : store;
-    return _leads.where((lead) => lead.location == location).toList();
+    return filtered.where((lead) => lead.location == location).toList();
   }
 
   List<LeadModel> getLeadsByDate(DateTime date) {
+    // Filter leads by selected date only
     return _leads.where((lead) {
       final leadDate = lead.createdAt;
       return leadDate.year == date.year &&
@@ -187,18 +231,25 @@ class LeadRepository extends ChangeNotifier {
   }
 
   List<LeadModel> getLeadsByStoreAndDate(String? store, DateTime date) {
-    List<LeadModel> filtered = getLeadsByDate(date);
+    // Apply store filter first
+    List<LeadModel> baseList = _leads;
 
     if (store != null && store != 'All Stores') {
-      // Extract location from "Brand - Location" format, or use as-is if already a location
       final location =
           store.contains(' - ')
               ? StoreLocations.resolveSelection(store).location
               : store;
-      filtered = filtered.where((lead) => lead.location == location).toList();
+
+      baseList = baseList.where((lead) => lead.location == location).toList();
     }
 
-    return filtered;
+    // Apply date filter to show only selected date
+    return baseList.where((lead) {
+      final leadDate = lead.createdAt;
+      return leadDate.year == date.year &&
+          leadDate.month == date.month &&
+          leadDate.day == date.day;
+    }).toList();
   }
 
   int getCountByCategory(String category, {String? store, DateTime? date}) {
@@ -438,8 +489,6 @@ class LeadRepository extends ChangeNotifier {
     try {
       await ensureInitialized();
 
-      await ensureInitialized();
-
       final response = await _apiService.getLossOfSaleLeads(
         store: store,
         enquiryFrom: enquiryFrom,
@@ -654,7 +703,12 @@ class LeadRepository extends ChangeNotifier {
       DateTime createdAt = DateTime.now();
       // Backend uses enquiry_date as the main date field
       final parsedCreatedAt =
-          _parseDate(leadData['created_at']) ?? DateTime.now();
+          _parseDate(leadData['created_at']) ??
+          _parseDate(leadData['enquiry_date']) ??
+          _parseDate(leadData['enquiryDate']) ??
+          _parseDate(leadData['visit_date']) ??
+          _parseDate(leadData['visitDate']) ??
+          DateTime.now();
 
       // _parseDate(
       //   leadData['enquiry_date'],
@@ -1115,6 +1169,68 @@ class LeadRepository extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('LeadRepository: Error fetching all leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Move a lead to report screen (remove from active leads)
+  Future<void> moveToReport(String id) async {
+    try {
+      await ensureInitialized();
+
+      // Find the lead to move
+      final leadIndex = _leads.indexWhere((lead) => lead.id == id);
+      if (leadIndex == -1) {
+        print('LeadRepository: Lead with id $id not found');
+        return;
+      }
+
+      final lead = _leads[leadIndex];
+      print(
+        'LeadRepository: Moving lead to report - ID: $id, Name: ${lead.name}, Category: ${lead.category}',
+      );
+
+      // Remove the lead from active leads list
+      _leads.removeAt(leadIndex);
+
+      // Save the updated leads list
+      await _saveLeads();
+
+      // Notify listeners that the lead has been moved
+      notifyListeners();
+
+      print('LeadRepository: Successfully moved lead $id to report screen');
+    } catch (e) {
+      print('LeadRepository: Error moving lead to report: $e');
+      rethrow;
+    }
+  }
+
+  // ========== API Call Summary ==========
+
+  /// Fetch call summary from API
+  Future<Map<String, dynamic>> fetchCallSummaryFromApi({
+    String? store,
+    DateTime? date,
+  }) async {
+    try {
+      // Format date for API (YYYY-MM-DD)
+      String? dateStr;
+      if (date != null) {
+        dateStr =
+            '${date.year.toString().padLeft(4, '0')}-'
+            '${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')}';
+      }
+
+      final response = await _apiService.getCallSummary(
+        store: store,
+        date: dateStr,
+      );
+
+      return response;
+    } catch (e) {
+      print('LeadRepository: Error fetching call summary from API: $e');
       rethrow;
     }
   }

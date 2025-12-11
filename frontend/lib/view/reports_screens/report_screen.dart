@@ -225,10 +225,12 @@ class _ReportScreenState extends State<ReportScreen> {
                                 : reportController.selectedCallTypeIndex == 1
                                 ? "No loss of sale calls found"
                                 : reportController.selectedCallTypeIndex == 2
-                                ? "No feedback calls found"
+                                ? "No Rent Out calls found"
                                 : reportController.selectedCallTypeIndex == 3
-                                ? "No Just Dial calls found"
+                                ? "No Booking confirmation Dial calls found"
                                 : reportController.selectedCallTypeIndex == 4
+                                ? "No Just Dial calls found"
+                                : reportController.selectedCallTypeIndex == 5
                                 ? "No enquiry calls found"
                                 : "No calls found",
                             style: TextStyle(
@@ -254,7 +256,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                 iconColor = const Color(0xFFE23434);
                                 icon = Icons.trending_down;
                                 break;
-                              case "hardout": // Used for Feedback Calls (Rent out)
+                              case "rentout": // Used for Feedback Calls (Rent out)
                                 iconBgColor = const Color(0xFFFFF7CC);
                                 iconColor = const Color(0xFFFFCC00);
                                 icon = Icons.message_outlined;
