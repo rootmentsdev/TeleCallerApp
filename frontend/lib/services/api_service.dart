@@ -463,7 +463,7 @@ class ApiService {
   }
 
   /// Create a new lead (Walk-in/General lead)
-  /// Matches backend POST /api/pages/leads
+  /// Matches backend POST /api/pages/add-lead
   Future<Map<String, dynamic>> createLead({
     required String leadName,
     required String phoneNumber,
@@ -485,11 +485,11 @@ class ApiService {
         throw Exception('Authentication required. Please login again.');
       }
 
-      // Prepare request body with EXACT snake_case fields required by backend
+      // Prepare request body with fields required by /api/pages/add-lead endpoint
       final requestBody = <String, dynamic>{
-        'lead_name': leadName,
+        'customer_name': leadName,
         'phone_number': phoneNumber,
-        'store': store,
+        'store_location': store,
         'source': source,
         'lead_type': leadType,
         'call_status': 'Not Called',

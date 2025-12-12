@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/home_controller.dart';
+import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
@@ -27,6 +28,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FollowupController()),
         ChangeNotifierProvider(create: (_) => ReportController()),
         ChangeNotifierProvider(create: (_) => CallTrackingController()),
+        ChangeNotifierProvider(create: (_) => LeadRepository()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

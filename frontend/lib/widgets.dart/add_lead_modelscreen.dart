@@ -102,8 +102,10 @@ class _AddLeadBottomSheetContentState
               const SizedBox(height: 10),
               // Grid of Dropdowns (2x2)
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
+                  Flexible(
+                    flex: 1,
                     child: _buildDropdownField(
                       context: context,
                       controller: controller,
@@ -116,15 +118,16 @@ class _AddLeadBottomSheetContentState
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
+                  Flexible(
+                    flex: 1,
                     child: _buildDropdownField(
                       context: context,
                       controller: controller,
-                      hint:
-                          controller.selectedBrand == null
-                              ? "Select Brand First"
-                              : "Location",
-                      value: controller.selectedLocation,
+                      hint: "Location",
+                      value:
+                          controller.selectedBrand != null
+                              ? controller.selectedLocation
+                              : null,
                       items: controller.locations,
                       enabled: controller.selectedBrand != null,
                       onChanged:
@@ -139,8 +142,10 @@ class _AddLeadBottomSheetContentState
               ),
               const SizedBox(height: 12),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
+                  Flexible(
+                    flex: 1,
                     child: _buildDropdownField(
                       context: context,
                       controller: controller,
@@ -153,7 +158,8 @@ class _AddLeadBottomSheetContentState
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
+                  Flexible(
+                    flex: 1,
                     child: _buildDropdownField(
                       context: context,
                       controller: controller,
@@ -243,15 +249,16 @@ class _AddLeadBottomSheetContentState
                         final result = await controller.submitLead();
                         if (!mounted) return;
 
-                        if (result['success'] == true) {
+                        final success = result['success'] as bool? ?? false;
+                        final message =
+                            result['message'] as String? ??
+                            result['error'] as String? ??
+                            'Unknown error';
+
+                        if (success) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                controller.followUpDate != null
-                                    ? 'Lead added successfully! Follow-up scheduled.'
-                                    : result['message'] ??
-                                        'Lead added successfully!',
-                              ),
+                              content: Text(message),
                               backgroundColor: Colors.green,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
@@ -265,15 +272,9 @@ class _AddLeadBottomSheetContentState
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                result['error'] ??
-                                    'Please enter customer name and phone number',
-                              ),
+                              content: Text(message),
                               backgroundColor: Colors.red,
                               behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
                             ),
                           );
                         }

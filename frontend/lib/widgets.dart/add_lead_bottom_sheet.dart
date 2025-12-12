@@ -181,18 +181,39 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildDropdownField(
-                      value: _selectedBrand != null ? _selectedLocation : null,
-                      label: 'Location',
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedLocation,
+                      decoration: InputDecoration(
+                        labelText: 'Location',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                       items:
                           _selectedBrand != null
                               ? (StoreLocations.brandStores[_selectedBrand!] ??
-                                  [])
+                                      [])
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(item),
+                                    ),
+                                  )
+                                  .toList()
                               : [],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedLocation = value;
-                        });
+                      onChanged:
+                          _selectedBrand == null
+                              ? null
+                              : (value) {
+                                setState(() {
+                                  _selectedLocation = value;
+                                });
+                              },
+                      validator: (value) {
+                        if (_selectedBrand != null && value == null) {
+                          return 'Location is required';
+                        }
+                        return null;
                       },
                     ),
                   ),
@@ -476,10 +497,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
 
     try {
       final apiService = ApiService();
-      final leadRepository = Provider.of<LeadRepository>(
-        context,
-        listen: false,
-      );
+      final leadRepository = LeadRepository();
 
       // Get store name from brand and location
       final store = _selectedLocation ?? _selectedBrand ?? 'Unknown';
@@ -503,14 +521,24 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
 
       // Extract the lead ID from API response
       String leadId = '';
-      if (apiResponse.containsKey('_id')) {
-        leadId = apiResponse['_id'].toString();
-      } else if (apiResponse.containsKey('id')) {
-        leadId = apiResponse['id'].toString();
-      } else if (apiResponse.containsKey('data') &&
-          apiResponse['data'] is Map) {
-        final data = apiResponse['data'] as Map<String, dynamic>;
-        leadId = data['_id']?.toString() ?? data['id']?.toString() ?? '';
+
+      // Check nested lead object first (new format)
+      if (apiResponse.containsKey('lead') && apiResponse['lead'] is Map) {
+        final lead = apiResponse['lead'] as Map<String, dynamic>;
+        leadId = lead['id']?.toString() ?? lead['_id']?.toString() ?? '';
+      }
+
+      // Check top-level fields
+      if (leadId.isEmpty) {
+        if (apiResponse.containsKey('_id')) {
+          leadId = apiResponse['_id'].toString();
+        } else if (apiResponse.containsKey('id')) {
+          leadId = apiResponse['id'].toString();
+        } else if (apiResponse.containsKey('data') &&
+            apiResponse['data'] is Map) {
+          final data = apiResponse['data'] as Map<String, dynamic>;
+          leadId = data['_id']?.toString() ?? data['id']?.toString() ?? '';
+        }
       }
 
       print('AddLeadBottomSheet: Extracted lead ID: $leadId');
