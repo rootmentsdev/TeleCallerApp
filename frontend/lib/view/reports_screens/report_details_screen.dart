@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/format_helper.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -116,18 +117,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   }
 
   String _formatCallDuration(int? seconds) {
-    if (seconds == null || seconds <= 0) {
-      return "00:00";
-    }
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final remainingSeconds = seconds % 60;
-
-    if (hours > 0) {
-      return "${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}";
-    } else {
-      return "${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}";
-    }
+    return FormatHelper.formatCallDurationWithUnits(seconds);
   }
 
   @override

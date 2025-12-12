@@ -9,6 +9,7 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
@@ -1060,6 +1061,66 @@ class _DetailsScreenState extends State<DetailsScreen>
                     _buildDetailsSection(),
 
                     const SizedBox(height: 24),
+
+                    // Call Duration Display Section
+                    if (_callDurationSeconds > 0)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.green[300]!,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.green[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.timer,
+                                size: 24,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Call Duration",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green[600],
+                                      fontFamily: TextConstant.dmSansRegular,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    FormatHelper.formatCallDurationWithUnits(
+                                      _callDurationSeconds,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[700],
+                                      fontFamily: TextConstant.dmSansMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    if (_callDurationSeconds > 0) const SizedBox(height: 24),
 
                     // Call Status Dropdown
                     _buildDropdown(
