@@ -95,29 +95,32 @@ class AddLeadController extends ChangeNotifier {
     }
 
     try {
-      // Call API to add lead
-      final response = await _apiService.addLead(
-        customerName: nameController.text.trim(),
+      // Call API to create lead with correct snake_case fields
+      final response = await _apiService.createLead(
+        leadName: nameController.text.trim(),
         phoneNumber: phoneController.text.trim(),
-        brand: selectedBrand,
-        storeLocation: storeLocation,
-        leadStatus: selectedLeadStatus,
-        callStatus: selectedCallStatus,
-        followUpDate: followUpDate,
+        store: storeLocation ?? selectedBrand ?? selectedLocation ?? 'Unknown',
+        source: 'Walk-in',
+        leadType: 'General',
+        remarks: null,
+        followUpFlag: followUpDate != null,
+        functionDate: followUpDate?.toIso8601String(),
       );
 
-      // Extract lead ID from API response if available
+      // Extract lead ID from API response
       String? leadId;
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is Map<String, dynamic>) {
-          leadId =
-              data['id']?.toString() ??
-              data['_id']?.toString() ??
-              DateTime.now().millisecondsSinceEpoch.toString();
-        }
+      if (response.containsKey('_id')) {
+        leadId = response['_id'].toString();
+      } else if (response.containsKey('id')) {
+        leadId = response['id'].toString();
+      } else if (response.containsKey('data') && response['data'] is Map) {
+        final data = response['data'] as Map<String, dynamic>;
+        leadId = data['_id']?.toString() ?? data['id']?.toString();
       }
-      leadId ??= DateTime.now().millisecondsSinceEpoch.toString();
+
+      if (leadId == null || leadId.isEmpty) {
+        throw Exception('Failed to get lead ID from server response');
+      }
 
       // Create lead model with API response ID
       final lead = LeadModel(
@@ -129,8 +132,10 @@ class AddLeadController extends ChangeNotifier {
         leadStatus: selectedLeadStatus,
         callStatus: selectedCallStatus,
         followUpDate: followUpDate,
-        category: null, // Category removed from add lead form
-        reason: null, // Reason removed from add lead form
+        category: null,
+        reason: null,
+        source: 'Walk-in',
+        leadType: 'General',
       );
 
       // Save lead to local repository

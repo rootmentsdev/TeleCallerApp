@@ -12,6 +12,7 @@ import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
+import 'package:telecaller_app/services/api_service.dart';
 import 'dart:async';
 
 class DetailsScreen extends StatefulWidget {
@@ -652,6 +653,83 @@ class _DetailsScreenState extends State<DetailsScreen>
               );
             }
             print('Error updating Booking Confirmation lead via API: $e');
+          }
+        }
+
+        // If it's a general/walk-in lead (no specific category), update via API
+        if (lead.category == null || lead.category!.isEmpty) {
+          try {
+            final apiService = ApiService();
+            final store = lead.location ?? lead.brand ?? 'Unknown';
+
+            print('DetailsScreen: Updating general lead via API');
+            print('DetailsScreen: Lead ID: $leadId');
+
+            await apiService.updateLead(
+              id: leadId,
+              leadName: lead.name,
+              phoneNumber: lead.phone,
+              store: store,
+              source: lead.source ?? 'Walk-in',
+              leadType: lead.leadType ?? 'General',
+              callStatus: selectedCallStatus ?? 'Not Called',
+              leadStatus: selectedLeadStatus ?? 'No Status',
+              remarks:
+                  remarksController.text.trim().isEmpty
+                      ? null
+                      : remarksController.text.trim(),
+              followUpFlag: markAsFollowUp,
+              functionDate:
+                  markAsFollowUp ? followUpDate?.toIso8601String() : null,
+            );
+
+            print('DetailsScreen: General lead updated successfully via API');
+
+            // Refresh controllers to update UI
+            try {
+              final leadController = Provider.of<LeadScreenController>(
+                context,
+                listen: false,
+              );
+              leadController.refresh();
+            } catch (e) {
+              print('Could not refresh LeadScreenController: $e');
+            }
+
+            try {
+              final reportController = Provider.of<ReportController>(
+                context,
+                listen: false,
+              );
+              reportController.refresh();
+            } catch (e) {
+              print('Could not refresh ReportController: $e');
+            }
+
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Lead updated successfully'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } catch (e) {
+            // Show error message but don't block navigation
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Failed to update on server: ${e.toString().replaceFirst('Exception: ', '')}',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+            print('DetailsScreen: Error updating general lead via API: $e');
           }
         }
 

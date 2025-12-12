@@ -462,15 +462,19 @@ class ApiService {
     }
   }
 
-  /// Add a new lead
-  Future<Map<String, dynamic>> addLead({
-    required String customerName,
+  /// Create a new lead (Walk-in/General lead)
+  /// Matches backend POST /api/pages/leads
+  Future<Map<String, dynamic>> createLead({
+    required String leadName,
     required String phoneNumber,
-    String? brand,
-    String? storeLocation,
-    String? leadStatus,
-    String? callStatus,
-    DateTime? followUpDate,
+    required String store,
+    required String source,
+    required String leadType,
+    String? remarks,
+    bool followUpFlag = false,
+    String? functionDate,
+    String? bookingNumber,
+    int securityAmount = 0,
   }) async {
     final url = Uri.parse(ApiConfig.addLead());
 
@@ -481,25 +485,27 @@ class ApiService {
         throw Exception('Authentication required. Please login again.');
       }
 
-      // Prepare request body
+      // Prepare request body with EXACT snake_case fields required by backend
       final requestBody = <String, dynamic>{
-        'customer_name': customerName,
+        'lead_name': leadName,
         'phone_number': phoneNumber,
+        'store': store,
+        'source': source,
+        'lead_type': leadType,
+        'call_status': 'Not Called',
+        'lead_status': 'No Status',
+        'remarks': remarks ?? '',
+        'follow_up_flag': followUpFlag,
+        'function_date': functionDate ?? '',
+        'booking_number': bookingNumber ?? '',
+        'security_amount': securityAmount,
       };
-
-      if (brand != null) requestBody['brand'] = brand;
-      if (storeLocation != null) requestBody['store_location'] = storeLocation;
-      if (leadStatus != null) requestBody['lead_status'] = leadStatus;
-      if (callStatus != null) requestBody['call_status'] = callStatus;
-      if (followUpDate != null) {
-        requestBody['follow_up_date'] = followUpDate.toIso8601String();
-      }
 
       final requestBodyJson = json.encode(requestBody);
 
-      print('ApiService: Adding new lead');
+      print('ApiService: Creating new lead');
       print('ApiService: URL => $url');
-      print('ApiService: Request body => $requestBodyJson');
+      print('ApiService: POST BODY SENT: $requestBodyJson');
 
       final response = await http.post(
         url,
@@ -507,16 +513,15 @@ class ApiService {
         body: requestBodyJson,
       );
 
-      print('ApiService: Add lead response status: ${response.statusCode}');
-      print('ApiService: Add lead response body: ${response.body}');
+      print('ApiService: Create lead response status: ${response.statusCode}');
+      print('ApiService: CREATED LEAD RESPONSE: ${response.body}');
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         final decodedResponse = json.decode(response.body);
         return decodedResponse is Map<String, dynamic>
             ? decodedResponse
             : {'success': true, 'data': decodedResponse};
       } else if (response.statusCode == 400) {
-        // Validation error - try to get detailed error message
         String errorMessage = 'Validation error. Please check your input.';
         try {
           final errorData = json.decode(response.body);
@@ -533,12 +538,9 @@ class ApiService {
         throw Exception(errorMessage);
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
-      } else if (response.statusCode == 403) {
-        throw Exception('Only admin or teamLead can add leads');
       } else {
-        // Try to parse error message from response
         String errorMessage =
-            'Failed to add lead: Status ${response.statusCode}';
+            'Failed to create lead: Status ${response.statusCode}';
         try {
           final errorData = json.decode(response.body);
           if (errorData is Map<String, dynamic>) {
@@ -554,7 +556,109 @@ class ApiService {
         throw Exception(errorMessage);
       }
     } catch (e) {
-      print('ApiService: Error adding lead: $e');
+      print('ApiService: Error creating lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Update a lead (generic update for any lead type)
+  /// Matches backend POST /api/pages/leads/{id}
+  Future<Map<String, dynamic>> updateLead({
+    required String id,
+    required String leadName,
+    required String phoneNumber,
+    required String store,
+    required String source,
+    required String leadType,
+    required String callStatus,
+    required String leadStatus,
+    String? remarks,
+    bool followUpFlag = false,
+    String? functionDate,
+    String? bookingNumber,
+    int securityAmount = 0,
+  }) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/leads/$id');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      // Prepare request body with EXACT snake_case fields required by backend
+      final requestBody = <String, dynamic>{
+        'lead_name': leadName,
+        'phone_number': phoneNumber,
+        'store': store,
+        'source': source,
+        'lead_type': leadType,
+        'call_status': callStatus,
+        'lead_status': leadStatus,
+        'remarks': remarks ?? '',
+        'follow_up_flag': followUpFlag,
+        'function_date': functionDate ?? '',
+        'booking_number': bookingNumber ?? '',
+        'security_amount': securityAmount,
+      };
+
+      final requestBodyJson = json.encode(requestBody);
+
+      print('ApiService: Updating lead');
+      print('ApiService: POST URL: $url');
+      print('ApiService: POST BODY SENT: $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print('ApiService: Update lead response status: ${response.statusCode}');
+      print('ApiService: Update lead response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'success': true, 'data': decodedResponse};
+      } else if (response.statusCode == 400) {
+        String errorMessage = 'Validation error. Please check your input.';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        String errorMessage =
+            'Failed to update lead: Status ${response.statusCode}';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('ApiService: Error updating lead: $e');
       rethrow;
     }
   }

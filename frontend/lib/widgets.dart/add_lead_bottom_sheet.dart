@@ -6,6 +6,7 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
+import 'package:telecaller_app/services/api_service.dart';
 
 class AddLeadBottomSheet extends StatefulWidget {
   final String? prefilledPhoneNumber;
@@ -181,8 +182,8 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildDropdownField(
-                      value: _selectedLocation,
-                      label: _selectedBrand ?? 'Location',
+                      value: _selectedBrand != null ? _selectedLocation : null,
+                      label: 'Location',
                       items:
                           _selectedBrand != null
                               ? (StoreLocations.brandStores[_selectedBrand!] ??
@@ -359,17 +360,31 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     required List<String> items,
     required Function(String?) onChanged,
   }) {
+    // Ensure value is in items list, otherwise set to null
+    final validValue = (value != null && items.contains(value)) ? value : null;
+    final isDisabled = items.isEmpty;
+
     return DropdownButtonFormField<String>(
-      value: value,
+      value: validValue,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderSide: BorderSide(
+            color:
+                isDisabled ? const Color(0xFFCCCCCC) : const Color(0xFFE0E0E0),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderSide: BorderSide(
+            color:
+                isDisabled ? const Color(0xFFCCCCCC) : const Color(0xFFE0E0E0),
+          ),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFCCCCCC)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -379,12 +394,14 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
           horizontal: 16,
           vertical: 14,
         ),
+        filled: isDisabled,
+        fillColor: isDisabled ? const Color(0xFFF5F5F5) : Colors.white,
       ),
       items:
           items.map((item) {
             return DropdownMenuItem(value: item, child: Text(item));
           }).toList(),
-      onChanged: onChanged,
+      onChanged: isDisabled ? null : onChanged,
     );
   }
 
@@ -458,14 +475,53 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     });
 
     try {
+      final apiService = ApiService();
       final leadRepository = Provider.of<LeadRepository>(
         context,
         listen: false,
       );
 
-      // Create new lead
+      // Get store name from brand and location
+      final store = _selectedLocation ?? _selectedBrand ?? 'Unknown';
+
+      // Call API to create lead with correct snake_case fields
+      final apiResponse = await apiService.createLead(
+        leadName: _nameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        store: store,
+        source: 'Walk-in',
+        leadType: 'General',
+        remarks:
+            _remarksController.text.trim().isEmpty
+                ? null
+                : _remarksController.text.trim(),
+        followUpFlag: _markAsFollowUp,
+        functionDate: _markAsFollowUp ? _followUpDate?.toIso8601String() : null,
+      );
+
+      print('AddLeadBottomSheet: API Response: $apiResponse');
+
+      // Extract the lead ID from API response
+      String leadId = '';
+      if (apiResponse.containsKey('_id')) {
+        leadId = apiResponse['_id'].toString();
+      } else if (apiResponse.containsKey('id')) {
+        leadId = apiResponse['id'].toString();
+      } else if (apiResponse.containsKey('data') &&
+          apiResponse['data'] is Map) {
+        final data = apiResponse['data'] as Map<String, dynamic>;
+        leadId = data['_id']?.toString() ?? data['id']?.toString() ?? '';
+      }
+
+      print('AddLeadBottomSheet: Extracted lead ID: $leadId');
+
+      if (leadId.isEmpty) {
+        throw Exception('Failed to get lead ID from server response');
+      }
+
+      // Create local lead model with the ID from API
       final lead = LeadModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: leadId,
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         brand: _selectedBrand,
@@ -477,11 +533,14 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
             _remarksController.text.trim().isEmpty
                 ? null
                 : _remarksController.text.trim(),
-        category: null, // General lead (no specific category)
+        category: null,
         callDuration: _callDuration,
         createdAt: DateTime.now(),
+        source: 'Walk-in',
+        leadType: 'General',
       );
 
+      // Add to local repository
       await leadRepository.addLead(lead);
 
       if (mounted) {
@@ -494,6 +553,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         );
       }
     } catch (e) {
+      print('AddLeadBottomSheet: Error saving lead: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
