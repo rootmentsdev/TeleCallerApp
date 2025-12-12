@@ -3,12 +3,15 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/home_controller.dart';
+import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/widgets.dart/call_card.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/widgets.dart/call_summary_card.dart';
 import 'package:telecaller_app/view/call_card_details_screen.dart';
+import 'package:telecaller_app/view/lead_screen.dart';
+import 'package:telecaller_app/view/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,6 +53,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 AppHeader(
                   showDate: true,
                   fullWidthStore: true,
+                  onProfileTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProfileScreen(),
+                      ),
+                    );
+                  },
                   onNotificationTap: () {
                     // Handle notification tap
                   },
@@ -78,6 +89,22 @@ class _HomeScreenState extends State<HomeScreen> {
                               bgColor: item["bgColor"],
                               iconColor: item["iconColor"],
                               icon: item["icon"],
+                              onTap: () {
+                                // Map the tapped summary card to the Lead screen tab
+                                final leadController =
+                                    Provider.of<LeadScreenController>(
+                                      context,
+                                      listen: false,
+                                    );
+                                leadController.setSelectedCallTypeIndex(index);
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LeadScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         );

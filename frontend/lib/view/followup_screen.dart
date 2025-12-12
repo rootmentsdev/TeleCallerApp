@@ -273,14 +273,14 @@ class FollowupScreen extends StatelessWidget {
                   fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
                 ),
               ),
-              if (isActive) ...[
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.keyboard_arrow_down,
-                  size: 16,
-                  color: Color(0xFF7C5DFF),
-                ),
-              ],
+              // if (isActive) ...[
+              //   const SizedBox(width: 6),
+              //   const Icon(
+              //     Icons.keyboard_arrow_down,
+              //     size: 16,
+              //     color: Color(0xFF7C5DFF),
+              //   ),
+              // ],
               if (badgeCount != null && !isActive) ...[
                 const SizedBox(width: 6),
                 Container(

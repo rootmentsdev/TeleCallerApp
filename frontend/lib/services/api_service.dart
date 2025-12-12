@@ -486,21 +486,32 @@ class ApiService {
       }
 
       // Prepare request body with EXACT snake_case fields required by backend
-      // Backend expects: customer_name, phone_number, store_location
+      // Backend expects: customer_name, phone_number, store_location, source, lead_status, call_status
       final requestBody = <String, dynamic>{
         'customer_name': leadName,
         'phone_number': phoneNumber,
         'store_location': store,
         'source': source,
-        'lead_type': leadType,
-        'call_status': 'Not Called',
         'lead_status': 'No Status',
-        'remarks': remarks ?? '',
-        'follow_up_flag': followUpFlag,
-        'function_date': functionDate ?? '',
-        'booking_number': bookingNumber ?? '',
-        'security_amount': securityAmount,
+        'call_status': 'Not Called',
       };
+
+      // Add optional fields if provided
+      if (remarks != null && remarks.isNotEmpty) {
+        requestBody['remarks'] = remarks;
+      }
+      if (followUpFlag) {
+        requestBody['follow_up_flag'] = followUpFlag;
+      }
+      if (functionDate != null && functionDate.isNotEmpty) {
+        requestBody['function_date'] = functionDate;
+      }
+      if (bookingNumber != null && bookingNumber.isNotEmpty) {
+        requestBody['booking_number'] = bookingNumber;
+      }
+      if (securityAmount > 0) {
+        requestBody['security_amount'] = securityAmount;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 
@@ -589,21 +600,32 @@ class ApiService {
       }
 
       // Prepare request body with EXACT snake_case fields required by backend
-      // Backend expects: customer_name, phone_number, store_location
+      // Backend expects: customer_name, phone_number, store_location, source, lead_status, call_status
       final requestBody = <String, dynamic>{
         'customer_name': leadName,
         'phone_number': phoneNumber,
         'store_location': store,
         'source': source,
-        'lead_type': leadType,
         'call_status': callStatus,
         'lead_status': leadStatus,
-        'remarks': remarks ?? '',
-        'follow_up_flag': followUpFlag,
-        'function_date': functionDate ?? '',
-        'booking_number': bookingNumber ?? '',
-        'security_amount': securityAmount,
       };
+
+      // Add optional fields if provided
+      if (remarks != null && remarks.isNotEmpty) {
+        requestBody['remarks'] = remarks;
+      }
+      if (followUpFlag) {
+        requestBody['follow_up_flag'] = followUpFlag;
+      }
+      if (functionDate != null && functionDate.isNotEmpty) {
+        requestBody['function_date'] = functionDate;
+      }
+      if (bookingNumber != null && bookingNumber.isNotEmpty) {
+        requestBody['booking_number'] = bookingNumber;
+      }
+      if (securityAmount > 0) {
+        requestBody['security_amount'] = securityAmount;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 

@@ -11,6 +11,7 @@ class AppHeader extends StatelessWidget {
   final bool showDate;
   final bool fullWidthStore;
   final VoidCallback? onNotificationTap;
+  final VoidCallback? onProfileTap;
 
   const AppHeader({
     super.key,
@@ -19,6 +20,7 @@ class AppHeader extends StatelessWidget {
     this.showDate = true,
     this.fullWidthStore = false,
     this.onNotificationTap,
+    this.onProfileTap,
   });
 
   @override
@@ -44,36 +46,47 @@ class AppHeader extends StatelessWidget {
               // Profile and Notification Row
               Row(
                 children: [
-                  CircleAvatar(
-                    maxRadius: 20,
-                    backgroundImage: AssetImage(
-                      'assets/images/Screenshot 2025-11-27 174648.png',
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  InkWell(
+                    onTap: onProfileTap,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Row(
                       children: [
-                        const Text(
-                          "Welcome Back!",
-                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                        CircleAvatar(
+                          maxRadius: 20,
+                          backgroundImage: const AssetImage(
+                            'assets/images/Screenshot 2025-11-27 174648.png',
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        FutureBuilder<String?>(
-                          future: AuthService.getUserName(),
-                          builder: (context, snapshot) {
-                            final displayName =
-                                userName ?? snapshot.data ?? 'User';
-                            return Text(
-                              displayName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Welcome Back!",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
                               ),
-                            );
-                          },
+                              const SizedBox(height: 4),
+                              FutureBuilder<String?>(
+                                future: AuthService.getUserName(),
+                                builder: (context, snapshot) {
+                                  final displayName =
+                                      userName ?? snapshot.data ?? 'User';
+                                  return Text(
+                                    displayName,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
