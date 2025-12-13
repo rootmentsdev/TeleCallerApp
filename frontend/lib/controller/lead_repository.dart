@@ -404,8 +404,12 @@ class LeadRepository extends ChangeNotifier {
       }
 
       // Remove existing booking confirmation leads (to avoid duplicates)
+      // Remove existing booking confirmation leads (to avoid duplicates)
+      // BUT: Preserve booking confirmation leads that have follow-up dates set
       _leads.removeWhere(
-        (lead) => lead.category == LeadConstants.categoryBookingConfirmation,
+        (lead) =>
+            lead.category == LeadConstants.categoryBookingConfirmation &&
+            !lead.needsFollowUp, // Keep if it has follow-up date
       );
 
       // Convert API data to LeadModel and add to repository
@@ -533,8 +537,11 @@ class LeadRepository extends ChangeNotifier {
       }
 
       // Remove existing loss of sale leads (to avoid duplicates)
+      // BUT: Preserve loss of sale leads that have follow-up dates set
       _leads.removeWhere(
-        (lead) => lead.category == LeadConstants.categoryLossOfSales,
+        (lead) =>
+            lead.category == LeadConstants.categoryLossOfSales &&
+            !lead.needsFollowUp, // Keep if it has follow-up date
       );
 
       // Convert API data to LeadModel and add to repository
@@ -834,9 +841,12 @@ class LeadRepository extends ChangeNotifier {
         }
       }
 
-      // Remove existing rent-out leads
+      // Remove existing rent-out leads (to avoid duplicates)
+      // BUT: Preserve rent-out leads that have follow-up dates set
       _leads.removeWhere(
-        (lead) => lead.category == LeadConstants.categoryRentOut,
+        (lead) =>
+            lead.category == LeadConstants.categoryRentOut &&
+            !lead.needsFollowUp, // Keep if it has follow-up date
       );
 
       int failedCount = 0;
@@ -1108,13 +1118,9 @@ class LeadRepository extends ChangeNotifier {
 
       // If page is specified, we might want to merge/update existing leads
       // Otherwise, replace all leads with fresh data from API
-      // BUT: Preserve called leads so they remain available for reports screen
+      // BUT: Preserve called leads and follow-up leads so they remain available for reports screen
       if (page == null || page == 1) {
-        // Store called leads before clearing
-        // final calledLeads =
-        //     _leads
-        //         .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
-        //         .toList();=====================================================================================================================================================================
+        // Store called leads and follow-up leads before clearing
         final preservedLeads =
             _leads
                 .where(
@@ -1124,19 +1130,13 @@ class LeadRepository extends ChangeNotifier {
                 )
                 .toList();
 
-        _leads.clear();
-        _leads.addAll(preservedLeads);
-
         print(
-          'LeadRepository: Clearing existing ${_leads.length} leads before adding new ones',
-        );
-        print(
-          'LeadRepository: Preserving ${preservedLeads.length} called leads for reports',
+          'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh',
         );
 
         _leads.clear();
 
-        // Restore called leads so they remain available for reports
+        // Restore called leads and follow-up leads so they remain available for reports
         _leads.addAll(preservedLeads);
       }
 

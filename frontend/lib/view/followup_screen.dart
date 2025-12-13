@@ -6,9 +6,14 @@ import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/details_screen.dart';
 
-class FollowupScreen extends StatelessWidget {
+class FollowupScreen extends StatefulWidget {
   const FollowupScreen({super.key});
 
+  @override
+  State<FollowupScreen> createState() => _FollowupScreenState();
+}
+
+class _FollowupScreenState extends State<FollowupScreen> {
   final List<String> categories = const [
     "All",
     "Loss of Sales",
@@ -17,6 +22,19 @@ class FollowupScreen extends StatelessWidget {
     "Just Dial",
     "Follow Up",
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch follow-up leads when screen is first loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final controller = Provider.of<FollowupController>(
+        context,
+        listen: false,
+      );
+      controller.fetchFollowUpLeads();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -310,6 +328,42 @@ class FollowupScreen extends StatelessWidget {
   }
 
   Widget _buildCallsList(BuildContext context, FollowupController controller) {
+    // Show loading state
+    if (controller.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Show error state
+    if (controller.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+            const SizedBox(height: 16),
+            Text(
+              'Error loading follow-up calls',
+              style: TextStyle(
+                fontFamily: TextConstant.dmSansMedium,
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              controller.error ?? '',
+              style: TextStyle(
+                fontFamily: TextConstant.dmSansRegular,
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     final currentLeads = controller.getCurrentLeads();
 
     if (currentLeads.isEmpty) {

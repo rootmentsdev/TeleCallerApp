@@ -47,14 +47,14 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 12),
+                const SizedBox(height: 110),
                 const CircleAvatar(
                   radius: 48,
                   backgroundImage: AssetImage(
                     'assets/images/Screenshot 2025-11-27 174648.png',
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 26),
                 Text(
                   name,
                   style: const TextStyle(
@@ -62,12 +62,12 @@ class ProfileScreen extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 18),
                 Text(
                   'EMP ID: $empId',
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
-                SizedBox(height: 40),
+                SizedBox(height: 70),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(

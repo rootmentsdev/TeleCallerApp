@@ -541,14 +541,25 @@ class LeadScreenController extends ChangeNotifier {
       );
     }
 
-    // Filter out leads with follow-up dates (they should appear only in Follow-up Screen)
-    // Keep only leads where followUpDate == null
-    final beforeFollowUpFilter = filteredLeads.length;
-    filteredLeads =
-        filteredLeads.where((lead) => lead.followUpDate == null).toList();
-    print(
-      'LeadScreenController: After follow-up filter: ${filteredLeads.length} leads (was $beforeFollowUpFilter, removed ${beforeFollowUpFilter - filteredLeads.length} follow-up leads)',
-    );
+    // Filter by follow-up status based on selected tab
+    // For "Follow Up Calls" tab (index 5), show ONLY leads with follow-up dates
+    // For other tabs, show ONLY leads without follow-up dates
+    if (_selectedCallTypeIndex == 5) {
+      // Follow Up Calls tab - show only leads with follow-up dates
+      filteredLeads =
+          filteredLeads.where((lead) => lead.followUpDate != null).toList();
+      print(
+        'LeadScreenController: Follow-up tab - showing ${filteredLeads.length} leads with follow-up dates',
+      );
+    } else {
+      // Other tabs - exclude leads with follow-up dates
+      final beforeFollowUpFilter = filteredLeads.length;
+      filteredLeads =
+          filteredLeads.where((lead) => lead.followUpDate == null).toList();
+      print(
+        'LeadScreenController: After follow-up filter: ${filteredLeads.length} leads (was $beforeFollowUpFilter, removed ${beforeFollowUpFilter - filteredLeads.length} follow-up leads)',
+      );
+    }
 
     // Debug: Print final count
     print(
@@ -598,6 +609,24 @@ class LeadScreenController extends ChangeNotifier {
       default:
         return "All Calls";
     }
+  }
+
+  /// Get count of follow-up leads for the selected date and store
+  int getFollowUpLeadsCount() {
+    final date = _headerController?.selectedDate ?? DateTime.now();
+    final store = _headerController?.selectedStore;
+
+    // Get all leads for the selected date
+    List<LeadModel> leads = _repository.getLeadsByDate(date);
+
+    // Filter by store if specified
+    if (store != null && store != 'All Stores') {
+      final selectedLocation = StoreLocations.resolveSelection(store).location;
+      leads = leads.where((lead) => lead.location == selectedLocation).toList();
+    }
+
+    // Count only leads with follow-up dates
+    return leads.where((lead) => lead.followUpDate != null).length;
   }
 
   String? _getCategoryForIndex(int index) {

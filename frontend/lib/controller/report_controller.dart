@@ -188,13 +188,67 @@ class ReportController extends ChangeNotifier {
   }
 
   // Get filtered leads based on selected call type
-  // Uses API reports instead of local repository
+  // Uses API reports for tabs 0-4, local repository for tab 5 (follow-up leads)
   List<Map<String, dynamic>> getFilteredLeads() {
     final store = _headerController?.selectedStore;
 
     // Handle "All Stores" case
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
 
+    // Special handling for tab 5 (Enquiry Calls)
+    // Shows: 1) Follow-up leads (with followUpDate set)
+    //        2) Newly added leads that have been called
+    if (_selectedCallTypeIndex == 5) {
+      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+
+      // Get all leads from repository
+      List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
+
+      // Combine two types of leads:
+      // 1. Leads with follow-up date set (follow-up leads)
+      // 2. Newly added leads that have been called (no follow-up date)
+      List<dynamic> enquiryLeads =
+          allLeads.where((lead) {
+            // Include if it has a follow-up date OR if it's been called
+            final hasFollowUp = lead.followUpDate != null;
+            final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+            return hasFollowUp || isCalled;
+          }).toList();
+
+      // Filter by store if specified
+      if (storeFilter != null) {
+        final location = StoreLocations.resolveSelection(storeFilter).location;
+        enquiryLeads =
+            enquiryLeads.where((lead) {
+              final leadLocation = lead.location ?? '';
+              return leadLocation.toLowerCase().contains(
+                    location.toLowerCase(),
+                  ) ||
+                  location.toLowerCase().contains(leadLocation.toLowerCase());
+            }).toList();
+      }
+
+      // Convert to contact format
+      return enquiryLeads.map((lead) {
+        return {
+          "id": lead.id,
+          "name": lead.name,
+          "phone": lead.phone,
+          "date": _formatDate(lead.createdAt),
+          "callDate": _formatDate(lead.createdAt),
+          "storeName": lead.location ?? lead.brand ?? "Not available",
+          "type": "enquiry",
+          "callStatus": lead.callStatus ?? "Not called yet",
+          "leadStatus": lead.leadStatus,
+          "reason": lead.reason,
+          "followUpDate": lead.followUpDate?.toIso8601String(),
+          "callDuration": lead.callDuration,
+          "remarks": lead.reason ?? "",
+        };
+      }).toList();
+    }
+
+    // For tabs 0-4, use API reports
     // Convert reports to contact format
     List<Map<String, dynamic>> filteredReports =
         _reports.map((report) {
@@ -302,8 +356,8 @@ class ReportController extends ChangeNotifier {
           }).toList();
     }
 
-    // Filter by lead type based on selected tab
-    if (_selectedCallTypeIndex != 0) {
+    // Filter by lead type based on selected tab (only for tabs 0-4)
+    if (_selectedCallTypeIndex != 0 && _selectedCallTypeIndex != 5) {
       switch (_selectedCallTypeIndex) {
         case 1:
           filteredReports =
@@ -323,16 +377,6 @@ class ReportController extends ChangeNotifier {
         case 4:
           filteredReports =
               filteredReports.where((r) => r["type"] == "justdial").toList();
-          break;
-
-        case 5:
-          // FOLLOW UP CALLS → leads with follow-up date set
-          filteredReports =
-              filteredReports.where((r) {
-                final followUpDate = r["followUpDate"];
-                return followUpDate != null &&
-                    followUpDate.toString().isNotEmpty;
-              }).toList();
           break;
       }
     }

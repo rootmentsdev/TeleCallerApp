@@ -183,7 +183,8 @@ class _DetailsScreenState extends State<DetailsScreen>
         }
       },
       onCallAnswered: (phoneNumber) {
-        // Call answered - NOW start the timer
+        // Call answered - update UI but don't start timer
+        // Duration will be provided by Android via onCallEnded callback
         final contactPhone = widget.contact["phone"] as String? ?? "";
         final cleanedContactPhone = contactPhone.replaceAll(
           RegExp(r'[\s\-\(\)]'),
@@ -198,8 +199,7 @@ class _DetailsScreenState extends State<DetailsScreen>
             cleanedContactPhone.contains(cleanedReceivedPhone) ||
             cleanedContactPhone == cleanedReceivedPhone) {
           if (mounted) {
-            // Start timer only when call is answered
-            _startCallTimer();
+            // Don't start Flutter timer - Android will provide accurate duration
             setState(() {
               _isCallActive = true;
             });
@@ -791,8 +791,9 @@ class _DetailsScreenState extends State<DetailsScreen>
     _autoStopTimer?.cancel();
     _autoStopTimer = null;
 
-    // Finalize duration calculation
-    if (_callStartTime != null && _isCallActive) {
+    // Only recalculate duration if we don't already have one from Android
+    // (Android provides accurate duration from OFFHOOK to IDLE)
+    if (_callStartTime != null && _isCallActive && _callDurationSeconds == 0) {
       final elapsed = DateTime.now().difference(_callStartTime!);
       _callDurationSeconds = elapsed.inSeconds;
     }

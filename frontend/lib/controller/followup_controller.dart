@@ -9,11 +9,15 @@ class FollowupController extends ChangeNotifier {
   String? _selectedStore;
   String? _selectedCategory;
   int _selectedTabIndex = 0; // 0: Today, 1: Upcoming, 2: Overdue
+  bool _isLoading = false;
+  String? _error;
 
   // Getters
   String? get selectedStore => _selectedStore;
   String? get selectedCategory => _selectedCategory;
   int get selectedTabIndex => _selectedTabIndex;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   // Setters
   void setSelectedStore(String? store) {
@@ -144,5 +148,26 @@ class FollowupController extends ChangeNotifier {
   void refresh() {
     notifyListeners();
     _repository.addListener(notifyListeners);
+  }
+
+  /// Fetch all leads from API to populate follow-up data
+  /// This should be called when the follow-up screen is first loaded
+  Future<void> fetchFollowUpLeads() async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      // Fetch all leads from API (this will populate follow-up leads in repository)
+      await _repository.fetchAllLeadsFromApi();
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      print('FollowupController: Error fetching follow-up leads: $e');
+      notifyListeners();
+    }
   }
 }
