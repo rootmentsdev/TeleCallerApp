@@ -149,7 +149,7 @@ class LeadRepository extends ChangeNotifier {
       final wasUncalled = LeadConstants.isUncalledStatus(oldLead.callStatus);
       final isNowCalled = LeadConstants.isCalledStatus(updatedLead.callStatus);
 
-      if (wasUncalled && isNowCalled) {
+      if (wasUncalled && isNowCalled && updatedLead.followUpDate == null) {
         print(
           'LeadRepository: Lead ${updatedLead.id} (${updatedLead.name}) status changed from "${oldLead.callStatus}" to "${updatedLead.callStatus}", moving to reports',
         );
@@ -1111,22 +1111,33 @@ class LeadRepository extends ChangeNotifier {
       // BUT: Preserve called leads so they remain available for reports screen
       if (page == null || page == 1) {
         // Store called leads before clearing
-        final calledLeads =
+        // final calledLeads =
+        //     _leads
+        //         .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+        //         .toList();=====================================================================================================================================================================
+        final preservedLeads =
             _leads
-                .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+                .where(
+                  (lead) =>
+                      LeadConstants.isCalledStatus(lead.callStatus) ||
+                      lead.needsFollowUp,
+                )
                 .toList();
+
+        _leads.clear();
+        _leads.addAll(preservedLeads);
 
         print(
           'LeadRepository: Clearing existing ${_leads.length} leads before adding new ones',
         );
         print(
-          'LeadRepository: Preserving ${calledLeads.length} called leads for reports',
+          'LeadRepository: Preserving ${preservedLeads.length} called leads for reports',
         );
 
         _leads.clear();
 
         // Restore called leads so they remain available for reports
-        _leads.addAll(calledLeads);
+        _leads.addAll(preservedLeads);
       }
 
       // Convert API data to LeadModel and add to repository

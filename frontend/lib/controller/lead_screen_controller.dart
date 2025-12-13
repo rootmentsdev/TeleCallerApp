@@ -287,6 +287,9 @@ class LeadScreenController extends ChangeNotifier {
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
               .toList();
 
+      // STEP 5: exclude leads with follow-up dates (they appear in Follow-up Screen)
+      leads = leads.where((lead) => lead.followUpDate == null).toList();
+
       return leads.length;
     }
 
@@ -537,6 +540,15 @@ class LeadScreenController extends ChangeNotifier {
         'LeadScreenController: After call status filter: ${filteredLeads.length} leads (was $beforeCallStatusFilter)',
       );
     }
+
+    // Filter out leads with follow-up dates (they should appear only in Follow-up Screen)
+    // Keep only leads where followUpDate == null
+    final beforeFollowUpFilter = filteredLeads.length;
+    filteredLeads =
+        filteredLeads.where((lead) => lead.followUpDate == null).toList();
+    print(
+      'LeadScreenController: After follow-up filter: ${filteredLeads.length} leads (was $beforeFollowUpFilter, removed ${beforeFollowUpFilter - filteredLeads.length} follow-up leads)',
+    );
 
     // Debug: Print final count
     print(

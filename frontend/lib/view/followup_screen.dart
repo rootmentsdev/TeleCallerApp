@@ -4,7 +4,7 @@ import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/view/reports_screens/report_screen.dart';
+import 'package:telecaller_app/view/details_screen.dart';
 
 class FollowupScreen extends StatelessWidget {
   const FollowupScreen({super.key});
@@ -331,102 +331,120 @@ class FollowupScreen extends StatelessWidget {
       itemBuilder: (context, index) {
         final lead = currentLeads[index];
         final call = controller.leadToDisplayMap(lead);
-        return _buildCallItem(call);
+        return _buildCallItem(call, context);
       },
     );
   }
 
-  Widget _buildCallItem(Map<String, dynamic> call) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: call["borderColor"] as Color, width: 4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: call["iconBgColor"] as Color,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                call["icon"] as IconData,
-                color: call["iconColor"] as Color,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Name, phone, and reason
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    call["name"] as String,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: TextConstant.dmSansMedium,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    call["phone"] as String,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: TextConstant.dmSansRegular,
-                      color: const Color(0xff797979),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Reason: ${call["reason"] as String}",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: TextConstant.dmSansRegular,
-                      color: const Color(0xff797979),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Tag
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: call["tagBgColor"] as Color,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                call["tag"] as String,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontFamily: TextConstant.dmSansMedium,
-                  color: call["tagColor"] as Color,
-                  fontWeight: FontWeight.w500,
+  Widget _buildCallItem(Map<String, dynamic> call, BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // Open details screen when follow-up lead is clicked
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => DetailsScreen(
+                  contact: call,
+                  callTypeIndex: 0, // All Calls (generic lead type)
                 ),
-              ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            left: BorderSide(color: call["borderColor"] as Color, width: 4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: call["iconBgColor"] as Color,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  call["icon"] as IconData,
+                  color: call["iconColor"] as Color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Name, phone, and reason
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      call["name"] as String,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: TextConstant.dmSansMedium,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      call["phone"] as String,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: TextConstant.dmSansRegular,
+                        color: const Color(0xff797979),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Reason: ${call["reason"] as String}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: TextConstant.dmSansRegular,
+                        color: const Color(0xff797979),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Tag
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: call["tagBgColor"] as Color,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  call["tag"] as String,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontFamily: TextConstant.dmSansMedium,
+                    color: call["tagColor"] as Color,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

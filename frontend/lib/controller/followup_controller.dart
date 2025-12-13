@@ -143,5 +143,6 @@ class FollowupController extends ChangeNotifier {
 
   void refresh() {
     notifyListeners();
+    _repository.addListener(notifyListeners);
   }
 }

@@ -7,6 +7,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
 import 'package:telecaller_app/view/reports_screens/just_dial_details_screen.dart';
+import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -279,19 +280,36 @@ class _ReportScreenState extends State<ReportScreen> {
 
                             return InkWell(
                               onTap: () {
-                                // Navigate to report details screen
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => ReportDetailsScreen(
-                                          contact: contact,
-                                          callTypeIndex:
-                                              reportController
-                                                  .selectedCallTypeIndex,
-                                        ),
-                                  ),
-                                );
+                                // For follow-up leads (tab 5), open DetailsScreen instead of ReportDetailsScreen
+                                // because follow-up leads are still in the leads list and need to be called
+                                if (reportController.selectedCallTypeIndex ==
+                                    5) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => DetailsScreen(
+                                            contact: contact,
+                                            callTypeIndex:
+                                                0, // All Calls (generic lead type)
+                                          ),
+                                    ),
+                                  );
+                                } else {
+                                  // Navigate to report details screen for other call types
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => ReportDetailsScreen(
+                                            contact: contact,
+                                            callTypeIndex:
+                                                reportController
+                                                    .selectedCallTypeIndex,
+                                          ),
+                                    ),
+                                  );
+                                }
                               },
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 12),

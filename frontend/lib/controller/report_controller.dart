@@ -88,7 +88,6 @@ class ReportController extends ChangeNotifier {
   // Only count leads that have been called (completed calls)
   List<Map<String, dynamic>> getCallSummary() {
     final store = _headerController?.selectedStore;
-    final date = _headerController?.selectedDate ?? DateTime.now();
 
     // Handle "All Stores" case
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
@@ -327,20 +326,13 @@ class ReportController extends ChangeNotifier {
           break;
 
         case 5:
-          // EQUARY → leads where type is null or unknown
+          // FOLLOW UP CALLS → leads with follow-up date set
           filteredReports =
-              filteredReports
-                  .where(
-                    (r) =>
-                        r["type"] == null ||
-                        ![
-                          "loss",
-                          "rent-out",
-                          "booking",
-                          "justdial",
-                        ].contains(r["type"]),
-                  )
-                  .toList();
+              filteredReports.where((r) {
+                final followUpDate = r["followUpDate"];
+                return followUpDate != null &&
+                    followUpDate.toString().isNotEmpty;
+              }).toList();
           break;
       }
     }
@@ -375,9 +367,11 @@ class ReportController extends ChangeNotifier {
       case 2:
         return "Rent-Out calls";
       case 3:
-        return "Just Dial Enquiries";
+        return "Booking Confirmation calls";
       case 4:
-        return "Equary Calls";
+        return "Just Dial Enquiries";
+      case 5:
+        return "Follow Up Calls";
       default:
         return "All calls";
     }
@@ -457,13 +451,7 @@ class ReportController extends ChangeNotifier {
   /// Fetch reports filtered by current header settings (store and date)
   Future<void> fetchReportsWithCurrentFilters() async {
     // Note: Store filter is not directly supported by reports API
-    // We'll filter by date range (same day) and filter by store in getFilteredLeads
-    final date = _headerController?.selectedDate ?? DateTime.now();
-
-    // Convert date to YYYY-MM-DD format for API
-    String formatDate(DateTime date) {
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    }
+    // We'll filter by store in getFilteredLeads
 
     // Determine leadType based on selected call type index
     String? leadType;
@@ -495,22 +483,12 @@ class ReportController extends ChangeNotifier {
         break;
     }
 
-    // For Equary Calls, don't filter by date - show all reports
-    // For other tabs, filter by edited date (same day)
-    String? dateFrom;
-    String? dateTo;
-
-    // Apply date filter for all tabs except Equary Calls
-    if (_selectedCallTypeIndex != 5) {
-      final dateStr = formatDate(date);
-      dateFrom = null;
-      dateTo = null;
-    }
-
+    // For all tabs, fetch reports without date filter
+    // Date filtering is handled in getFilteredLeads() based on selected tab
     await fetchReportsFromApi(
       leadType: leadType,
-      dateFrom: dateFrom,
-      dateTo: dateTo,
+      dateFrom: null,
+      dateTo: null,
       page: 1,
       limit: 100, // Increased limit to get more reports
     );
