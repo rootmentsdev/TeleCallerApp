@@ -85,6 +85,8 @@ class _ReportScreenState extends State<ReportScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AppHeader(
+                showDate: true,
+                showFilters: true,
                 onNotificationTap: () {
                   // Handle notification tap
                 },

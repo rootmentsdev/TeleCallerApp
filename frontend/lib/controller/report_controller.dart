@@ -453,6 +453,16 @@ class ReportController extends ChangeNotifier {
     // Note: Store filter is not directly supported by reports API
     // We'll filter by store in getFilteredLeads
 
+    // Get selected date from header controller
+    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+
+    // Format date to YYYY-MM-DD for API
+    String formatDate(DateTime date) {
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
+
+    final dateStr = formatDate(selectedDate);
+
     // Determine leadType based on selected call type index
     String? leadType;
 
@@ -483,12 +493,15 @@ class ReportController extends ChangeNotifier {
         break;
     }
 
-    // For all tabs, fetch reports without date filter
-    // Date filtering is handled in getFilteredLeads() based on selected tab
+    print(
+      'ReportController: Fetching reports for date: $dateStr, leadType: $leadType',
+    );
+
+    // Fetch reports with date filter
     await fetchReportsFromApi(
       leadType: leadType,
-      dateFrom: null,
-      dateTo: null,
+      dateFrom: dateStr,
+      dateTo: dateStr,
       page: 1,
       limit: 100, // Increased limit to get more reports
     );

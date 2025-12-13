@@ -42,6 +42,9 @@ class _DetailsScreenState extends State<DetailsScreen>
   int rating = 0;
   final TextEditingController remarksController = TextEditingController();
 
+  // Dirty flag to track unsaved changes
+  bool _isDirty = false;
+
   // Call tracking variables
   bool _isCallActive = false;
   DateTime? _callStartTime;
@@ -143,6 +146,11 @@ class _DetailsScreenState extends State<DetailsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Add listeners to track changes for dirty flag
+    remarksController.addListener(_markDirty);
+    customReasonController.addListener(_markDirty);
+
     // Initialize call duration from existing contact if available
     final existingDuration = widget.contact["callDuration"] as int?;
     if (existingDuration != null && existingDuration > 0) {
@@ -741,6 +749,9 @@ class _DetailsScreenState extends State<DetailsScreen>
       }
     }
 
+    // Reset dirty flag after successful save
+    _isDirty = false;
+
     // Navigate back to previous screen (BottomNav) and switch to Reports tab
     if (mounted) {
       // Pop back to BottomNav (not all the way to LoginScreen)
@@ -921,485 +932,558 @@ class _DetailsScreenState extends State<DetailsScreen>
     super.dispose();
   }
 
+  /// Mark the form as dirty when any field changes
+  void _markDirty() {
+    if (!_isDirty) {
+      setState(() {
+        _isDirty = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ColorConstant.primaryColor,
-      body: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Back button positioned on the left
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(
-                      Icons.arrow_back_ios,
-                      color: Colors.white,
+    return WillPopScope(
+      onWillPop: _handleBackNavigation,
+      child: Scaffold(
+        backgroundColor: ColorConstant.primaryColor,
+        body: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Back button positioned on the left
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: _handleBackNavigation,
+                      child: const Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                // Centered title and subtitle
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      screenTitle,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: TextConstant.dmSansMedium,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.contact["storeName"] ?? "Zorucci Edappally",
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                        fontFamily: TextConstant.dmSansRegular,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Content
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Contact Information Section
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: iconBgColor,
-                          child: Icon(icon, color: iconColor, size: 28),
+                  // Centered title and subtitle
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        screenTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: TextConstant.dmSansMedium,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.contact["storeName"] ?? "Zorucci Edappally",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Contact Information Section
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: iconBgColor,
+                            child: Icon(icon, color: iconColor, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.contact["name"] ?? "",
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: TextConstant.dmSansMedium,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  widget.contact["phone"] ?? "",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: ColorConstant.grey,
+                                    fontFamily: TextConstant.dmSansRegular,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed:
+                                _isCallActive
+                                    ? null
+                                    : () async {
+                                      await _makePhoneCall(
+                                        widget.contact["phone"] ?? "",
+                                      );
+                                    },
+                            icon: Icon(
+                              _isCallActive
+                                  ? Icons.phone_disabled
+                                  : Icons.phone,
+                              size: 18,
+                            ),
+                            label: Text(
+                              _isCallActive ? "Calling..." : "Call Now",
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  _isCallActive
+                                      ? Colors.grey[400]
+                                      : ColorConstant.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Lead Details Section - Dynamic based on call type
+                      _buildDetailsSection(),
+
+                      const SizedBox(height: 24),
+
+                      // Call Duration Display Section
+                      if (_callDurationSeconds > 0)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green[300]!,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                widget.contact["name"] ?? "",
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: TextConstant.dmSansMedium,
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[100],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.timer,
+                                  size: 24,
+                                  color: Colors.green[700],
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.contact["phone"] ?? "",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: ColorConstant.grey,
-                                  fontFamily: TextConstant.dmSansRegular,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Call Duration",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green[600],
+                                        fontFamily: TextConstant.dmSansRegular,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      FormatHelper.formatCallDurationWithUnits(
+                                        _callDurationSeconds,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green[700],
+                                        fontFamily: TextConstant.dmSansMedium,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed:
-                              _isCallActive
-                                  ? null
-                                  : () async {
-                                    await _makePhoneCall(
-                                      widget.contact["phone"] ?? "",
-                                    );
-                                  },
-                          icon: Icon(
-                            _isCallActive ? Icons.phone_disabled : Icons.phone,
-                            size: 18,
-                          ),
-                          label: Text(
-                            _isCallActive ? "Calling..." : "Call Now",
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _isCallActive
-                                    ? Colors.grey[400]
-                                    : ColorConstant.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
+
+                      if (_callDurationSeconds > 0) const SizedBox(height: 24),
+
+                      // Call Status Dropdown
+                      _buildDropdown(
+                        label:
+                            _callDurationSeconds > 0
+                                ? "Call Status (Auto: Connected)"
+                                : "Call Status",
+                        value: selectedCallStatus,
+                        items: callStatusOptions,
+                        enabled: _hasCalled,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCallStatus = value;
+                            _isDirty = true;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // Reason Dropdown - Only for Loss of Sale and All Calls
+                      if (widget.callTypeIndex == 0 ||
+                          widget.callTypeIndex == 1) ...[
+                        _buildDropdown(
+                          label: "Reason",
+                          value: selectedReason,
+                          items: reasonOptions,
+                          hint: "Add reason",
+                          enabled: _hasCalled,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedReason = value;
+                              _isDirty = true;
+                              if (value != "Other") {
+                                customReasonController.clear();
+                              }
+                            });
+                          },
                         ),
+                        // Custom Reason TextField (shown when "Other" is selected)
+                        if (selectedReason == "Other") ...[
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: customReasonController,
+                            enabled: _hasCalled,
+                            decoration: InputDecoration(
+                              hintText: "Enter custom reason",
+                              hintStyle: TextStyle(
+                                color: Colors.grey[400],
+                                fontFamily: TextConstant.dmSansRegular,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: ColorConstant.primaryColor,
+                                  width: 2,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                        ],
                       ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Lead Details Section - Dynamic based on call type
-                    _buildDetailsSection(),
-
-                    const SizedBox(height: 24),
-
-                    // Call Duration Display Section
-                    if (_callDurationSeconds > 0)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.green[300]!,
-                            width: 1.5,
-                          ),
+                      // Rating Section - Only for Rentout Feedback (replaces Reason dropdown)
+                      if (widget.contact["isRentout"] == true) ...[
+                        _buildRatingSection(),
+                        const SizedBox(height: 16),
+                      ],
+                      // Lead Status Dropdown - Only for Booking Confirmation and Rentout
+                      if (widget.callTypeIndex == 3 ||
+                          widget.contact["isRentout"] == true)
+                        _buildDropdown(
+                          label: "Lead Status",
+                          value: selectedLeadStatus,
+                          items: leadStatusOptions,
+                          hint: "No Status",
+                          enabled: _hasCalled,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedLeadStatus = value;
+                              _isDirty = true;
+                            });
+                          },
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.green[100],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.timer,
-                                size: 24,
-                                color: Colors.green[700],
-                              ),
+
+                      if (widget.callTypeIndex == 3 ||
+                          widget.contact["isRentout"] == true)
+                        const SizedBox(height: 16),
+
+                      const SizedBox(height: 16),
+
+                      // Mark As Follow Up
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: markAsFollowUp,
+                            onChanged:
+                                _hasCalled
+                                    ? (value) {
+                                      setState(() {
+                                        markAsFollowUp = value ?? false;
+                                        _isDirty = true;
+                                        if (markAsFollowUp &&
+                                            followUpDate == null) {
+                                          followUpDate = DateTime.now().add(
+                                            const Duration(days: 7),
+                                          );
+                                        }
+                                      });
+                                    }
+                                    : null,
+                            activeColor: ColorConstant.primaryColor,
+                          ),
+                          Text(
+                            "Mark As Follow Up",
+                            style: TextStyle(
+                              fontFamily: TextConstant.dmSansMedium,
+                              fontSize: 14,
+                              color: Colors.black,
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Call Duration",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.green[600],
-                                      fontFamily: TextConstant.dmSansRegular,
-                                    ),
+                          ),
+                          if (markAsFollowUp) ...[
+                            const Spacer(),
+                            GestureDetector(
+                              onTap:
+                                  _hasCalled
+                                      ? () async {
+                                        DateTime? pickedDate =
+                                            await showDatePicker(
+                                              context: context,
+                                              initialDate:
+                                                  followUpDate ??
+                                                  DateTime.now(),
+                                              firstDate: DateTime.now(),
+                                              lastDate: DateTime(2101),
+                                            );
+                                        if (pickedDate != null) {
+                                          setState(() {
+                                            followUpDate = pickedDate;
+                                            _isDirty = true;
+                                          });
+                                        }
+                                      }
+                                      : null,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: iconBgColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  followUpDate != null
+                                      ? "${followUpDate!.day} ${_getMonthName(followUpDate!.month)} ${followUpDate!.year}"
+                                      : "Select Date",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: iconColor,
+                                    fontFamily: TextConstant.dmSansMedium,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    FormatHelper.formatCallDurationWithUnits(
-                                      _callDurationSeconds,
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
-                                      fontFamily: TextConstant.dmSansMedium,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
 
-                    if (_callDurationSeconds > 0) const SizedBox(height: 24),
-
-                    // Call Status Dropdown
-                    _buildDropdown(
-                      label:
-                          _callDurationSeconds > 0
-                              ? "Call Status (Auto: Connected)"
-                              : "Call Status",
-                      value: selectedCallStatus,
-                      items: callStatusOptions,
-                      enabled: _hasCalled,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedCallStatus = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // Reason Dropdown - Only for Loss of Sale and All Calls
-                    if (widget.callTypeIndex == 0 ||
-                        widget.callTypeIndex == 1) ...[
-                      _buildDropdown(
-                        label: "Reason",
-                        value: selectedReason,
-                        items: reasonOptions,
-                        hint: "Add reason",
-                        enabled: _hasCalled,
-                        onChanged: (value) {
-                          setState(() {
-                            selectedReason = value;
-                            if (value != "Other") {
-                              customReasonController.clear();
-                            }
-                          });
-                        },
-                      ),
-                      // Custom Reason TextField (shown when "Other" is selected)
-                      if (selectedReason == "Other") ...[
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: customReasonController,
-                          enabled: _hasCalled,
-                          decoration: InputDecoration(
-                            hintText: "Enter custom reason",
-                            hintStyle: TextStyle(
-                              color: Colors.grey[400],
-                              fontFamily: TextConstant.dmSansRegular,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: ColorConstant.primaryColor,
-                                width: 2,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.all(12),
-                          ),
-                        ),
-                      ],
-                    ],
-                    // Rating Section - Only for Rentout Feedback (replaces Reason dropdown)
-                    if (widget.contact["isRentout"] == true) ...[
-                      _buildRatingSection(),
-                      const SizedBox(height: 16),
-                    ],
-                    // Lead Status Dropdown - Only for Booking Confirmation and Rentout
-                    if (widget.callTypeIndex == 3 ||
-                        widget.contact["isRentout"] == true)
-                      _buildDropdown(
-                        label: "Lead Status",
-                        value: selectedLeadStatus,
-                        items: leadStatusOptions,
-                        hint: "No Status",
-                        enabled: _hasCalled,
-                        onChanged: (value) {
-                          setState(() {
-                            selectedLeadStatus = value;
-                          });
-                        },
-                      ),
-
-                    if (widget.callTypeIndex == 3 ||
-                        widget.contact["isRentout"] == true)
                       const SizedBox(height: 16),
 
-                    const SizedBox(height: 16),
-
-                    // Mark As Follow Up
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: markAsFollowUp,
-                          onChanged:
-                              _hasCalled
-                                  ? (value) {
-                                    setState(() {
-                                      markAsFollowUp = value ?? false;
-                                      if (markAsFollowUp &&
-                                          followUpDate == null) {
-                                        followUpDate = DateTime.now().add(
-                                          const Duration(days: 7),
-                                        );
-                                      }
-                                    });
-                                  }
-                                  : null,
-                          activeColor: ColorConstant.primaryColor,
+                      // Remarks
+                      Text(
+                        "Remarks",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: TextConstant.dmSansMedium,
+                          color: Colors.grey[800],
                         ),
-                        Text(
-                          "Mark As Follow Up",
-                          style: TextStyle(
-                            fontFamily: TextConstant.dmSansMedium,
-                            fontSize: 14,
-                            color: Colors.black,
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: remarksController,
+                        enabled: _hasCalled,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: "Enter your remarks",
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontFamily: TextConstant.dmSansRegular,
                           ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: ColorConstant.primaryColor,
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.all(12),
                         ),
-                        if (markAsFollowUp) ...[
-                          const Spacer(),
-                          GestureDetector(
-                            onTap:
-                                _hasCalled
-                                    ? () async {
-                                      DateTime? pickedDate =
-                                          await showDatePicker(
-                                            context: context,
-                                            initialDate:
-                                                followUpDate ?? DateTime.now(),
-                                            firstDate: DateTime.now(),
-                                            lastDate: DateTime(2101),
-                                          );
-                                      if (pickedDate != null) {
-                                        setState(() {
-                                          followUpDate = pickedDate;
-                                        });
-                                      }
-                                    }
-                                    : null,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: iconBgColor,
-                                borderRadius: BorderRadius.circular(8),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: BorderSide(color: Colors.grey[300]!),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                               child: Text(
-                                followUpDate != null
-                                    ? "${followUpDate!.day} ${_getMonthName(followUpDate!.month)} ${followUpDate!.year}"
-                                    : "Select Date",
+                                "Cancel",
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: iconColor,
+                                  color: Colors.grey[800],
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: TextConstant.dmSansMedium,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed:
+                                  _hasCalled
+                                      ? () async {
+                                        await _saveCallUpdate();
+                                      }
+                                      : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    _hasCalled
+                                        ? ColorConstant.primaryColor
+                                        : Colors.grey[400],
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Text(
+                                "Save Call Update",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
                                   fontFamily: TextConstant.dmSansMedium,
                                 ),
                               ),
                             ),
                           ),
                         ],
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Remarks
-                    Text(
-                      "Remarks",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        fontFamily: TextConstant.dmSansMedium,
-                        color: Colors.grey[800],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: remarksController,
-                      enabled: _hasCalled,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        hintText: "Enter your remarks",
-                        hintStyle: TextStyle(
-                          color: Colors.grey[400],
-                          fontFamily: TextConstant.dmSansRegular,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: ColorConstant.primaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.all(12),
-                      ),
-                    ),
 
-                    const SizedBox(height: 32),
-
-                    // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: BorderSide(color: Colors.grey[300]!),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              "Cancel",
-                              style: TextStyle(
-                                color: Colors.grey[800],
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: TextConstant.dmSansMedium,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed:
-                                _hasCalled
-                                    ? () async {
-                                      await _saveCallUpdate();
-                                    }
-                                    : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  _hasCalled
-                                      ? ColorConstant.primaryColor
-                                      : Colors.grey[400],
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              "Save Call Update",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: TextConstant.dmSansMedium,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-                  ],
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  /// Handle back navigation with unsaved changes detection
+  Future<bool> _handleBackNavigation() async {
+    if (!_isDirty) {
+      // No unsaved changes, allow navigation
+      return true;
+    }
+
+    // Show confirmation dialog
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Unsaved Changes'),
+          content: const Text(
+            'You have entered details but not saved. What do you want to do?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false); // Cancel
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // Save
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSave == true) {
+      // User chose to save
+      await _saveCallUpdate();
+      return true; // Allow navigation after saving
+    }
+
+    // User chose to cancel or dismissed
+    return false; // Prevent navigation
   }
 
   Widget _buildDetailRow(
@@ -1622,6 +1706,7 @@ class _DetailsScreenState extends State<DetailsScreen>
                       ? () {
                         setState(() {
                           rating = index + 1;
+                          _isDirty = true;
                         });
                       }
                       : null,
