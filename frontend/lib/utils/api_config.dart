@@ -159,6 +159,10 @@ class ApiConfig {
     return "$authEndpoint/login";
   }
 
+  static String refreshToken() {
+    return "$authEndpoint/refresh-token";
+  }
+
   static String updateLossOfSale(String id) {
     return "$pagesEndpoint/loss-of-sale/$id";
   }

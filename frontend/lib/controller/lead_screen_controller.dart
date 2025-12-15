@@ -160,39 +160,7 @@ class LeadScreenController extends ChangeNotifier {
     // Note: store and date filters are handled in getUncalledLeadsCount
 
     // Helper function to count uncalled leads
-    // int getUncalledLeadsCount({String? category}) {
-    //   List<LeadModel> leads =
-    //       category != null
-    //           ? _repository.getLeadsByCategory(category)
-    //           : _repository.allLeads;
-
-    //   // Filter by store - extract location from "Brand - Location" format
-    //   if (storeFilter != null) {
-    //     final location = StoreLocations.resolveSelection(storeFilter).location;
-    //     leads = leads.where((lead) => lead.location == location).toList();
-    //   }
-
-    //   // Filter by date - but for Loss of Sale, count all leads (date filter is handled by API)
-    //   // For other categories, filter by selected date
-    //   if (category != LeadConstants.categoryLossOfSales) {
-    //     leads =
-    //         leads.where((lead) {
-    //           final leadDate = lead.createdAt;
-    //           return leadDate.year == date.year &&
-    //               leadDate.month == date.month &&
-    //               leadDate.day == date.day;
-    //         }).toList();
-    //   }
-
-    //   // Filter out leads that have been called
-    //   leads =
-    //       leads
-    //           .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-    //           .toList();
-
-    //   return leads.length;
-    // }
-    int getUncalledLeadsCount({String? category}) {
+    int getUncalledLeadsCount({String? category, bool followUpOnly = false}) {
       final date = _headerController?.selectedDate ?? DateTime.now();
 
       // STEP 1: get leads by category with date filter
@@ -281,14 +249,21 @@ class LeadScreenController extends ChangeNotifier {
       // STEP 3: DO NOT FILTER BY DATE
       // (This is the reason counts were 0 before)
 
-      // STEP 4: count only uncalled
-      leads =
-          leads
-              .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-              .toList();
-
-      // STEP 5: exclude leads with follow-up dates (they appear in Follow-up Screen)
-      leads = leads.where((lead) => lead.followUpDate == null).toList();
+      // STEP 4: Handle follow-up filter
+      if (followUpOnly) {
+        // For Follow Up tab - show only leads with follow-up dates
+        leads = leads.where((lead) => lead.followUpDate != null).toList();
+      } else {
+        // For other tabs - count only uncalled leads
+        leads =
+            leads
+                .where(
+                  (lead) => LeadConstants.isUncalledStatus(lead.callStatus),
+                )
+                .toList();
+        // Exclude leads with follow-up dates (they appear in Follow-up tab)
+        leads = leads.where((lead) => lead.followUpDate == null).toList();
+      }
 
       return leads.length;
     }
@@ -340,16 +315,6 @@ class LeadScreenController extends ChangeNotifier {
         "bgColor": const Color(0xFFFFE8D5),
         "iconColor": const Color(0xFFF37927),
         "icon": Icons.headset_mic_outlined,
-      },
-      {
-        "title": "Follow Up\nCalls",
-        "count":
-            getUncalledLeadsCount(
-              category: LeadConstants.categoryFollowUp,
-            ).toString(),
-        "bgColor": const Color(0xFFD5E8FF),
-        "iconColor": const Color(0xFF2196F3),
-        "icon": Icons.event_note_outlined,
       },
     ];
   }
@@ -541,25 +506,13 @@ class LeadScreenController extends ChangeNotifier {
       );
     }
 
-    // Filter by follow-up status based on selected tab
-    // For "Follow Up Calls" tab (index 5), show ONLY leads with follow-up dates
-    // For other tabs, show ONLY leads without follow-up dates
-    if (_selectedCallTypeIndex == 5) {
-      // Follow Up Calls tab - show only leads with follow-up dates
-      filteredLeads =
-          filteredLeads.where((lead) => lead.followUpDate != null).toList();
-      print(
-        'LeadScreenController: Follow-up tab - showing ${filteredLeads.length} leads with follow-up dates',
-      );
-    } else {
-      // Other tabs - exclude leads with follow-up dates
-      final beforeFollowUpFilter = filteredLeads.length;
-      filteredLeads =
-          filteredLeads.where((lead) => lead.followUpDate == null).toList();
-      print(
-        'LeadScreenController: After follow-up filter: ${filteredLeads.length} leads (was $beforeFollowUpFilter, removed ${beforeFollowUpFilter - filteredLeads.length} follow-up leads)',
-      );
-    }
+    // Exclude leads with follow-up dates (they appear in Follow-up tab in Reports screen)
+    final beforeFollowUpFilter = filteredLeads.length;
+    filteredLeads =
+        filteredLeads.where((lead) => lead.followUpDate == null).toList();
+    print(
+      'LeadScreenController: After follow-up filter: ${filteredLeads.length} leads (was $beforeFollowUpFilter, removed ${beforeFollowUpFilter - filteredLeads.length} follow-up leads)',
+    );
 
     // Debug: Print final count
     print(
@@ -604,8 +557,6 @@ class LeadScreenController extends ChangeNotifier {
         return "Booking Confirmation";
       case 4:
         return "Just Dial Enquiries";
-      case 5:
-        return "Follow Up Calls";
       default:
         return "All Calls";
     }
@@ -641,8 +592,6 @@ class LeadScreenController extends ChangeNotifier {
         return LeadConstants.categoryBookingConfirmation;
       case 4:
         return LeadConstants.categoryJustDial;
-      case 5:
-        return LeadConstants.categoryFollowUp;
       default:
         return null;
     }

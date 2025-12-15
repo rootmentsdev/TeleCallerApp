@@ -14,7 +14,6 @@ import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
-import 'dart:async';
 
 class DetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -31,8 +30,7 @@ class DetailsScreen extends StatefulWidget {
   State<DetailsScreen> createState() => _DetailsScreenState();
 }
 
-class _DetailsScreenState extends State<DetailsScreen>
-    with WidgetsBindingObserver {
+class _DetailsScreenState extends State<DetailsScreen> {
   String? selectedCallStatus;
   String? selectedReason;
   final TextEditingController customReasonController = TextEditingController();
@@ -47,12 +45,7 @@ class _DetailsScreenState extends State<DetailsScreen>
 
   // Call tracking variables
   bool _isCallActive = false;
-  DateTime? _callStartTime;
   int _callDurationSeconds = 0;
-  Timer? _callTimer;
-  bool _wasAppInBackground = false;
-  DateTime? _backgroundTime;
-  Timer? _autoStopTimer;
   bool _hasCalled = false; // Track if call was initiated from lead screen
 
   final List<Map<String, dynamic>> callSummary = [
@@ -145,7 +138,6 @@ class _DetailsScreenState extends State<DetailsScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
 
     // Add listeners to track changes for dirty flag
     remarksController.addListener(_markDirty);
@@ -160,69 +152,27 @@ class _DetailsScreenState extends State<DetailsScreen>
     // Initialize PhoneCallService to listen for automatic call duration
     PhoneCallService.initialize(
       onCallStarted: (phoneNumber) {
-        // Call initiated - set state but don't start timer yet
-        final contactPhone = widget.contact["phone"] as String? ?? "";
-        final cleanedContactPhone = contactPhone.replaceAll(
-          RegExp(r'[\s\-\(\)]'),
-          '',
-        );
-        final cleanedReceivedPhone = phoneNumber.replaceAll(
-          RegExp(r'[\s\-\(\)]'),
-          '',
-        );
-
-        if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
-            cleanedContactPhone.contains(cleanedReceivedPhone) ||
-            cleanedContactPhone == cleanedReceivedPhone) {
-          if (mounted) {
-            setState(() {
-              _isCallActive = true; // Show call is active but not answered yet
-              _callDurationSeconds = 0; // Reset duration
-            });
-          }
+        // Call initiated - set state
+        if (mounted) {
+          setState(() {
+            _isCallActive = true; // Show call is active but not answered yet
+            _callDurationSeconds = 0; // Reset duration
+          });
         }
       },
       onCallAnswered: (phoneNumber) {
-        // Call answered - update UI but don't start timer
-        // Duration will be provided by Android via onCallEnded callback
-        final contactPhone = widget.contact["phone"] as String? ?? "";
-        final cleanedContactPhone = contactPhone.replaceAll(
-          RegExp(r'[\s\-\(\)]'),
-          '',
-        );
-        final cleanedReceivedPhone = phoneNumber.replaceAll(
-          RegExp(r'[\s\-\(\)]'),
-          '',
-        );
-
-        if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
-            cleanedContactPhone.contains(cleanedReceivedPhone) ||
-            cleanedContactPhone == cleanedReceivedPhone) {
-          if (mounted) {
-            // Don't start Flutter timer - Android will provide accurate duration
-            setState(() {
-              _isCallActive = true;
-            });
-          }
+        // Call answered - update UI
+        if (mounted) {
+          setState(() {
+            _isCallActive = true;
+          });
         }
       },
       onCallEnded: (phoneNumber, duration) {
-        if (mounted && duration != null && duration > 0) {
-          // Check if the phone number matches
-          final contactPhone = widget.contact["phone"] as String? ?? "";
-          final cleanedContactPhone = contactPhone.replaceAll(
-            RegExp(r'[\s\-\(\)]'),
-            '',
-          );
-          final cleanedReceivedPhone = phoneNumber.replaceAll(
-            RegExp(r'[\s\-\(\)]'),
-            '',
-          );
-
-          // Match phone numbers (handle cases with/without country code)
-          if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
-              cleanedContactPhone.contains(cleanedReceivedPhone) ||
-              cleanedContactPhone == cleanedReceivedPhone) {
+        if (mounted && duration != null) {
+          // For any call that ends with duration > 0, update the screen
+          // This handles cases where user calls from this screen
+          if (duration > 0) {
             setState(() {
               _callDurationSeconds = duration;
               _isCallActive = false;
@@ -231,28 +181,12 @@ class _DetailsScreenState extends State<DetailsScreen>
                 selectedCallStatus = "Connected";
               }
             });
-            _stopCallTimer();
-          }
-        } else if (mounted && duration != null && duration == 0) {
-          // Call ended but was not answered (missed/rejected)
-          final contactPhone = widget.contact["phone"] as String? ?? "";
-          final cleanedContactPhone = contactPhone.replaceAll(
-            RegExp(r'[\s\-\(\)]'),
-            '',
-          );
-          final cleanedReceivedPhone = phoneNumber.replaceAll(
-            RegExp(r'[\s\-\(\)]'),
-            '',
-          );
-
-          if (cleanedReceivedPhone.contains(cleanedContactPhone) ||
-              cleanedContactPhone.contains(cleanedReceivedPhone) ||
-              cleanedContactPhone == cleanedReceivedPhone) {
+          } else {
+            // Call ended but was not answered (missed/rejected)
             setState(() {
               _isCallActive = false;
               _callDurationSeconds = 0;
             });
-            _stopCallTimer();
           }
         }
       },
@@ -284,13 +218,10 @@ class _DetailsScreenState extends State<DetailsScreen>
                 break;
               case CallState.answered:
                 _isCallActive = true;
-                _callStartTime = callData.startTime;
-                _startCallTimer();
                 break;
               case CallState.ended:
                 _isCallActive = false;
                 _callDurationSeconds = callData.duration;
-                _stopCallTimer();
                 // Auto-set call status based on duration
                 if (selectedCallStatus == null) {
                   selectedCallStatus =
@@ -304,30 +235,6 @@ class _DetailsScreenState extends State<DetailsScreen>
         }
       }
     });
-  }
-
-  /// Listen to call tracking updates for current call
-  void _listenToCallTracking() {
-    final callTrackingController = Provider.of<CallTrackingController>(
-      context,
-      listen: false,
-    );
-
-    // Check if there's already an active call for this number
-    final contactPhone = widget.contact["phone"] as String? ?? "";
-    if (callTrackingController.isPhoneNumberFromRecentCall(contactPhone)) {
-      final callData = callTrackingController.currentCall;
-      if (callData != null && mounted) {
-        setState(() {
-          _isCallActive = callTrackingController.isCallActive;
-          _callDurationSeconds = callTrackingController.currentCallDuration;
-          if (_isCallActive && callData.callState == CallState.answered) {
-            _callStartTime = callData.startTime;
-            _startCallTimer();
-          }
-        });
-      }
-    }
   }
 
   /// Check if phone numbers match (handles different formats)
@@ -357,67 +264,7 @@ class _DetailsScreenState extends State<DetailsScreen>
         clean2.contains(clean1);
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      // App went to background - user likely opened dialer or is on a call
-      if (_isCallActive && _callStartTime != null) {
-        _wasAppInBackground = true;
-        _backgroundTime = DateTime.now();
-        // Set auto-stop timer in case user doesn't return (max 2 hours)
-        _autoStopTimer?.cancel();
-        _autoStopTimer = Timer(const Duration(hours: 2), () {
-          if (mounted && _isCallActive) {
-            _stopCallTimer();
-            setState(() {});
-          }
-        });
-      }
-    } else if (state == AppLifecycleState.resumed) {
-      // App came back to foreground
-      _autoStopTimer?.cancel();
-      _autoStopTimer = null;
-
-      if (_wasAppInBackground && _isCallActive) {
-        // Calculate time spent in background
-        if (_backgroundTime != null) {
-          final backgroundDuration = DateTime.now().difference(
-            _backgroundTime!,
-          );
-
-          // If user was away for more than 30 seconds, assume call ended
-          // This handles the case where user makes call and returns to app
-          if (backgroundDuration.inSeconds > 30) {
-            // Finalize the duration - timer already calculated it
-            _stopCallTimer();
-            _wasAppInBackground = false;
-            _backgroundTime = null;
-
-            // Auto-set status to Connected if duration > 0
-            if (_callDurationSeconds > 0 && selectedCallStatus == null) {
-              selectedCallStatus = "Connected";
-            }
-          } else {
-            // User returned quickly, might still be in dialer
-            // Keep timer running
-            _wasAppInBackground = false;
-            _backgroundTime = null;
-          }
-        } else {
-          // Fallback: stop timer if we were tracking
-          _stopCallTimer();
-          _wasAppInBackground = false;
-        }
-      }
-    }
-  }
-
   Future<void> _saveCallUpdate() async {
-    // Stop timer if running
-    _stopCallTimer();
-
     // If call was made and has duration, auto-set status to Connected
     if (_callDurationSeconds > 0 && selectedCallStatus == null) {
       selectedCallStatus = "Connected";
@@ -550,12 +397,9 @@ class _DetailsScreenState extends State<DetailsScreen>
               listen: false,
             );
 
-            // Determine call date - use call start time if available, otherwise use current time
+            // Determine call date - use current time if call was made
             DateTime? callDate;
-            if (_callStartTime != null) {
-              callDate = _callStartTime;
-            } else if (_callDurationSeconds > 0 || _isCallActive) {
-              // If call was made but start time not recorded, use current time
+            if (_callDurationSeconds > 0 || _isCallActive) {
               callDate = DateTime.now();
             }
 
@@ -612,12 +456,9 @@ class _DetailsScreenState extends State<DetailsScreen>
               listen: false,
             );
 
-            // Determine call date - use call start time if available, otherwise use current time
+            // Determine call date - use current time if call was made
             DateTime? callDate;
-            if (_callStartTime != null) {
-              callDate = _callStartTime;
-            } else if (_callDurationSeconds > 0 || _isCallActive) {
-              // If call was made but start time not recorded, use current time
+            if (_callDurationSeconds > 0 || _isCallActive) {
               callDate = DateTime.now();
             }
 
@@ -768,47 +609,6 @@ class _DetailsScreenState extends State<DetailsScreen>
     }
   }
 
-  void _startCallTimer() {
-    _callStartTime = DateTime.now();
-    _isCallActive = true;
-    _callDurationSeconds = 0; // Reset duration when starting new call
-    _callTimer?.cancel();
-    _callTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted && _callStartTime != null) {
-        final elapsed = DateTime.now().difference(_callStartTime!);
-        setState(() {
-          _callDurationSeconds = elapsed.inSeconds;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  void _stopCallTimer() {
-    _callTimer?.cancel();
-    _callTimer = null;
-    _autoStopTimer?.cancel();
-    _autoStopTimer = null;
-
-    // Only recalculate duration if we don't already have one from Android
-    // (Android provides accurate duration from OFFHOOK to IDLE)
-    if (_callStartTime != null && _isCallActive && _callDurationSeconds == 0) {
-      final elapsed = DateTime.now().difference(_callStartTime!);
-      _callDurationSeconds = elapsed.inSeconds;
-    }
-
-    _isCallActive = false;
-    _callStartTime = null;
-    _wasAppInBackground = false;
-    _backgroundTime = null;
-
-    // Auto-set status to Connected if call had duration
-    if (_callDurationSeconds > 0 && selectedCallStatus == null) {
-      selectedCallStatus = "Connected";
-    }
-  }
-
   Future<void> _makePhoneCall(String phoneNumber) async {
     if (phoneNumber.isEmpty) {
       if (mounted) {
@@ -859,9 +659,6 @@ class _DetailsScreenState extends State<DetailsScreen>
           _callDurationSeconds = 0;
           _hasCalled = true; // Enable form fields after call is initiated
         });
-
-        // Listen to call tracking updates
-        _listenToCallTracking();
       } else if (mounted) {
         // Fallback to url_launcher
         final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
@@ -876,14 +673,6 @@ class _DetailsScreenState extends State<DetailsScreen>
               _isCallActive = true;
               _callDurationSeconds = 0;
               _hasCalled = true;
-            });
-
-            // Listen to call tracking updates
-            _listenToCallTracking();
-            _startCallTimer();
-            setState(() {
-              _isCallActive = true;
-              _hasCalled = true; // Enable form fields after call is initiated
             });
           } else if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -925,9 +714,6 @@ class _DetailsScreenState extends State<DetailsScreen>
 
   @override
   void dispose() {
-    _stopCallTimer();
-    _autoStopTimer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
     remarksController.dispose();
     customReasonController.dispose();
     super.dispose();

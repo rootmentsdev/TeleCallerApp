@@ -5,6 +5,9 @@ import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/utils/api_config.dart';
 
 class ApiService {
+  // Callback for session expiry - should be set by main app
+  static Function? onSessionExpired;
+
   // Function to get Loss of Sale leads
   Future<Map<String, dynamic>> getLossOfSaleLeads({
     String? store,
@@ -549,7 +552,27 @@ class ApiService {
         }
         throw Exception(errorMessage);
       } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
+        // Session expired - try to refresh token
+        final refreshed = await _handleUnauthorized();
+        if (refreshed) {
+          // Retry the request with new token
+          return await createLead(
+            leadName: leadName,
+            phoneNumber: phoneNumber,
+            store: store,
+            source: source,
+            leadType: leadType,
+            remarks: remarks,
+            followUpFlag: followUpFlag,
+            functionDate: functionDate,
+            bookingNumber: bookingNumber,
+            securityAmount: securityAmount,
+          );
+        } else {
+          // Token refresh failed, session expired
+          onSessionExpired?.call();
+          throw Exception('Session expired. Please login again.');
+        }
       } else {
         String errorMessage =
             'Failed to create lead: Status ${response.statusCode}';
@@ -1020,5 +1043,47 @@ class ApiService {
     }
 
     return headers;
+  }
+
+  /// Handle 401 Unauthorized response - attempt to refresh token
+  Future<bool> _handleUnauthorized() async {
+    try {
+      final refreshToken = await AuthService.getRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) {
+        // No refresh token available, need to login again
+        await AuthService.clearAuth();
+        return false;
+      }
+
+      // Attempt to refresh the token
+      final url = Uri.parse(ApiConfig.refreshToken());
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({'refreshToken': refreshToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body) as Map<String, dynamic>;
+
+        // Save new token
+        if (responseData.containsKey('token')) {
+          await AuthService.saveToken(responseData['token'] as String);
+          print('ApiService: Token refreshed successfully');
+          return true;
+        }
+      } else if (response.statusCode == 401) {
+        // Refresh token is also invalid, clear auth and require login
+        await AuthService.clearAuth();
+        return false;
+      }
+    } catch (e) {
+      print('ApiService: Error refreshing token: $e');
+    }
+
+    return false;
   }
 }

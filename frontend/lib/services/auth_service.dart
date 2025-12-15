@@ -122,11 +122,31 @@ class AuthService {
   static Future<bool> clearAuth() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Log what we're clearing for debugging
+      print('AuthService: Clearing authentication data');
+      print('  - Token exists: ${prefs.getString(_tokenKey) != null}');
+      print(
+        '  - Refresh token exists: ${prefs.getString(_refreshTokenKey) != null}',
+      );
+      print('  - User ID exists: ${prefs.getString(_userIdKey) != null}');
+
+      // Check if leads data exists before clearing auth
+      final leadsData = prefs.getString('saved_leads');
+      print('  - Leads data exists: ${leadsData != null}');
+      if (leadsData != null) {
+        print('  - Leads data size: ${leadsData.length} characters');
+      }
+
       await prefs.remove(_tokenKey);
       await prefs.remove(_refreshTokenKey);
       await prefs.remove(_userIdKey);
       await prefs.remove(_empIdKey);
       await prefs.remove(_userNameKey);
+
+      // NOTE: We are NOT clearing 'saved_leads' - this should persist across logins
+      print('AuthService: Authentication data cleared, leads data preserved');
+
       return true;
     } catch (e) {
       print('Error clearing auth: $e');

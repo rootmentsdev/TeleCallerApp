@@ -10,8 +10,21 @@ import 'package:telecaller_app/controller/call_tracking_controller.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/view/login_screen.dart';
 import 'package:telecaller_app/services/auth_service.dart';
+import 'package:telecaller_app/services/api_service.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  // Set up session expiry callback
+  ApiService.onSessionExpired = () {
+    // Clear auth and navigate to login
+    AuthService.clearAuth();
+    navigatorKey.currentState?.pushNamedAndRemoveUntil(
+      '/login',
+      (route) => false,
+    );
+  };
+
   runApp(const MyApp());
 }
 
@@ -34,7 +47,9 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Demo',
         theme: ThemeData(useMaterial3: true),
+        navigatorKey: navigatorKey,
         home: const RootScreen(),
+        routes: {'/login': (context) => const LoginScreen()},
       ),
     );
   }
@@ -57,6 +72,15 @@ class RootScreen extends StatelessWidget {
 
         final isAuth = snapshot.data == true;
         if (isAuth) {
+          // When user is authenticated, ensure data is properly loaded
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            final leadRepository = Provider.of<LeadRepository>(
+              context,
+              listen: false,
+            );
+            await leadRepository.forceReloadFromStorage();
+            print('RootScreen: Data reloaded after authentication check');
+          });
           return const BottomNav();
         }
 

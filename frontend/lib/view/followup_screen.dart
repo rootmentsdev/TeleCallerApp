@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
-import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/details_screen.dart';
+import 'package:telecaller_app/widgets.dart/app_header.dart';
 
 class FollowupScreen extends StatefulWidget {
   const FollowupScreen({super.key});
@@ -39,97 +39,17 @@ class _FollowupScreenState extends State<FollowupScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<FollowupController>(context);
+
     return Scaffold(
       backgroundColor: ColorConstant.primaryColor,
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 62, right: 16, left: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 42,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: controller.selectedStore,
-                        isExpanded: true,
-                        dropdownColor: ColorConstant.primaryColor,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.white,
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                        ),
-                        hint: const Text(
-                          "Select Store",
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                        items:
-                            StoreLocations.buildStoreOptions().map((
-                              String store,
-                            ) {
-                              return DropdownMenuItem<String>(
-                                value: store,
-                                child: Text(
-                                  store,
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              );
-                            }).toList(),
-                        onChanged: (String? newValue) {
-                          controller.setSelectedStore(newValue);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      hint: const Text(
-                        "Category",
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Colors.white,
-                      ),
-                      dropdownColor: ColorConstant.primaryColor,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      items:
-                          (categories.map((String category) {
-                            return DropdownMenuItem<String>(
-                              value: category,
-                              child: Text(
-                                category,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            );
-                          })).toList(),
-                      value: controller.selectedCategory,
-                      onChanged: (String? newValue) {
-                        controller.setSelectedCategory(newValue);
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          AppHeader(
+            showDate: true,
+            showFilters: true,
+            onNotificationTap: () {
+              // Handle notification tap
+            },
           ),
           Expanded(
             child: Padding(
@@ -145,57 +65,6 @@ class _FollowupScreenState extends State<FollowupScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    // Header with back button and title
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          // GestureDetector(
-                          //   onTap:
-                          //       () => Navigator.pop(
-                          //         context,
-                          //         MaterialPageRoute(
-                          //           builder: (context) => const ReportScreen(),
-                          //         ),
-                          //       ),
-                          //   child: const Icon(
-                          //     Icons.arrow_back_ios_outlined,
-                          //     size: 18,
-                          //   ),
-                          // ),
-                          Expanded(
-                            child: Text(
-                              "Follow-Up Calls",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontFamily: TextConstant.dmSansMedium,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 18),
-                        ],
-                      ),
-                    ),
-
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: ColorConstant.primaryColor.withOpacity(0.2),
-                            width: 1,
-                            style: BorderStyle.solid,
-                          ),
-                        ),
-                      ),
-                      child: CustomPaint(painter: DottedLinePainter()),
-                    ),
                     const SizedBox(height: 16),
                     // Filter tabs
                     Padding(

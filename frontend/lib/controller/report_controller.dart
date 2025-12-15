@@ -41,6 +41,13 @@ class ReportController extends ChangeNotifier {
     }
   }
 
+  // Force refresh data from repository
+  Future<void> forceRefreshData() async {
+    print('ReportController: Force refreshing data');
+    await _repository.forceReloadFromStorage();
+    notifyListeners();
+  }
+
   // Initialize with header controller
   void init(HeaderController headerController) {
     if (_headerController != headerController) {
@@ -188,31 +195,123 @@ class ReportController extends ChangeNotifier {
   }
 
   // Get filtered leads based on selected call type
-  // Uses API reports for tabs 0-4, local repository for tab 5 (follow-up leads)
+  // Uses API reports for tabs 0-4, local repository for tabs 5-6 (follow-up leads)
   List<Map<String, dynamic>> getFilteredLeads() {
     final store = _headerController?.selectedStore;
 
     // Handle "All Stores" case
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
 
+    // Special handling for tab 7 (Follow-up Leads)
+    // Shows: Only leads with followUpDate set
+    if (_selectedCallTypeIndex == 7) {
+      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+
+      // Get all leads from repository
+      List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
+
+      // Filter only leads with follow-up date set
+      List<dynamic> followUpLeads =
+          allLeads.where((lead) {
+            return lead.followUpDate != null;
+          }).toList();
+
+      // Filter by store if specified
+      if (storeFilter != null) {
+        final location = StoreLocations.resolveSelection(storeFilter).location;
+        followUpLeads =
+            followUpLeads.where((lead) {
+              final leadLocation = lead.location ?? '';
+              return leadLocation.toLowerCase().contains(
+                    location.toLowerCase(),
+                  ) ||
+                  location.toLowerCase().contains(leadLocation.toLowerCase());
+            }).toList();
+      }
+
+      // Convert to contact format
+      return followUpLeads.map((lead) {
+        return {
+          "id": lead.id,
+          "name": lead.name,
+          "phone": lead.phone,
+          "date": _formatDate(lead.createdAt),
+          "callDate": _formatDate(lead.createdAt),
+          "storeName": lead.location ?? lead.brand ?? "Not available",
+          "type": "followup",
+          "callStatus": lead.callStatus ?? "Not called yet",
+          "leadStatus": lead.leadStatus,
+          "reason": lead.reason,
+          "followUpDate": lead.followUpDate?.toIso8601String(),
+          "callDuration": lead.callDuration,
+          "remarks": lead.reason ?? "",
+        };
+      }).toList();
+    }
+
+    // Special handling for tab 6 (Enquiry Calls)
+    // Shows: Called leads + follow-up leads (leads that have been called)
+    if (_selectedCallTypeIndex == 6) {
+      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+
+      // Get all leads from repository
+      List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
+
+      // Filter leads that have been called OR have a follow-up date
+      List<dynamic> enquiryLeads =
+          allLeads.where((lead) {
+            final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+            final hasFollowUp = lead.followUpDate != null;
+            return isCalled || hasFollowUp;
+          }).toList();
+
+      // Filter by store if specified
+      if (storeFilter != null) {
+        final location = StoreLocations.resolveSelection(storeFilter).location;
+        enquiryLeads =
+            enquiryLeads.where((lead) {
+              final leadLocation = lead.location ?? '';
+              return leadLocation.toLowerCase().contains(
+                    location.toLowerCase(),
+                  ) ||
+                  location.toLowerCase().contains(leadLocation.toLowerCase());
+            }).toList();
+      }
+
+      // Convert to contact format
+      return enquiryLeads.map((lead) {
+        return {
+          "id": lead.id,
+          "name": lead.name,
+          "phone": lead.phone,
+          "date": _formatDate(lead.createdAt),
+          "callDate": _formatDate(lead.createdAt),
+          "storeName": lead.location ?? lead.brand ?? "Not available",
+          "type": "enquiry",
+          "callStatus": lead.callStatus ?? "Not called yet",
+          "leadStatus": lead.leadStatus,
+          "reason": lead.reason,
+          "followUpDate": lead.followUpDate?.toIso8601String(),
+          "callDuration": lead.callDuration,
+          "remarks": lead.reason ?? "",
+        };
+      }).toList();
+    }
+
     // Special handling for tab 5 (Enquiry Calls)
-    // Shows: 1) Follow-up leads (with followUpDate set)
-    //        2) Newly added leads that have been called
+    // Shows: Only newly added leads (not called yet)
     if (_selectedCallTypeIndex == 5) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
       // Get all leads from repository
       List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
 
-      // Combine two types of leads:
-      // 1. Leads with follow-up date set (follow-up leads)
-      // 2. Newly added leads that have been called (no follow-up date)
+      // Filter only newly added leads (not called yet)
       List<dynamic> enquiryLeads =
           allLeads.where((lead) {
-            // Include if it has a follow-up date OR if it's been called
-            final hasFollowUp = lead.followUpDate != null;
-            final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
-            return hasFollowUp || isCalled;
+            // Include only leads that have NOT been called
+            final isNotCalled = !LeadConstants.isCalledStatus(lead.callStatus);
+            return isNotCalled;
           }).toList();
 
       // Filter by store if specified

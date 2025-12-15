@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/format_helper.dart';
+import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/model/lead_model.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -118,6 +120,70 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
   String _formatCallDuration(int? seconds) {
     return FormatHelper.formatCallDurationWithUnits(seconds);
+  }
+
+  Future<void> _saveChanges() async {
+    try {
+      final leadId = widget.contact["id"] as String?;
+      if (leadId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Lead ID not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final repository = LeadRepository();
+      final lead = repository.getLeadById(leadId);
+
+      if (lead != null) {
+        // Update lead with new information
+        final updatedLead = LeadModel(
+          id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          brand: lead.brand,
+          location: lead.location,
+          leadStatus: selectedLeadStatus,
+          callStatus: selectedCallStatus,
+          followUpDate: markAsFollowUp ? followUpDate : null,
+          reason:
+              selectedReason == "Other"
+                  ? customReasonController.text.trim().isEmpty
+                      ? null
+                      : customReasonController.text.trim()
+                  : selectedReason,
+          category: lead.category,
+          createdAt: lead.createdAt,
+          callDuration: lead.callDuration,
+        );
+
+        // Update locally
+        await repository.updateLead(updatedLead);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Changes saved successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving changes: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -579,9 +645,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                           child: ElevatedButton(
                             onPressed:
                                 callNow
-                                    ? () {
-                                      // Handle save action
-                                      Navigator.pop(context);
+                                    ? () async {
+                                      await _saveChanges();
                                     }
                                     : null,
                             style: ElevatedButton.styleFrom(

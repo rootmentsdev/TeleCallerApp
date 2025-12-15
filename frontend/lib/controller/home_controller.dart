@@ -22,8 +22,16 @@ class HomeController extends ChangeNotifier {
       _headerController = headerController;
       _headerController?.addListener(_onHeaderChanged);
     }
+    // Debug data integrity on home screen init
+    _debugDataOnInit();
     // Fetch calls overview when initialized
     fetchCallsOverviewFromApi();
+  }
+
+  // Debug data integrity when home screen initializes
+  Future<void> _debugDataOnInit() async {
+    print('HomeController: Debugging data on init');
+    await _repository.debugDataIntegrity();
   }
 
   void _onHeaderChanged() {
@@ -137,13 +145,6 @@ class HomeController extends ChangeNotifier {
         "iconColor": const Color(0xFFF37927),
         "icon": Icons.headset_mic_outlined,
       },
-      {
-        "title": "Follow Up\nCalls",
-        "count": count(LeadConstants.categoryFollowUp).toString(),
-        "bgColor": const Color(0xFFD5E8FF),
-        "iconColor": const Color(0xFF2196F3),
-        "icon": Icons.event_note_outlined,
-      },
     ];
   }
 
@@ -201,14 +202,6 @@ class HomeController extends ChangeNotifier {
         "count": confirmed,
         "bgColor": const Color(0xffD4F5DA),
         "iconColor": const Color(0xff56BE6B),
-      },
-      {
-        "icon": Icons.block_outlined,
-        "title": "Cancelled / Rejected",
-        "subtitle": "Customer Declined",
-        "count": cancelled,
-        "bgColor": const Color(0xffE7E7E7),
-        "iconColor": const Color(0xff797979),
       },
     ];
   }
@@ -284,21 +277,6 @@ class HomeController extends ChangeNotifier {
                 .toString(),
         "bgColor": const Color(0xffD4F5DA),
         "iconColor": const Color(0xff56BE6B),
-      },
-      {
-        "icon": Icons.block_outlined,
-        "title": "Cancelled / Rejected",
-        "subtitle": "Customer Declined",
-        "count":
-            _repository
-                .getCountByCategory(
-                  "Loss of Sales",
-                  store: storeFilter,
-                  date: date,
-                )
-                .toString(),
-        "bgColor": const Color(0xffE7E7E7),
-        "iconColor": const Color(0xff797979),
       },
     ];
   }

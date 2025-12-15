@@ -121,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     bottom: 8,
                   ),
                   child: Container(
-                    height: 400,
+                    height: 410,
                     width: double.infinity,
                     child: Column(
                       children: [

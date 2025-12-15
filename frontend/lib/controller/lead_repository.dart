@@ -19,6 +19,88 @@ class LeadRepository extends ChangeNotifier {
     });
   }
 
+  /// Force reload data from SharedPreferences
+  /// This should be called after login to ensure data is properly loaded
+  Future<void> forceReloadFromStorage() async {
+    print('LeadRepository: Force reloading data from storage');
+    await _loadLeads();
+    print('LeadRepository: Loaded ${_leads.length} leads from storage');
+    notifyListeners();
+  }
+
+  /// Debug method to check data integrity
+  Future<void> debugDataIntegrity() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final leadsJson = prefs.getString(_storageKey);
+
+      print('=== LeadRepository Data Integrity Check ===');
+      print('SharedPreferences key: $_storageKey');
+      print('Raw JSON exists: ${leadsJson != null}');
+      print('Raw JSON length: ${leadsJson?.length ?? 0}');
+      print('In-memory leads count: ${_leads.length}');
+
+      if (leadsJson != null && leadsJson.isNotEmpty) {
+        try {
+          final List<dynamic> leadsList = json.decode(leadsJson);
+          print('Parsed leads from storage: ${leadsList.length}');
+
+          // Count different types
+          int calledCount = 0;
+          int followUpCount = 0;
+          int enquiryCount = 0;
+
+          for (final leadMap in leadsList) {
+            final callStatus = leadMap['callStatus']?.toString() ?? '';
+            final followUpDate = leadMap['followUpDate']?.toString();
+
+            if (LeadConstants.isCalledStatus(callStatus)) {
+              calledCount++;
+            }
+            if (followUpDate != null && followUpDate.isNotEmpty) {
+              followUpCount++;
+            }
+            if (LeadConstants.isCalledStatus(callStatus) ||
+                (followUpDate != null && followUpDate.isNotEmpty)) {
+              enquiryCount++;
+            }
+          }
+
+          print('Storage breakdown:');
+          print('  - Called leads: $calledCount');
+          print('  - Follow-up leads: $followUpCount');
+          print('  - Enquiry leads: $enquiryCount');
+        } catch (e) {
+          print('Error parsing stored JSON: $e');
+        }
+      }
+
+      // Check in-memory data
+      final memoryCalledCount =
+          _leads
+              .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+              .length;
+      final memoryFollowUpCount =
+          _leads.where((lead) => lead.needsFollowUp).length;
+      final memoryEnquiryCount =
+          _leads
+              .where(
+                (lead) =>
+                    LeadConstants.isCalledStatus(lead.callStatus) ||
+                    lead.needsFollowUp,
+              )
+              .length;
+
+      print('In-memory breakdown:');
+      print('  - Called leads: $memoryCalledCount');
+      print('  - Follow-up leads: $memoryFollowUpCount');
+      print('  - Enquiry leads: $memoryEnquiryCount');
+      print('=== End Data Integrity Check ===');
+    } catch (e) {
+      print('LeadRepository: Error in data integrity check: $e');
+    }
+  }
+
   final List<LeadModel> _leads = [];
   static const String _storageKey = 'saved_leads';
   bool _isInitialized = false;
@@ -80,8 +162,13 @@ class LeadRepository extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final leadsJson = prefs.getString(_storageKey);
 
+      print('LeadRepository: Loading leads from SharedPreferences');
+      print('LeadRepository: Raw JSON length: ${leadsJson?.length ?? 0}');
+
       if (leadsJson != null && leadsJson.isNotEmpty) {
         final List<dynamic> leadsList = json.decode(leadsJson);
+        print('LeadRepository: Parsed ${leadsList.length} leads from storage');
+
         _leads.clear();
         _leads.addAll(
           leadsList
@@ -90,10 +177,36 @@ class LeadRepository extends ChangeNotifier {
               )
               .toList(),
         );
+
+        // Count different types of leads for debugging
+        final calledLeads =
+            _leads
+                .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+                .length;
+        final followUpLeads = _leads.where((lead) => lead.needsFollowUp).length;
+        final enquiryLeads =
+            _leads
+                .where(
+                  (lead) =>
+                      LeadConstants.isCalledStatus(lead.callStatus) ||
+                      lead.needsFollowUp,
+                )
+                .length;
+
+        print('LeadRepository: Loaded leads breakdown:');
+        print('  - Total leads: ${_leads.length}');
+        print('  - Called leads: $calledLeads');
+        print('  - Follow-up leads: $followUpLeads');
+        print('  - Enquiry leads (called + follow-up): $enquiryLeads');
+
         // Notify listeners that leads have been loaded from persistence
         notifyListeners();
+      } else {
+        print('LeadRepository: No leads found in SharedPreferences');
+        _leads.clear();
       }
     } catch (e) {
+      print('LeadRepository: Error loading leads from SharedPreferences: $e');
       // If loading fails, start with empty list
       _leads.clear();
     }
@@ -106,9 +219,23 @@ class LeadRepository extends ChangeNotifier {
         _leads.map((lead) => lead.toMap()).toList(),
       );
       await prefs.setString(_storageKey, leadsJson);
+
+      // Count different types of leads for debugging
+      final calledLeads =
+          _leads
+              .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+              .length;
+      final followUpLeads = _leads.where((lead) => lead.needsFollowUp).length;
+
+      print(
+        'LeadRepository: Saved ${_leads.length} leads to SharedPreferences',
+      );
+      print('  - Called leads: $calledLeads');
+      print('  - Follow-up leads: $followUpLeads');
+      print('  - JSON size: ${leadsJson.length} characters');
     } catch (e) {
       // Handle save error silently or log it
-      print('Error saving leads: $e');
+      print('LeadRepository: Error saving leads: $e');
     }
   }
 
@@ -1134,10 +1261,19 @@ class LeadRepository extends ChangeNotifier {
           'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh',
         );
 
+        // Log details of preserved leads for debugging
+        for (final lead in preservedLeads) {
+          print(
+            '  - Preserving: ${lead.name} (${lead.callStatus}, followUp: ${lead.followUpDate != null})',
+          );
+        }
+
         _leads.clear();
 
         // Restore called leads and follow-up leads so they remain available for reports
         _leads.addAll(preservedLeads);
+
+        print('LeadRepository: Restored ${_leads.length} preserved leads');
       }
 
       // Convert API data to LeadModel and add to repository

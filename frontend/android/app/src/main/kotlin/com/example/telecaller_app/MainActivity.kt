@@ -8,15 +8,18 @@ import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
 
 class MainActivity : FlutterActivity() {
 
     private val METHOD_CHANNEL = "com.telecaller_app/phone"
+    private val EVENT_CHANNEL = "com.telecaller_app/phone_events"
     private val CALL_PHONE_PERMISSION_REQUEST_CODE = 100
     private val PERMISSIONS_REQUEST = 200
 
     private lateinit var phoneCallService: PhoneCallService
     private var pendingPhoneNumber: String? = null
+    private var eventSink: EventChannel.EventSink? = null
 
     private val PHONE_STATE_PERMISSION = Manifest.permission.READ_PHONE_STATE
     private val CALL_LOG_PERMISSION = Manifest.permission.READ_CALL_LOG
@@ -29,6 +32,24 @@ class MainActivity : FlutterActivity() {
         Log.d("MainActivity", "CallTrackingReceiver initialized with FlutterEngine")
 
         phoneCallService = PhoneCallService(this)
+
+        // Set up event channel for call events
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    eventSink = events
+                    // Set the event sink in PhoneCallService
+                    phoneCallService.setEventSink { event ->
+                        eventSink?.success(event)
+                    }
+                    Log.d("MainActivity", "EventChannel listener attached")
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    eventSink = null
+                    Log.d("MainActivity", "EventChannel listener detached")
+                }
+            })
 
         // Set up method channel for making phone calls
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)

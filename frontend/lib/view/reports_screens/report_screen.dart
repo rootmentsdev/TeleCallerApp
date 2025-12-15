@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
+import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
@@ -56,6 +57,21 @@ class _ReportScreenState extends State<ReportScreen> {
       );
       // Check if we should navigate to Equary Calls tab (after call save)
       reportController.checkNavigationFlag();
+
+      // Force refresh data from repository to ensure we have latest data
+      try {
+        await reportController.forceRefreshData();
+
+        // Debug data integrity
+        final leadRepository = Provider.of<LeadRepository>(
+          context,
+          listen: false,
+        );
+        await leadRepository.debugDataIntegrity();
+      } catch (e) {
+        print('ReportScreen: Error refreshing data: $e');
+      }
+
       // Fetch reports from API when screen becomes visible
       try {
         await reportController.fetchReportsWithCurrentFilters();
@@ -76,7 +92,9 @@ class _ReportScreenState extends State<ReportScreen> {
           "rent out calls",
           "booking calls",
           "Just Dial",
-          "Equary Calls",
+          "New Leads",
+          "Enquiry Calls",
+          "Follow-up",
         ];
 
         return Scaffold(
@@ -234,7 +252,11 @@ class _ReportScreenState extends State<ReportScreen> {
                                 : reportController.selectedCallTypeIndex == 4
                                 ? "No Just Dial calls found"
                                 : reportController.selectedCallTypeIndex == 5
+                                ? "No new leads found"
+                                : reportController.selectedCallTypeIndex == 6
                                 ? "No enquiry calls found"
+                                : reportController.selectedCallTypeIndex == 7
+                                ? "No follow-up leads found"
                                 : "No calls found",
                             style: TextStyle(
                               fontFamily: TextConstant.dmSansRegular,
@@ -282,10 +304,14 @@ class _ReportScreenState extends State<ReportScreen> {
 
                             return InkWell(
                               onTap: () {
-                                // For follow-up leads (tab 5), open DetailsScreen instead of ReportDetailsScreen
-                                // because follow-up leads are still in the leads list and need to be called
+                                // For new leads, enquiry calls, and follow-up leads (tabs 5, 6, 7), open DetailsScreen instead of ReportDetailsScreen
+                                // because these leads are still in the leads list and need to be called
                                 if (reportController.selectedCallTypeIndex ==
-                                    5) {
+                                        5 ||
+                                    reportController.selectedCallTypeIndex ==
+                                        6 ||
+                                    reportController.selectedCallTypeIndex ==
+                                        7) {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(

@@ -32,14 +32,14 @@ class CallTrackingReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent == null) return
+        if (intent == null || context == null) return
 
         val action = intent.action
         Log.d(TAG, "onReceive called with action: $action")
 
         when (action) {
             "android.intent.action.PHONE_STATE" -> {
-                handlePhoneState(intent)
+                handlePhoneState(context, intent)
             }
             "android.intent.action.NEW_OUTGOING_CALL" -> {
                 handleOutgoingCall(intent)
@@ -47,7 +47,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun handlePhoneState(intent: Intent) {
+    private fun handlePhoneState(context: Context, intent: Intent) {
         val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
         val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
 
