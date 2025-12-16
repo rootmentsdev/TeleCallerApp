@@ -77,8 +77,7 @@ class BottomNavState extends State<BottomNav>
       'BottomNav: Call ended - Phone: $phoneNumber, Duration: ${duration}s',
     );
 
-    // Only show for calls with duration > 0 (answered calls)
-    if (duration > 0 && mounted) {
+    if (mounted) {
       // Get call data from controller
       final callTrackingController = Provider.of<CallTrackingController>(
         context,
@@ -86,11 +85,19 @@ class BottomNavState extends State<BottomNav>
       );
       final callData = callTrackingController.lastEndedCall;
 
-      // Show Add Lead bottom sheet for incoming calls
-      if (callData != null && callData.callType == CallType.incoming) {
+      // Show Add Lead bottom sheet for incoming calls that were not answered (duration = 0)
+      // or for answered incoming calls (duration > 0)
+      if (callData != null &&
+          callData.callType == CallType.incoming &&
+          phoneNumber != "Unknown" &&
+          phoneNumber.isNotEmpty) {
         // Small delay to ensure UI is ready
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
+            print(
+              'BottomNav: Showing Add Lead bottom sheet for incoming call - Phone: $phoneNumber, Duration: ${duration}s',
+            );
+
             showAddLeadBottomSheet(
               context,
               phoneNumber: phoneNumber,
@@ -99,6 +106,10 @@ class BottomNavState extends State<BottomNav>
             );
           }
         });
+      } else {
+        print(
+          'BottomNav: Not showing Add Lead bottom sheet - CallType: ${callData?.callType}, Phone: $phoneNumber, Duration: ${duration}s',
+        );
       }
     }
   }

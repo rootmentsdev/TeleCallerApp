@@ -51,30 +51,44 @@ class MainActivity : FlutterActivity() {
                 }
             })
 
-        // Set up method channel for making phone calls
+        // Set up method channel for making phone calls and call tracking
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .setMethodCallHandler { call, result ->
-                if (call.method == "callPhone") {
-                    val phoneNumber = call.argument<String>("phoneNumber") ?: ""
-                    
-                    // Check permission first
-                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) 
-                        != PackageManager.PERMISSION_GRANTED) {
-                        // Request permission
-                        pendingPhoneNumber = phoneNumber
-                        ActivityCompat.requestPermissions(
-                            this,
-                            arrayOf(Manifest.permission.CALL_PHONE),
-                            CALL_PHONE_PERMISSION_REQUEST_CODE
-                        )
-                        result.success(false)
-                    } else {
-                        // Permission already granted, make the call
-                        makePhoneCall(phoneNumber)
+                when (call.method) {
+                    "callPhone" -> {
+                        val phoneNumber = call.argument<String>("phoneNumber") ?: ""
+                        
+                        // Check permission first
+                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) 
+                            != PackageManager.PERMISSION_GRANTED) {
+                            // Request permission
+                            pendingPhoneNumber = phoneNumber
+                            ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(Manifest.permission.CALL_PHONE),
+                                CALL_PHONE_PERMISSION_REQUEST_CODE
+                            )
+                            result.success(false)
+                        } else {
+                            // Permission already granted, make the call
+                            makePhoneCall(phoneNumber)
+                            result.success(true)
+                        }
+                    }
+                    "getLatestCallResult" -> {
+                        // Get cached call result from SharedPreferences
+                        val callResult = CallResultCache.getLatestCallResult(this)
+                        result.success(callResult)
+                    }
+                    "clearCallResult" -> {
+                        // Clear cached call result
+                        val phoneNumber = call.argument<String>("phoneNumber")
+                        CallResultCache.clearCallResult(this, phoneNumber)
                         result.success(true)
                     }
-                } else {
-                    result.notImplemented()
+                    else -> {
+                        result.notImplemented()
+                    }
                 }
             }
 
@@ -102,6 +116,10 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun makePhoneCall(phoneNumber: String) {
+        // Notify CallTrackingReceiver about the outgoing call
+        CallTrackingReceiver.setOutgoingCallNumber(phoneNumber)
+        Log.d("MainActivity", "Notified CallTrackingReceiver about outgoing call to: $phoneNumber")
+        
         phoneCallService.makeCall(phoneNumber)
     }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/followup_controller.dart';
+import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/details_screen.dart';
@@ -26,91 +27,102 @@ class _FollowupScreenState extends State<FollowupScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch follow-up leads when screen is first loaded
+    // Initialize controllers and fetch follow-up leads when screen is first loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final controller = Provider.of<FollowupController>(
+      final headerController = Provider.of<HeaderController>(
         context,
         listen: false,
       );
-      controller.fetchFollowUpLeads();
+      final followupController = Provider.of<FollowupController>(
+        context,
+        listen: false,
+      );
+
+      // Initialize followup controller with header controller for date filtering
+      followupController.init(headerController);
+      followupController.fetchFollowUpLeads();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<FollowupController>(context);
-
-    return Scaffold(
-      backgroundColor: ColorConstant.primaryColor,
-      body: Column(
-        children: [
-          AppHeader(
-            showDate: true,
-            showFilters: true,
-            onNotificationTap: () {
-              // Handle notification tap
-            },
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    topRight: Radius.circular(18),
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    // Filter tabs
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          _buildTab(
-                            context,
-                            controller,
-                            "Today",
-                            0,
-                            Icons.calendar_today,
-                            controller.selectedTabIndex == 0,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTab(
-                            context,
-                            controller,
-                            "Upcoming",
-                            1,
-                            null,
-                            controller.selectedTabIndex == 1,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTab(
-                            context,
-                            controller,
-                            "Overdue",
-                            2,
-                            null,
-                            controller.selectedTabIndex == 2,
-                            badgeCount: controller.overdueCount,
-                          ),
-                        ],
+    return Consumer2<HeaderController, FollowupController>(
+      builder: (context, headerController, followupController, child) {
+        return Scaffold(
+          backgroundColor: ColorConstant.primaryColor,
+          body: Column(
+            children: [
+              AppHeader(
+                showDate: true,
+                showFilters: true,
+                onNotificationTap: () {
+                  // Handle notification tap
+                },
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // List of follow-up calls
-                    Expanded(child: _buildCallsList(context, controller)),
-                  ],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        // Filter tabs
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              _buildTab(
+                                context,
+                                followupController,
+                                "Today",
+                                0,
+                                Icons.calendar_today,
+                                followupController.selectedTabIndex == 0,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildTab(
+                                context,
+                                followupController,
+                                "Upcoming",
+                                1,
+                                null,
+                                followupController.selectedTabIndex == 1,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildTab(
+                                context,
+                                followupController,
+                                "Overdue",
+                                2,
+                                null,
+                                followupController.selectedTabIndex == 2,
+                                badgeCount: followupController.overdueCount,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // List of follow-up calls
+                        Expanded(
+                          child: _buildCallsList(context, followupController),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

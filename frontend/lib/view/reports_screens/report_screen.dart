@@ -93,7 +93,6 @@ class _ReportScreenState extends State<ReportScreen> {
           "booking calls",
           "Just Dial",
           "New Leads",
-          "Enquiry Calls",
           "Follow-up",
         ];
 
@@ -254,8 +253,6 @@ class _ReportScreenState extends State<ReportScreen> {
                                 : reportController.selectedCallTypeIndex == 5
                                 ? "No new leads found"
                                 : reportController.selectedCallTypeIndex == 6
-                                ? "No enquiry calls found"
-                                : reportController.selectedCallTypeIndex == 7
                                 ? "No follow-up leads found"
                                 : "No calls found",
                             style: TextStyle(
@@ -304,14 +301,12 @@ class _ReportScreenState extends State<ReportScreen> {
 
                             return InkWell(
                               onTap: () {
-                                // For new leads, enquiry calls, and follow-up leads (tabs 5, 6, 7), open DetailsScreen instead of ReportDetailsScreen
+                                // For new leads and follow-up leads (tabs 5, 6), open DetailsScreen instead of ReportDetailsScreen
                                 // because these leads are still in the leads list and need to be called
                                 if (reportController.selectedCallTypeIndex ==
                                         5 ||
                                     reportController.selectedCallTypeIndex ==
-                                        6 ||
-                                    reportController.selectedCallTypeIndex ==
-                                        7) {
+                                        6) {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(

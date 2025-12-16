@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
@@ -6,25 +7,42 @@ import 'package:telecaller_app/utils/store_location.dart';
 /// Controller for Followup Screen
 class FollowupController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
-  String? _selectedStore;
+  HeaderController? _headerController;
   String? _selectedCategory;
   int _selectedTabIndex = 0; // 0: Today, 1: Upcoming, 2: Overdue
   bool _isLoading = false;
   String? _error;
 
   // Getters
-  String? get selectedStore => _selectedStore;
+  DateTime get selectedDate =>
+      _headerController?.selectedDate ?? DateTime.now();
+  String? get selectedStore => _headerController?.selectedStore;
   String? get selectedCategory => _selectedCategory;
   int get selectedTabIndex => _selectedTabIndex;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Setters
-  void setSelectedStore(String? store) {
-    _selectedStore = store;
+  // Initialize with header controller
+  void init(HeaderController headerController) {
+    if (_headerController != headerController) {
+      _headerController?.removeListener(_onHeaderChanged);
+      _headerController = headerController;
+      _headerController?.addListener(_onHeaderChanged);
+    }
+  }
+
+  void _onHeaderChanged() {
+    // When header (store/date) changes, refresh the follow-up leads
     notifyListeners();
   }
 
+  @override
+  void dispose() {
+    _headerController?.removeListener(_onHeaderChanged);
+    super.dispose();
+  }
+
+  // Setters
   void setSelectedCategory(String? category) {
     _selectedCategory = category;
     notifyListeners();
@@ -35,21 +53,51 @@ class FollowupController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get follow-up leads based on selected tab
+  // Get follow-up leads based on selected tab and header date filter
   List<LeadModel> getCurrentLeads() {
+    final selectedDate = this.selectedDate;
+    final selectedStore = this.selectedStore;
+
+    // Get all leads with follow-up dates
+    List<LeadModel> allFollowUpLeads =
+        _repository.allLeads
+            .where((lead) => lead.followUpDate != null)
+            .toList();
+
+    // Filter by selected date and tab type
     List<LeadModel> currentLeads;
     switch (_selectedTabIndex) {
-      case 0:
-        currentLeads = _repository.todayFollowUps;
+      case 0: // Today - follow-ups scheduled for selected date
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              final followUpDate = lead.followUpDate!;
+              return followUpDate.year == selectedDate.year &&
+                  followUpDate.month == selectedDate.month &&
+                  followUpDate.day == selectedDate.day;
+            }).toList();
         break;
-      case 1:
-        currentLeads = _repository.upcomingFollowUps;
+      case 1: // Upcoming - follow-ups scheduled after selected date
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              final followUpDate = lead.followUpDate!;
+              return followUpDate.isAfter(selectedDate);
+            }).toList();
         break;
-      case 2:
-        currentLeads = _repository.overdueFollowUps;
+      case 2: // Overdue - follow-ups scheduled before selected date
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              final followUpDate = lead.followUpDate!;
+              return followUpDate.isBefore(selectedDate);
+            }).toList();
         break;
       default:
-        currentLeads = _repository.todayFollowUps;
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              final followUpDate = lead.followUpDate!;
+              return followUpDate.year == selectedDate.year &&
+                  followUpDate.month == selectedDate.month &&
+                  followUpDate.day == selectedDate.day;
+            }).toList();
     }
 
     // Filter by category if selected
@@ -61,8 +109,8 @@ class FollowupController extends ChangeNotifier {
     }
 
     // Filter by store if selected - extract location from "Brand - Location" format
-    if (_selectedStore != null && _selectedStore != 'All Stores') {
-      final location = StoreLocations.resolveSelection(_selectedStore).location;
+    if (selectedStore != null && selectedStore != 'All Stores') {
+      final location = StoreLocations.resolveSelection(selectedStore).location;
       currentLeads =
           currentLeads.where((lead) => lead.location == location).toList();
     }
@@ -70,8 +118,17 @@ class FollowupController extends ChangeNotifier {
     return currentLeads;
   }
 
-  // Get overdue count for badge
-  int get overdueCount => _repository.overdueFollowUps.length;
+  // Get overdue count for badge (based on selected date)
+  int get overdueCount {
+    final selectedDate = this.selectedDate;
+    return _repository.allLeads
+        .where(
+          (lead) =>
+              lead.followUpDate != null &&
+              lead.followUpDate!.isBefore(selectedDate),
+        )
+        .length;
+  }
 
   // Convert LeadModel to display format
   Map<String, dynamic> leadToDisplayMap(LeadModel lead) {

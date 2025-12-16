@@ -37,7 +37,9 @@ class ReportController extends ChangeNotifier {
   void checkNavigationFlag() {
     if (_shouldNavigateToEquaryCalls) {
       _shouldNavigateToEquaryCalls = false;
-      setSelectedCallTypeIndex(5); // Equary Calls tab
+      setSelectedCallTypeIndex(
+        0,
+      ); // All Calls tab (since Equary Calls was removed)
     }
   }
 
@@ -202,9 +204,9 @@ class ReportController extends ChangeNotifier {
     // Handle "All Stores" case
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
 
-    // Special handling for tab 7 (Follow-up Leads)
+    // Special handling for tab 6 (Follow-up Leads)
     // Shows: Only leads with followUpDate set
-    if (_selectedCallTypeIndex == 7) {
+    if (_selectedCallTypeIndex == 6) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
       // Get all leads from repository
@@ -249,56 +251,7 @@ class ReportController extends ChangeNotifier {
       }).toList();
     }
 
-    // Special handling for tab 6 (Enquiry Calls)
-    // Shows: Called leads + follow-up leads (leads that have been called)
-    if (_selectedCallTypeIndex == 6) {
-      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-
-      // Get all leads from repository
-      List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
-
-      // Filter leads that have been called OR have a follow-up date
-      List<dynamic> enquiryLeads =
-          allLeads.where((lead) {
-            final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
-            final hasFollowUp = lead.followUpDate != null;
-            return isCalled || hasFollowUp;
-          }).toList();
-
-      // Filter by store if specified
-      if (storeFilter != null) {
-        final location = StoreLocations.resolveSelection(storeFilter).location;
-        enquiryLeads =
-            enquiryLeads.where((lead) {
-              final leadLocation = lead.location ?? '';
-              return leadLocation.toLowerCase().contains(
-                    location.toLowerCase(),
-                  ) ||
-                  location.toLowerCase().contains(leadLocation.toLowerCase());
-            }).toList();
-      }
-
-      // Convert to contact format
-      return enquiryLeads.map((lead) {
-        return {
-          "id": lead.id,
-          "name": lead.name,
-          "phone": lead.phone,
-          "date": _formatDate(lead.createdAt),
-          "callDate": _formatDate(lead.createdAt),
-          "storeName": lead.location ?? lead.brand ?? "Not available",
-          "type": "enquiry",
-          "callStatus": lead.callStatus ?? "Not called yet",
-          "leadStatus": lead.leadStatus,
-          "reason": lead.reason,
-          "followUpDate": lead.followUpDate?.toIso8601String(),
-          "callDuration": lead.callDuration,
-          "remarks": lead.reason ?? "",
-        };
-      }).toList();
-    }
-
-    // Special handling for tab 5 (Enquiry Calls)
+    // Special handling for tab 5 (New Leads)
     // Shows: Only newly added leads (not called yet)
     if (_selectedCallTypeIndex == 5) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
@@ -307,7 +260,7 @@ class ReportController extends ChangeNotifier {
       List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
 
       // Filter only newly added leads (not called yet)
-      List<dynamic> enquiryLeads =
+      List<dynamic> newLeads =
           allLeads.where((lead) {
             // Include only leads that have NOT been called
             final isNotCalled = !LeadConstants.isCalledStatus(lead.callStatus);
@@ -317,8 +270,8 @@ class ReportController extends ChangeNotifier {
       // Filter by store if specified
       if (storeFilter != null) {
         final location = StoreLocations.resolveSelection(storeFilter).location;
-        enquiryLeads =
-            enquiryLeads.where((lead) {
+        newLeads =
+            newLeads.where((lead) {
               final leadLocation = lead.location ?? '';
               return leadLocation.toLowerCase().contains(
                     location.toLowerCase(),
@@ -328,7 +281,7 @@ class ReportController extends ChangeNotifier {
       }
 
       // Convert to contact format
-      return enquiryLeads.map((lead) {
+      return newLeads.map((lead) {
         return {
           "id": lead.id,
           "name": lead.name,
@@ -336,7 +289,7 @@ class ReportController extends ChangeNotifier {
           "date": _formatDate(lead.createdAt),
           "callDate": _formatDate(lead.createdAt),
           "storeName": lead.location ?? lead.brand ?? "Not available",
-          "type": "enquiry",
+          "type": "newlead",
           "callStatus": lead.callStatus ?? "Not called yet",
           "leadStatus": lead.leadStatus,
           "reason": lead.reason,
@@ -514,6 +467,8 @@ class ReportController extends ChangeNotifier {
       case 4:
         return "Just Dial Enquiries";
       case 5:
+        return "New Leads";
+      case 6:
         return "Follow Up Calls";
       default:
         return "All calls";

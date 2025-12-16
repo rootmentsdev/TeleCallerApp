@@ -1,226 +1,257 @@
 package com.example.telecaller_app
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import android.provider.CallLog
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.content.ContextCompat
-import android.Manifest
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class CallTrackingReceiver : BroadcastReceiver() {
+
     companion object {
+        private const val TAG = "CallTrackingReceiver"
         private var flutterEngine: FlutterEngine? = null
+
         private var lastPhoneNumber: String? = null
+        private var isOutgoing = false
+        private var callStartTime: Long = 0
         private var callAnswerTime: Long = 0
         private var previousState = TelephonyManager.CALL_STATE_IDLE
-        private var isOutgoingCall = false
-        private var outgoingCallStartTime: Long = 0
-        private var offhookTime: Long = 0  // Track when OFFHOOK first occurred
-        private var offhookOccurred: Boolean = false  // Track if OFFHOOK state was reached
-        private const val TAG = "CallTrackingReceiver"
-        private const val MIN_CALL_DURATION = 3  // Minimum 3 seconds to count as a real call (blocks 1-2 second fake durations)
+        private var offhookOccurred = false
 
         fun setFlutterEngine(engine: FlutterEngine) {
             flutterEngine = engine
-            Log.d(TAG, "FlutterEngine set for call tracking")
+            Log.d(TAG, "FlutterEngine attached")
+        }
+
+        fun setOutgoingCallNumber(phoneNumber: String) {
+            Log.d(TAG, "📱 Received outgoing call notification: '$phoneNumber'")
+            lastPhoneNumber = phoneNumber
+            isOutgoing = true
+            callAnswerTime = 0
+            previousState = TelephonyManager.CALL_STATE_IDLE
+            offhookOccurred = false
         }
     }
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent == null || context == null) return
+        if (context == null || intent == null) return
 
-        val action = intent.action
-        Log.d(TAG, "onReceive called with action: $action")
+        when (intent.action) {
 
-        when (action) {
-            "android.intent.action.PHONE_STATE" -> {
-                handlePhoneState(context, intent)
+            Intent.ACTION_NEW_OUTGOING_CALL -> {
+                val rawNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
+                lastPhoneNumber = if (!rawNumber.isNullOrEmpty()) cleanNumber(rawNumber) else null
+                isOutgoing = true
+                sendToFlutterMain(
+                    "onCallStateChanged",
+                    mapOf("state" to "outgoing", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
+                )
+                Log.d(TAG, "📤 Outgoing call: $rawNumber -> $lastPhoneNumber")
             }
-            "android.intent.action.NEW_OUTGOING_CALL" -> {
-                handleOutgoingCall(intent)
-            }
-        }
-    }
 
-    private fun handlePhoneState(context: Context, intent: Intent) {
-        val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-        val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+            TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
+                val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
+                val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
 
-        Log.d(TAG, "Phone state: $state, Phone: $phoneNumber, previousState: $previousState")
+                Log.d(TAG, "Phone state: $state, Phone: $phoneNumber, previousState: $previousState")
 
-        when (state) {
-            TelephonyManager.EXTRA_STATE_RINGING -> {
-                lastPhoneNumber = phoneNumber
-                previousState = TelephonyManager.CALL_STATE_RINGING
-                Log.d(TAG, "📞 Incoming call RINGING from: $phoneNumber (timer NOT started)")
-                sendToFlutter("onCallStateChanged", mapOf(
-                    "phoneNumber" to (phoneNumber ?: "Unknown"),
-                    "state" to "ringing"
-                ))
-            }
-            TelephonyManager.EXTRA_STATE_OFFHOOK -> {
-                if (previousState != TelephonyManager.CALL_STATE_OFFHOOK) {
-                    offhookTime = System.currentTimeMillis()
-                    offhookOccurred = true  // Mark that OFFHOOK occurred
-                    previousState = TelephonyManager.CALL_STATE_OFFHOOK
-                    Log.d(TAG, "✅ Call OFFHOOK - Waiting for actual audio connection at: $offhookTime")
-                    
-                    // For outgoing calls, delay timer start to detect actual answer
-                    // For incoming calls, start timer immediately (user answered)
-                    if (isOutgoingCall) {
-                        // Delay 1.5 seconds to let audio connection establish
-                        // Then set callAnswerTime to detect actual talking time
-                        Thread {
-                            Thread.sleep(1500)
-                            if (previousState == TelephonyManager.CALL_STATE_OFFHOOK) {
-                                callAnswerTime = System.currentTimeMillis()
-                                Log.d(TAG, "📞 Outgoing call - Actual audio connection detected, timer STARTED at: $callAnswerTime")
+                when (state) {
+                    TelephonyManager.EXTRA_STATE_RINGING -> {
+                        if (!phoneNumber.isNullOrEmpty()) {
+                            lastPhoneNumber = cleanNumber(phoneNumber)
+                            Log.d(TAG, "📞 RINGING: '$phoneNumber' -> '$lastPhoneNumber'")
+                        }
+                        isOutgoing = false
+                        previousState = TelephonyManager.CALL_STATE_RINGING
+                        callStartTime = System.currentTimeMillis()
+                        
+                        sendToFlutterMain(
+                            "onCallStateChanged",
+                            mapOf("state" to "ringing", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
+                        )
+                    }
+
+                    TelephonyManager.EXTRA_STATE_OFFHOOK -> {
+                        if (previousState != TelephonyManager.CALL_STATE_OFFHOOK) {
+                            offhookOccurred = true
+                            previousState = TelephonyManager.CALL_STATE_OFFHOOK
+                            callAnswerTime = System.currentTimeMillis()
+                            
+                            if (!phoneNumber.isNullOrEmpty()) {
+                                lastPhoneNumber = cleanNumber(phoneNumber)
+                                Log.d(TAG, "📞 OFFHOOK: '$phoneNumber' -> '$lastPhoneNumber'")
                             }
-                        }.start()
-                    } else {
-                        // Incoming call - start timer immediately
-                        callAnswerTime = System.currentTimeMillis()
-                        Log.d(TAG, "📞 Incoming call - Timer STARTED at: $callAnswerTime")
+                            
+                            Log.d(TAG, "✅ ANSWERED at: $callAnswerTime, Phone: '$lastPhoneNumber'")
+                            
+                            sendToFlutterMain(
+                                "onCallStateChanged",
+                                mapOf("state" to "answered", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
+                            )
+                        } else {
+                            Log.d(TAG, "⚠️ OFFHOOK duplicate, ignoring")
+                        }
                     }
-                    
-                    sendToFlutter("onCallStateChanged", mapOf(
-                        "phoneNumber" to (phoneNumber ?: lastPhoneNumber ?: "Unknown"),
-                        "state" to "answered"
-                    ))
-                } else {
-                    Log.d(TAG, "⚠️ OFFHOOK received again (duplicate), ignoring")
+
+                    TelephonyManager.EXTRA_STATE_IDLE -> {
+                        Log.d(TAG, "🔴 IDLE - Call ended, phone: '$lastPhoneNumber'")
+                        processCallEnd(context)
+                    }
                 }
             }
-            TelephonyManager.EXTRA_STATE_IDLE -> {
-                // Only show duration if OFFHOOK occurred AND call log duration > 0
-                if (offhookOccurred && previousState == TelephonyManager.CALL_STATE_OFFHOOK) {
-                    // Fetch call log duration to validate
-                    val callLogDuration = getCallDurationFromCallLog(context, lastPhoneNumber)
-                    
-                    if (callLogDuration > 0) {
-                        // Validate calculated duration as well
-                        val endTime = System.currentTimeMillis()
-                        var calculatedDuration = if (callAnswerTime > 0) {
-                            ((endTime - callAnswerTime) / 1000).toInt()
-                        } else {
-                            0
-                        }
-                        
-                        // Use call log duration as source of truth, but validate it
-                        var finalDuration = callLogDuration
-                        
-                        // Block fake 1-2 second durations even if call log says otherwise
-                        if (finalDuration < MIN_CALL_DURATION) {
-                            finalDuration = 0
-                            Log.d(TAG, "🔴 Call ENDED - Duration: 0s (call log duration $callLogDuration < $MIN_CALL_DURATION seconds, blocked fake duration)")
-                        } else {
-                            Log.d(TAG, "🔴 Call ENDED - Duration: ${finalDuration}s (from call log, calculated: ${calculatedDuration}s), Phone: $lastPhoneNumber, isOutgoing: $isOutgoingCall")
-                        }
-                        
-                        sendToFlutter("onCallEnded", mapOf(
-                            "phoneNumber" to (lastPhoneNumber ?: "Unknown"),
-                            "duration" to finalDuration
-                        ))
-                    } else {
-                        // Call log shows 0 duration - call was not answered or was cancelled
-                        Log.d(TAG, "🔴 Call ENDED - Duration: 0s (call log duration is 0, call was not answered or cancelled)")
-                        sendToFlutter("onCallEnded", mapOf(
-                            "phoneNumber" to (lastPhoneNumber ?: "Unknown"),
-                            "duration" to 0
-                        ))
-                    }
+        }
+    }
+
+    private fun processCallEnd(context: Context) {
+        val phoneSnapshot = lastPhoneNumber
+        val outgoingSnapshot = isOutgoing
+        val offhookSnapshot = offhookOccurred
+        val answerTimeSnapshot = callAnswerTime
+
+        lastPhoneNumber = null
+        isOutgoing = false
+        callStartTime = 0
+        callAnswerTime = 0
+        previousState = TelephonyManager.CALL_STATE_IDLE
+        offhookOccurred = false
+
+        Thread {
+            Thread.sleep(2000)
+
+            var number = phoneSnapshot
+            if (number == null || number == "Unknown") {
+                number = getLatestCallNumber(context)
+                Log.d(TAG, "📱 Got number from call log: $number")
+            }
+
+            val callLogDuration = getLatestCallDuration(context)
+            var duration = 0
+
+            if (!outgoingSnapshot) {
+                // Incoming call - use call log
+                duration = callLogDuration
+                Log.d(TAG, "📞 Incoming: duration=$duration from call log")
+            } else {
+                // Outgoing call
+                if (offhookSnapshot && answerTimeSnapshot > 0) {
+                    val calculatedDuration = ((System.currentTimeMillis() - answerTimeSnapshot) / 1000).toInt()
+                    duration = maxOf(calculatedDuration, callLogDuration)
+                    Log.d(TAG, "📤 Outgoing: calculated=$calculatedDuration, log=$callLogDuration, final=$duration")
                 } else {
-                    // Missed, rejected, or cancelled call (no OFFHOOK = no answer)
-                    Log.d(TAG, "🔴 Call ENDED - Duration: 0s (missed/rejected/cancelled - offhookOccurred=$offhookOccurred, previousState=$previousState, callAnswerTime=$callAnswerTime)")
-                    sendToFlutter("onCallEnded", mapOf(
-                        "phoneNumber" to (lastPhoneNumber ?: "Unknown"),
-                        "duration" to 0
-                    ))
+                    duration = callLogDuration
+                    Log.d(TAG, "📤 Outgoing: duration=$duration from call log")
                 }
-                lastPhoneNumber = null
-                callAnswerTime = 0
-                offhookTime = 0
-                offhookOccurred = false
-                previousState = TelephonyManager.CALL_STATE_IDLE
-                isOutgoingCall = false
             }
-        }
-    }
 
-    private fun handleOutgoingCall(intent: Intent) {
-        val phoneNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
-        Log.d(TAG, "📤 Outgoing call initiated to: $phoneNumber")
-        
-        // Mark this as an outgoing call so we can adjust duration later
-        isOutgoingCall = true
-        
-        // Store the phone number but DO NOT start the timer yet
-        // Timer will start only when call state becomes OFFHOOK (call answered)
-        lastPhoneNumber = phoneNumber
-        callAnswerTime = 0 // Reset timer - will be set when call is answered
-        previousState = TelephonyManager.CALL_STATE_IDLE // Not yet answered
-        
-        sendToFlutter("onCallStateChanged", mapOf(
-            "phoneNumber" to (phoneNumber ?: "Unknown"),
-            "state" to "outgoing"
-        ))
-    }
+            Log.d(TAG, "✅ Final: number=$number, duration=$duration")
 
-    private fun sendToFlutter(method: String, arguments: Map<String, Any>) {
-        flutterEngine?.let {
-            try {
-                val channel = MethodChannel(it.dartExecutor.binaryMessenger, "com.telecaller.app/call_tracking")
-                channel.invokeMethod(method, arguments)
-                Log.d(TAG, "Sent to Flutter: $method with args: $arguments")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error sending to Flutter: ${e.message}")
-            }
-        } ?: run {
-            Log.w(TAG, "FlutterEngine not set, cannot send to Flutter")
-        }
-    }
-
-    // Fetch call duration from call log for validation
-    private fun getCallDurationFromCallLog(context: Context?, phoneNumber: String?): Int {
-        if (context == null || phoneNumber == null) {
-            return 0
-        }
-
-        // Check permission first
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG)
-            != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "READ_CALL_LOG permission not granted, cannot validate call duration")
-            return 0
-        }
-
-        try {
-            val callLogUri = CallLog.Calls.CONTENT_URI
-            val cursor = context.contentResolver.query(
-                callLogUri,
-                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.NUMBER),
-                CallLog.Calls.NUMBER + " = ?",
-                arrayOf(phoneNumber),
-                CallLog.Calls.DATE + " DESC" // Sort by the most recent call
+            CallResultCache.cacheCallResult(
+                context,
+                number ?: "Unknown",
+                duration,
+                if (outgoingSnapshot) "outgoing" else "incoming"
             )
 
-            cursor?.let {
-                if (it.moveToFirst()) {
-                    val duration = it.getInt(it.getColumnIndex(CallLog.Calls.DURATION))
-                    Log.d(TAG, "Fetched duration from call log: $duration seconds for $phoneNumber")
-                    it.close()
-                    return duration
-                }
-                it.close()
+            sendToFlutterMain(
+                "onCallEnded",
+                mapOf(
+                    "phoneNumber" to (number ?: "Unknown"),
+                    "duration" to duration
+                )
+            )
+        }.start()
+    }
+
+    private fun getLatestCallDuration(context: Context): Int {
+        if (!hasCallLogPermission(context)) return 0
+
+        return try {
+            val cursor = context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.DURATION),
+                null,
+                null,
+                "${CallLog.Calls.DATE} DESC"
+            )
+
+            cursor?.use {
+                if (it.moveToFirst()) it.getInt(0) else 0
+            } ?: 0
+        } catch (e: Exception) {
+            Log.e(TAG, "Duration error: ${e.message}")
+            0
+        }
+    }
+
+    private fun getLatestCallNumber(context: Context): String? {
+        if (!hasCallLogPermission(context)) return null
+
+        return try {
+            val cursor = context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER),
+                null,
+                null,
+                "${CallLog.Calls.DATE} DESC"
+            )
+
+            cursor?.use {
+                if (it.moveToFirst()) cleanNumber(it.getString(0)) else null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error reading call log: ${e.message}")
+            Log.e(TAG, "Number error: ${e.message}")
+            null
         }
+    }
 
-        return 0
+    private fun hasCallLogPermission(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CALL_LOG
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun cleanNumber(number: String?): String {
+        if (number.isNullOrEmpty()) return "Unknown"
+        
+        val digits = number.replace(Regex("[^0-9]"), "")
+        
+        val tenDigits = when {
+            digits.length == 12 && digits.startsWith("91") -> digits.substring(2)
+            digits.length == 11 && digits.startsWith("0") -> digits.substring(1)
+            digits.length >= 10 -> digits.takeLast(10)
+            else -> return "Unknown"
+        }
+        
+        return if (tenDigits.length == 10 && tenDigits.all { it.isDigit() }) {
+            tenDigits
+        } else {
+            "Unknown"
+        }
+    }
+
+    private fun sendToFlutterMain(method: String, args: Map<String, Any>) {
+        Handler(Looper.getMainLooper()).post {
+            flutterEngine?.let {
+                try {
+                    MethodChannel(
+                        it.dartExecutor.binaryMessenger,
+                        "com.telecaller.app/call_tracking"
+                    ).invokeMethod(method, args)
+                    Log.d(TAG, "📤 Flutter: $method")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Flutter error: ${e.message}")
+                }
+            }
+        }
     }
 }

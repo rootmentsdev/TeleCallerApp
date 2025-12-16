@@ -152,6 +152,47 @@ class _LeadScreenState extends State<LeadScreen> {
     );
   }
 
+  // Helper method to get colors for each tab, including Follow Up tab
+  Map<String, Color> _getTabColors(int index) {
+    switch (index) {
+      case 0: // All Calls
+        return {
+          "bgColor": const Color(0xFFE8E3FF),
+          "iconColor": const Color(0xFF7C5DFF),
+        };
+      case 1: // Loss of Sale
+        return {
+          "bgColor": const Color(0xFFFFE8E8),
+          "iconColor": const Color(0xFFE23434),
+        };
+      case 2: // Rent Out
+        return {
+          "bgColor": const Color(0xFFFFF7CC),
+          "iconColor": const Color(0xFFFFCC00),
+        };
+      case 3: // Booking Confirmation
+        return {
+          "bgColor": const Color(0xFFD4F5DA),
+          "iconColor": const Color(0xff56BE6B),
+        };
+      case 4: // Just Dial
+        return {
+          "bgColor": const Color(0xFFFFE8D5),
+          "iconColor": const Color(0xFFF37927),
+        };
+      case 5: // Follow Up
+        return {
+          "bgColor": const Color(0xFFD5E8FF),
+          "iconColor": const Color(0xFF2196F3),
+        };
+      default:
+        return {
+          "bgColor": const Color(0xFFE8E3FF),
+          "iconColor": const Color(0xFF7C5DFF),
+        };
+    }
+  }
+
   // =============================================================
 
   @override
@@ -297,8 +338,9 @@ class _LeadScreenState extends State<LeadScreen> {
                       ),
                       decoration: BoxDecoration(
                         color:
-                            callSummary[controller
-                                    .selectedCallTypeIndex]["bgColor"]
+                            _getTabColors(
+                                  controller.selectedCallTypeIndex,
+                                )["bgColor"]
                                 as Color,
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -308,8 +350,9 @@ class _LeadScreenState extends State<LeadScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color:
-                              callSummary[controller
-                                      .selectedCallTypeIndex]["iconColor"]
+                              _getTabColors(
+                                    controller.selectedCallTypeIndex,
+                                  )["iconColor"]
                                   as Color,
                           fontFamily: TextConstant.dmSansMedium,
                         ),

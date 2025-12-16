@@ -157,6 +157,158 @@ class CallTrackingService extends ChangeNotifier {
     }
   }
 
+  /// Get latest call result from Android cache
+  Future<Map<String, dynamic>?> getLatestCallResult() async {
+    try {
+      print(
+        'CallTrackingService: Requesting cached call result from Android...',
+      );
+      const platform = MethodChannel('com.telecaller_app/phone');
+      final result = await platform.invokeMethod('getLatestCallResult');
+
+      if (result != null && result is Map) {
+        final callResult = Map<String, dynamic>.from(result);
+        print(
+          'CallTrackingService: ✅ Retrieved cached call result: $callResult',
+        );
+        return callResult;
+      } else {
+        print(
+          'CallTrackingService: ❌ No cached call result found or result is null',
+        );
+      }
+
+      return null;
+    } catch (e) {
+      print('CallTrackingService: 💥 Error getting cached call result: $e');
+      return null;
+    }
+  }
+
+  /// Clear cached call result for specific phone number
+  Future<void> clearCallResult(String? phoneNumber) async {
+    try {
+      const platform = MethodChannel('com.telecaller_app/phone');
+      await platform.invokeMethod('clearCallResult', {
+        'phoneNumber': phoneNumber,
+      });
+      print(
+        'CallTrackingService: Cleared cached call result for: $phoneNumber',
+      );
+    } catch (e) {
+      print('CallTrackingService: Error clearing cached call result: $e');
+    }
+  }
+
+  /// Check for cached call result and emit if found
+  Future<CallData?> checkForCachedCallResult(String phoneNumber) async {
+    try {
+      final cachedResult = await getLatestCallResult();
+
+      if (cachedResult != null) {
+        final cachedPhone = cachedResult['phoneNumber'] as String?;
+        final duration = cachedResult['duration'] as int?;
+        final timestamp = cachedResult['timestamp'] as int?;
+        final callType = cachedResult['callType'] as String?;
+
+        print(
+          'CallTrackingService: Cached result - phone: $cachedPhone, duration: $duration, timestamp: $timestamp',
+        );
+
+        // Improved phone number matching using last 10 digits
+        if (cachedPhone != null &&
+            duration != null &&
+            timestamp != null &&
+            cachedPhone != 'Unknown' &&
+            _phoneNumbersMatch(cachedPhone, phoneNumber)) {
+          final cacheAge = DateTime.now().millisecondsSinceEpoch - timestamp;
+          final maxAge = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+          if (cacheAge <= maxAge) {
+            print(
+              'CallTrackingService: Found valid cached result for $phoneNumber: ${duration}s',
+            );
+
+            final endTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+            final startTime = endTime.subtract(Duration(seconds: duration));
+
+            final callData = CallData(
+              phoneNumber: phoneNumber,
+              duration: duration,
+              startTime: startTime,
+              endTime: endTime,
+              callType:
+                  callType == 'outgoing'
+                      ? CallType.outgoing
+                      : CallType.incoming,
+              callState: CallState.ended,
+            );
+
+            // Emit the cached call data
+            _callEndedController.add(callData);
+            _callDataController.add(callData);
+
+            // Clear the cache after using it
+            await clearCallResult(phoneNumber);
+
+            return callData;
+          }
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('CallTrackingService: Error checking cached call result: $e');
+      return null;
+    }
+  }
+
+  /// Check if two phone numbers match using last 10 digits
+  bool _phoneNumbersMatch(String phone1, String phone2) {
+    // Clean both numbers to digits only
+    String clean1 = phone1.replaceAll(RegExp(r'[^\d]'), '');
+    String clean2 = phone2.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Handle different formats for Indian numbers
+    String normalized1 = _normalizePhoneNumber(clean1);
+    String normalized2 = _normalizePhoneNumber(clean2);
+
+    print(
+      'CallTrackingService: Comparing $phone1 -> $normalized1 vs $phone2 -> $normalized2',
+    );
+    return normalized1 == normalized2 && normalized1.isNotEmpty;
+  }
+
+  /// Normalize phone number to exactly 10 digits for Indian numbers
+  String _normalizePhoneNumber(String phoneNumber) {
+    if (phoneNumber.isEmpty) return '';
+
+    // Remove all non-digit characters
+    String digits = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Extract exactly 10 digits
+    String tenDigits = '';
+    if (digits.length == 12 && digits.startsWith('91')) {
+      // +91XXXXXXXXXX or 91XXXXXXXXXX -> XXXXXXXXXX
+      tenDigits = digits.substring(2);
+    } else if (digits.length == 11 && digits.startsWith('0')) {
+      // 0XXXXXXXXXX -> XXXXXXXXXX
+      tenDigits = digits.substring(1);
+    } else if (digits.length >= 10) {
+      // Take last 10 digits
+      tenDigits = digits.substring(digits.length - 10);
+    } else {
+      // Less than 10 digits, invalid
+      return '';
+    }
+
+    // Validate exactly 10 digits
+    if (tenDigits.length == 10 && RegExp(r'^\d{10}$').hasMatch(tenDigits)) {
+      return tenDigits;
+    }
+    return '';
+  }
+
   /// Handle phone state change from native code
   void _handlePhoneStateChangeFromNative(String? phoneNumber, String? state) {
     if (phoneNumber == null || state == null) return;

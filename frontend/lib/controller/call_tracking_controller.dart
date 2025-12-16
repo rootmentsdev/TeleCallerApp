@@ -192,6 +192,27 @@ class CallTrackingController extends ChangeNotifier {
     _callTrackingService.startOutgoingCallTracking(phoneNumber);
   }
 
+  /// Check for cached call result for specific phone number
+  Future<CallData?> checkCachedCallResult(String phoneNumber) async {
+    try {
+      final cleanNumber = _cleanPhoneNumber(phoneNumber);
+      return await _callTrackingService.checkForCachedCallResult(cleanNumber);
+    } catch (e) {
+      print('CallTrackingController: Error checking cached call result: $e');
+      return null;
+    }
+  }
+
+  /// Clear cached call result
+  Future<void> clearCachedCallResult(String phoneNumber) async {
+    try {
+      final cleanNumber = _cleanPhoneNumber(phoneNumber);
+      await _callTrackingService.clearCallResult(cleanNumber);
+    } catch (e) {
+      print('CallTrackingController: Error clearing cached call result: $e');
+    }
+  }
+
   /// Get call data for phone number (for pre-filling forms)
   CallData? getCallDataForPhoneNumber(String phoneNumber) {
     final cleanNumber = _cleanPhoneNumber(phoneNumber);

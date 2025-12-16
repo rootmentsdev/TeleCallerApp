@@ -30,7 +30,8 @@ class DetailsScreen extends StatefulWidget {
   State<DetailsScreen> createState() => _DetailsScreenState();
 }
 
-class _DetailsScreenState extends State<DetailsScreen> {
+class _DetailsScreenState extends State<DetailsScreen>
+    with WidgetsBindingObserver {
   String? selectedCallStatus;
   String? selectedReason;
   final TextEditingController customReasonController = TextEditingController();
@@ -139,6 +140,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
   void initState() {
     super.initState();
 
+    // Add app lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
+
     // Add listeners to track changes for dirty flag
     remarksController.addListener(_markDirty);
     customReasonController.addListener(_markDirty);
@@ -147,7 +151,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
     final existingDuration = widget.contact["callDuration"] as int?;
     if (existingDuration != null && existingDuration > 0) {
       _callDurationSeconds = existingDuration;
+      _hasCalled = true;
     }
+
+    // Check for cached call result immediately
+    _checkForCachedCallResult();
 
     // Initialize PhoneCallService to listen for automatic call duration
     PhoneCallService.initialize(
@@ -176,6 +184,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
             setState(() {
               _callDurationSeconds = duration;
               _isCallActive = false;
+              _hasCalled = true;
               // Auto-set status to Connected if call had duration
               if (selectedCallStatus == null) {
                 selectedCallStatus = "Connected";
@@ -194,6 +203,76 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
     // Set up call tracking listener
     _setupCallTrackingListener();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // When app becomes active (returns from background), check for cached call results
+    if (state == AppLifecycleState.resumed) {
+      print('DetailsScreen: App resumed, checking for cached call results');
+      _checkForCachedCallResult();
+    }
+  }
+
+  /// Check for cached call result from Android SharedPreferences
+  Future<void> _checkForCachedCallResult() async {
+    try {
+      final contactPhone = widget.contact["phone"] as String? ?? "";
+      if (contactPhone.isEmpty) {
+        print('DetailsScreen: No contact phone number available');
+        return;
+      }
+
+      print('DetailsScreen: Checking cached call result for: $contactPhone');
+
+      final callTrackingService = CallTrackingService();
+      final cachedResult = await callTrackingService.checkForCachedCallResult(
+        contactPhone,
+      );
+
+      if (cachedResult != null && mounted) {
+        print(
+          'DetailsScreen: ✅ Found cached call result: ${cachedResult.duration}s for $contactPhone',
+        );
+
+        setState(() {
+          _callDurationSeconds = cachedResult.duration;
+          _isCallActive = false; // Ensure call is not active
+          _hasCalled = true; // Mark as called to show duration
+
+          // Auto-set call status based on duration
+          if (selectedCallStatus == null) {
+            selectedCallStatus =
+                cachedResult.duration > 0
+                    ? LeadConstants.callStatusConnected
+                    : LeadConstants.callStatusNotConnected;
+          }
+        });
+
+        // Show a brief notification that call duration was loaded
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              cachedResult.duration > 0
+                  ? 'Call duration loaded: ${FormatHelper.formatCallDurationWithUnits(cachedResult.duration)}'
+                  : 'Call completed: No answer (0s)',
+            ),
+            backgroundColor:
+                cachedResult.duration > 0 ? Colors.green : Colors.orange,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        print(
+          'DetailsScreen: ❌ No cached call result found for: $contactPhone',
+        );
+      }
+    } catch (e) {
+      print('DetailsScreen: 💥 Error checking cached call result: $e');
+    }
   }
 
   /// Set up call tracking listener for automatic call duration detection
@@ -222,6 +301,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
               case CallState.ended:
                 _isCallActive = false;
                 _callDurationSeconds = callData.duration;
+                _hasCalled = true; // Mark as called to show duration
                 // Auto-set call status based on duration
                 if (selectedCallStatus == null) {
                   selectedCallStatus =
@@ -229,6 +309,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           ? LeadConstants.callStatusConnected
                           : LeadConstants.callStatusNotConnected;
                 }
+                print(
+                  'DetailsScreen: Call ended with duration: ${callData.duration}s',
+                );
                 break;
             }
           });
@@ -239,29 +322,49 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
   /// Check if phone numbers match (handles different formats)
   bool _isPhoneNumberMatch(String phone1, String phone2) {
-    // Clean both numbers
+    // Clean both numbers to digits only
     String clean1 = phone1.replaceAll(RegExp(r'[^\d]'), '');
     String clean2 = phone2.replaceAll(RegExp(r'[^\d]'), '');
 
-    // Handle country codes
-    if (clean1.startsWith('91') && clean1.length == 12) {
-      clean1 = clean1.substring(2);
-    }
-    if (clean2.startsWith('91') && clean2.length == 12) {
-      clean2 = clean2.substring(2);
+    // Normalize both numbers using the same logic as Android
+    String normalized1 = _normalizePhoneNumber(clean1);
+    String normalized2 = _normalizePhoneNumber(clean2);
+
+    print(
+      'DetailsScreen: Comparing phone numbers: $phone1 -> $normalized1 vs $phone2 -> $normalized2',
+    );
+
+    return normalized1 == normalized2 && normalized1.isNotEmpty;
+  }
+
+  /// Normalize phone number to exactly 10 digits for Indian numbers
+  String _normalizePhoneNumber(String phoneNumber) {
+    if (phoneNumber.isEmpty) return '';
+
+    // Remove all non-digit characters
+    String digits = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Extract exactly 10 digits
+    String tenDigits = '';
+    if (digits.length == 12 && digits.startsWith('91')) {
+      // +91XXXXXXXXXX or 91XXXXXXXXXX -> XXXXXXXXXX
+      tenDigits = digits.substring(2);
+    } else if (digits.length == 11 && digits.startsWith('0')) {
+      // 0XXXXXXXXXX -> XXXXXXXXXX
+      tenDigits = digits.substring(1);
+    } else if (digits.length >= 10) {
+      // Take last 10 digits
+      tenDigits = digits.substring(digits.length - 10);
+    } else {
+      // Less than 10 digits, invalid
+      return '';
     }
 
-    // Handle leading zeros
-    if (clean1.startsWith('0') && clean1.length == 11) {
-      clean1 = clean1.substring(1);
+    // Validate exactly 10 digits
+    if (tenDigits.length == 10 && RegExp(r'^\d{10}$').hasMatch(tenDigits)) {
+      return tenDigits;
     }
-    if (clean2.startsWith('0') && clean2.length == 11) {
-      clean2 = clean2.substring(1);
-    }
-
-    return clean1 == clean2 ||
-        clean1.contains(clean2) ||
-        clean2.contains(clean1);
+    return '';
   }
 
   Future<void> _saveCallUpdate() async {
@@ -714,6 +817,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     remarksController.dispose();
     customReasonController.dispose();
     super.dispose();
@@ -874,7 +978,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       const SizedBox(height: 24),
 
                       // Call Duration Display Section
-                      if (_callDurationSeconds > 0)
+                      if (_callDurationSeconds >= 0 && _hasCalled)
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -931,7 +1035,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           ),
                         ),
 
-                      if (_callDurationSeconds > 0) const SizedBox(height: 24),
+                      if (_callDurationSeconds >= 0 && _hasCalled)
+                        const SizedBox(height: 24),
 
                       // Call Status Dropdown
                       _buildDropdown(

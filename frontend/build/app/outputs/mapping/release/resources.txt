@@ -167,14 +167,15 @@ Marking attr:switchStyle:2130903359 reachable: referenced from C:\flutter_apps\t
 android.content.res.Resources#getIdentifier present: true
 Web content present: true
 Referenced Strings:
-android.settings.MANAGE_APP_ALL_FILES...
 exception
+android.settings.MANAGE_APP_ALL_FILES...
 cancel
 STRING_LIST
 http://
 callerContext
 DISMISS
 TextInput.requestAutofill
+PhoneCallService
 suggest_intent_data
 valueCase_
 app_flutter
@@ -204,7 +205,6 @@ kotlinx.coroutines.DefaultExecutor
 left
 kotlin.jvm.functions.
 kotlinx.coroutines.scheduler.default....
-callRinging
 TextInputClient.updateEditingStateWit...
 registerWith
 SystemSoundType.alert
@@ -233,8 +233,8 @@ a
 b
 address
 ACTION_CLEAR_ACCESSIBILITY_FOCUS
-c
 user_query
+c
 SystemUiOverlay.top
 f
 RESULT_PARSE_EXCEPTION
@@ -246,9 +246,11 @@ kotlin.String
 sidecarDeviceState
 o
 r
+s
 java.lang.Module
 SUSPEND
 GridLayoutManager
+clearCallResult
 package:
 TypefaceCompatApi26Impl
 this$0
@@ -260,6 +262,7 @@ acc
 flutter_assets
 propertyXName
 TextInputClient.performPrivateCommand
+latest_timestamp
 androidx.profileinstaller.action.SKIP...
 displayFeature.rect
 mimeType
@@ -288,8 +291,8 @@ phoneCountryCode
 telephoneNumberCountryCode
 decimal
 AppLifecycleState.
-strokeWidth
 SystemChrome.setSystemUIOverlayStyle
+strokeWidth
 androidx.view.accessibility.Accessibi...
 outgoing
 addWindowLayoutInfoListener
@@ -330,6 +333,7 @@ MOVE_CURSOR_FORWARD_BY_CHARACTER
 message
 scanCode
 FlutterJNI
+latest_call_type
 java.util.function.Consumer
 args
 ACTION_DRAG_DROP
@@ -379,8 +383,8 @@ _rootCause
 binding.applicationContext
 datastore/
 putFloat
-creditCardNumber
 resizeUp
+creditCardNumber
 RESULT_NOT_WRITABLE
 onPostResume
 doAfterTextChanged
@@ -414,8 +418,10 @@ resizeDown
 TextInput.setClient
 android.settings.APPLICATION_DETAILS_...
 _resumed
+getLatestCallResult
 TextInputType.multiline
 getChildId
+$context
 android.permission.RECEIVE_MMS
 FIXED64
 framework
@@ -423,10 +429,11 @@ messenger
 runningWorkers
 DESTROYED
 selectionExtent
-New
 SystemChrome.setEnabledSystemUIOverlays
+New
 onCallEnded
 kotlin.collections.Collection
+CallResultCache
 ReflectionGuard
 TextInputAction.send
 scaleX
@@ -479,8 +486,8 @@ SFIXED64_LIST_PACKED
 kotlinx.coroutines.DefaultExecutor.ke...
 kotlin.Annotation
 android.permission.NEARBY_WIFI_DEVICES
-info.displayFeatures
 synchronizeToNativeViewHierarchy
+info.displayFeatures
 enableJavaScript
 direction
 dev.flutter.pigeon.shared_preferences...
@@ -536,13 +543,13 @@ zoomIn
 ACTION_SCROLL_DOWN
 android.view.ViewRootImpl
 io.flutter.embedding.android.EnableSu...
+input
 dev.flutter.pigeon.shared_preferences...
 SupportMenuInflater
 _COROUTINE.
 REMOVE_FROZEN
 .tmp
 peekInt
-CALL
 getHorizontallyScrolling
 PathParser
 copyMemory
@@ -558,6 +565,7 @@ CUSTOM_ACTION
 TextInputClient.updateEditingStateWit...
 objectFieldOffset
 cached_engine_id
+timestamp
 ACTION_SELECT
 setRemoveOnCancelPolicy
 android.permission.BODY_SENSORS_BACKG...
@@ -566,8 +574,8 @@ NO_ACTIVITY
 viewportWidth
 android.permission.READ_MEDIA_IMAGES
 gradient
-checkOpNoThrow
 forbidden
+checkOpNoThrow
 windowToken
 onTrimMemory
 blockingTasksInBuffer
@@ -593,8 +601,8 @@ kotlin.Double
 onActivityResult
 removeListenerMethod
 view
-java.lang.Short
 allScroll
+java.lang.Short
 SystemChrome.systemUIChange
 android.widget.Button
 NewApi
@@ -642,7 +650,6 @@ android
 platformViewId
 java.lang.module.ModuleDescriptor
 description
-callEnded
 nameSuffix
 _isTerminated
 libcore.io.Memory
@@ -681,8 +688,8 @@ android.intent.action.VIEW
 short
 startY
 middleName
-startX
 window
+startX
 personFamilyName
 dev.flutter.pigeon.url_launcher_andro...
 Cancelling
@@ -700,13 +707,13 @@ ACCESSIBILITY_CLICKABLE_SPAN_ID
 dev.flutter.pigeon.url_launcher_andro...
 hybridFallback
 getBounds
+callType
 ACTION_PAGE_LEFT
 put
 TextInputType.text
 EmptyCoroutineContext
 ACTION_ARGUMENT_SELECTION_END_INT
 in_progress
-callAnswered
 pokeLong
 shouldShowRequestPermissionRationale
 FAILED
@@ -750,15 +757,17 @@ BOOL_LIST_PACKED
 /data/misc/profiles/cur/0/
 flags
 PrivateApi
-tel:
 SystemSound.play
+tel:
 onPause
 SystemUiOverlay.bottom
 ViewConfigCompat
 ImageReaderSurfaceProducer
+callFailed
 enabled
 kotlinx.coroutines.bufferedChannel.ex...
 androidx.browser.customtabs.extra.SHA...
+unknown
 android.widget.SeekBar
 android.intent.action.RUN
 android.permission.ACCESS_FINE_LOCATION
@@ -788,8 +797,8 @@ FIXED32_LIST
 .immediate
 TextInputAction.unspecified
 libflutter.so
-char
 width
+char
 sendSegment
 _parentHandle
 SFIXED32
@@ -841,9 +850,9 @@ job
 TextInputClient.requestExistingInputS...
 setLocale
 Clipboard.setData
+TextInput.sendAppPrivateCommand
 wm.defaultDisplay
 TextInputType.phone
-TextInput.sendAppPrivateCommand
 SET_TEXT
 CLOSED
 SystemChrome.restoreSystemUIOverlays
@@ -857,8 +866,8 @@ INT
 kotlin.Enum
 _removedRef
 fillType
-dev.flutter.pigeon.shared_preferences...
 alias
+dev.flutter.pigeon.shared_preferences...
 SINT64_LIST_PACKED
 deltas
 kotlin.String.Companion
@@ -868,8 +877,8 @@ move
 http://schemas.android.com/apk/res/an...
 ACTION_SHOW_TOOLTIP
 suggest_text_2_url
-jClass
 TextInput.show
+jClass
 value_
 setPosture
 addFontFromAssetManager
@@ -877,6 +886,7 @@ doBeforeTextChanged
 ensureImeVisible
 android.permission.ANSWER_PHONE_CALLS
 WindowInsetsCompat
+latest_duration
 android.intent.action.PROCESS_TEXT
 PopupWindowCompatApi21
 INT32_LIST
@@ -914,6 +924,7 @@ cleanedAndPointers
 DartMessenger
 ACTION_UNKNOWN
 addObserver
+call_results_cache
 SFIXED32_LIST
 SHOULD_BUFFER
 ON_ANY
@@ -964,8 +975,8 @@ PERMIT
 transition
 computeFitSystemWindows
 getScaledScrollFactor
-hintText
 flutter/scribe
+hintText
 INACTIVE
 personNamePrefix
 ACTION_NEXT_AT_MOVEMENT_GRANULARITY
@@ -1018,8 +1029,8 @@ android.permission.ACCESS_MEDIA_LOCATION
 ACTION_LONG_CLICK
 TERMINATED
 ACTION_SET_SELECTION
-flutter/navigation
 Localization.getStringResource
+flutter/navigation
 android.speech.extra.LANGUAGE
 getFloat
 putLong
@@ -1030,8 +1041,8 @@ content
 timeout
 duration
 kotlin.collections.Map
-cached_engine_group_id
 ProcessText.queryTextActions
+cached_engine_group_id
 statusBarColor
 ListPopupWindow
 hashCode
@@ -1054,14 +1065,14 @@ FlutterEngineCxnRegstry
 false
 keydown
 workerCtl
-trimPathStart
 activateSystemCursor
+trimPathStart
 onCallStateChanged
 TextInputClient.updateEditingState
 flutter/accessibility
 obj
-io.flutter.embedding.android.LeakVM
 resizeLeft
+io.flutter.embedding.android.LeakVM
 pushRouteInformation
 resize
 androidx.window.extensions.layout.Fol...
@@ -1129,8 +1140,8 @@ personNameSuffix
 kotlin.jvm.functions.Function
 menu
 uri
-url
 resizeLeftRight
+url
 platformBrightness
 getLong
 TextInputAction.done
@@ -1167,6 +1178,7 @@ pokeInt
 kotlin.Number
 android.support.customtabs.extra.SESSION
 DeviceOrientation.portraitDown
+incoming
 NULL
 TOO_LATE_TO_CANCEL
 shared_preferences
@@ -1179,8 +1191,8 @@ personMiddleName
 io.flutter.embedding.android.Impeller...
 entry
 font_italic
-null
 grabbing
+null
 alwaysUse24HourFormat
 true
 androidx.datastore.preferences.protob...
@@ -1217,8 +1229,8 @@ android.intent.action.NEW_OUTGOING_CALL
 baseKey
 DONE_RCV
 currentDisplay
-android.support.customtabs.action.Cus...
 Clipboard.getData
+android.support.customtabs.action.Cus...
 longPress
 pokeByteArray
 TextInputType.twitter
@@ -1229,8 +1241,8 @@ COROUTINE_SUSPENDED
 config_viewMinRotaryEncoderFlingVelocity
 dev.flutter.pigeon.shared_preferences...
 Trace
-MenuItemImpl
 Share.invoke
+MenuItemImpl
 androidx.core.view.inputmethod.Editor...
 flutter/textinput
 ACTVAutoSizeHelper
@@ -1248,7 +1260,6 @@ SINT32_LIST
 valueTo
 suggest_icon_1
 suggest_icon_2
-callStarted
 io.flutter.embedding.android.DisableM...
 TextInput.hide
 createAsync
@@ -1274,6 +1285,7 @@ _decision
 $this$require
 enqIdx
 kotlin.Array
+latest_phone_number
 accept
 ACTION_COLLAPSE
 input_method
@@ -1321,9 +1333,9 @@ contextMenu
 android.speech.action.WEB_SEARCH
 handled
 STRING
-progress
 resizeRight
 SystemNavigator.pop
+progress
 TextInputAction.newline
 compressed
 autofill
@@ -1411,8 +1423,8 @@ base
 dexopt/baseline.profm
 xx
 kotlinx.coroutines.bufferedChannel.se...
-extendedPostalCode
 TextInput.setPlatformViewClient
+extendedPostalCode
 android.intent.extra.PROCESS_TEXT
 INT64_LIST_PACKED
 prefix
@@ -1434,6 +1446,7 @@ HapticFeedbackType.mediumImpact
 NONE
 cont
 getTextDirectionHeuristic
+callInitiated
 dev.flutter.pigeon.shared_preferences...
 ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT
 DeviceOrientation.portraitUp
@@ -1479,9 +1492,9 @@ oneTimeCode
 FLAT
 getDisplayInfo
 DOUBLE
-power
 copy
 precise
+power
 event
 java.lang.Number
 BanUncheckedReflection
@@ -1507,6 +1520,7 @@ strokeAlpha
 sharedPreferencesDataStore
 URI_MASKABLE
 ON_CREATE
+date
 msg
 android.widget.Switch
 data
