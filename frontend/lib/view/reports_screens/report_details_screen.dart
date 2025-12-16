@@ -4,6 +4,7 @@ import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
+import 'package:telecaller_app/services/api_service.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -163,15 +164,57 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         // Update locally
         await repository.updateLead(updatedLead);
 
+        // Also update via API if this is a report lead (already called)
+        try {
+          final store = lead.location ?? lead.brand ?? 'Unknown';
+          await ApiService().updateLead(
+            id: leadId,
+            leadName: lead.name,
+            phoneNumber: lead.phone,
+            store: store,
+            source: lead.source ?? 'Report',
+            leadType: lead.leadType ?? 'General',
+            callStatus: selectedCallStatus ?? 'Connected',
+            leadStatus: selectedLeadStatus ?? 'No Status',
+            remarks:
+                remarksController.text.trim().isEmpty
+                    ? null
+                    : remarksController.text.trim(),
+            followUpFlag: markAsFollowUp,
+            functionDate:
+                markAsFollowUp ? followUpDate?.toIso8601String() : null,
+          );
+          print('ReportDetailsScreen: Lead updated successfully via API');
+        } catch (apiError) {
+          print('ReportDetailsScreen: API update error: $apiError');
+          // Continue even if API fails - local update succeeded
+        }
+
         if (mounted) {
+          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Changes saved successfully'),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+              duration: Duration(seconds: 1),
             ),
           );
-          Navigator.pop(context);
+
+          // Close the details screen after a short delay to show the snackbar
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (mounted) {
+            Navigator.pop(context);
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error: Lead not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
     } catch (e) {

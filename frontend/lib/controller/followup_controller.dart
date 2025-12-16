@@ -1,16 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 
 /// Controller for Followup Screen
 class FollowupController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
+  HeaderController? _headerController;
   String? _selectedStore;
   String? _selectedCategory;
   int _selectedTabIndex = 0; // 0: Today, 1: Upcoming, 2: Overdue
   bool _isLoading = false;
   String? _error;
+
+  // Initialize with header controller
+  void init(HeaderController headerController) {
+    if (_headerController != headerController) {
+      _headerController?.removeListener(_onHeaderChanged);
+      _headerController = headerController;
+      _headerController?.addListener(_onHeaderChanged);
+    }
+  }
+
+  void _onHeaderChanged() {
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _headerController?.removeListener(_onHeaderChanged);
+    super.dispose();
+  }
 
   // Getters
   String? get selectedStore => _selectedStore;
@@ -35,21 +56,73 @@ class FollowupController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get follow-up leads based on selected tab
+  // Get follow-up leads based on selected tab and date filter
   List<LeadModel> getCurrentLeads() {
-    List<LeadModel> currentLeads;
+    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+
+    // Get all leads with follow-up dates
+    final allFollowUpLeads = _repository.followUpLeads;
+
+    List<LeadModel> currentLeads = [];
+
+    // Filter by follow-up date relative to selected date
     switch (_selectedTabIndex) {
       case 0:
-        currentLeads = _repository.todayFollowUps;
+        // Today: follow-up date equals selected date
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              if (lead.followUpDate == null) return false;
+              final followUpDate = DateTime(
+                lead.followUpDate!.year,
+                lead.followUpDate!.month,
+                lead.followUpDate!.day,
+              );
+              final today = DateTime(
+                selectedDate.year,
+                selectedDate.month,
+                selectedDate.day,
+              );
+              return followUpDate.isAtSameMomentAs(today);
+            }).toList();
         break;
       case 1:
-        currentLeads = _repository.upcomingFollowUps;
+        // Upcoming: follow-up date is after selected date
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              if (lead.followUpDate == null) return false;
+              final followUpDate = DateTime(
+                lead.followUpDate!.year,
+                lead.followUpDate!.month,
+                lead.followUpDate!.day,
+              );
+              final today = DateTime(
+                selectedDate.year,
+                selectedDate.month,
+                selectedDate.day,
+              );
+              return followUpDate.isAfter(today);
+            }).toList();
         break;
       case 2:
-        currentLeads = _repository.overdueFollowUps;
+        // Overdue: follow-up date is before selected date
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              if (lead.followUpDate == null) return false;
+              final followUpDate = DateTime(
+                lead.followUpDate!.year,
+                lead.followUpDate!.month,
+                lead.followUpDate!.day,
+              );
+              final today = DateTime(
+                selectedDate.year,
+                selectedDate.month,
+                selectedDate.day,
+              );
+              return followUpDate.isBefore(today);
+            }).toList();
         break;
       default:
-        currentLeads = _repository.todayFollowUps;
+        currentLeads = allFollowUpLeads;
     }
 
     // Filter by category if selected
@@ -70,8 +143,26 @@ class FollowupController extends ChangeNotifier {
     return currentLeads;
   }
 
-  // Get overdue count for badge
-  int get overdueCount => _repository.overdueFollowUps.length;
+  // Get overdue count for badge based on selected date
+  int get overdueCount {
+    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final allFollowUpLeads = _repository.followUpLeads;
+
+    return allFollowUpLeads.where((lead) {
+      if (lead.followUpDate == null) return false;
+      final followUpDate = DateTime(
+        lead.followUpDate!.year,
+        lead.followUpDate!.month,
+        lead.followUpDate!.day,
+      );
+      final today = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+      );
+      return followUpDate.isBefore(today);
+    }).length;
+  }
 
   // Convert LeadModel to display format
   Map<String, dynamic> leadToDisplayMap(LeadModel lead) {

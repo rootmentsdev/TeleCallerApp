@@ -9822,10 +9822,24 @@ com.baseflow.permissionhandler.PermissionUtils:
     static final java.lang.String SHARED_PREFERENCES_PERMISSION_WAS_DENIED_BEFORE_KEY
     public void <init>()
 com.baseflow.permissionhandler.R
-com.example.telecaller_app.CallTrackingReceiver:
-    private static final int MIN_CALL_DURATION
+com.example.telecaller_app.CallResultCache:
+    private static final java.lang.String KEY_CALL_TYPE
+    private static final java.lang.String KEY_DURATION
+    private static final java.lang.String KEY_PHONE
+    private static final java.lang.String KEY_TIMESTAMP
+    private static final java.lang.String PREFS_NAME
     private static final java.lang.String TAG
-    private static long outgoingCallStartTime
+    public final void clearCache(android.content.Context)
+com.example.telecaller_app.CallTrackingReceiver$Companion:
+    public final void setOutgoingCallNumber(java.lang.String)
+com.example.telecaller_app.CallTrackingReceiver:
+    private static final java.lang.String TAG
+    public static final synthetic void access$setCallAnswerTime$cp(long)
+    public static final synthetic void access$setCallEndProcessed$cp(boolean)
+    public static final synthetic void access$setLastPhoneNumber$cp(java.lang.String)
+    public static final synthetic void access$setOffhookOccurred$cp(boolean)
+    public static final synthetic void access$setOutgoing$cp(boolean)
+    public static final synthetic void access$setPreviousState$cp(int)
 com.example.telecaller_app.R$drawable
 com.example.telecaller_app.R$mipmap
 com.example.telecaller_app.R$style
@@ -14877,14 +14891,42 @@ kotlin.text.MatcherMatchResult$groupValues$1
 kotlin.text.MatcherMatchResult$groups$1$iterator$1
 kotlin.text.MatcherMatchResult$groups$1
 kotlin.text.MatcherMatchResult
-kotlin.text.Regex$Companion
+kotlin.text.Regex$Companion:
+    public static final synthetic int access$ensureUnicodeCase(kotlin.text.Regex$Companion,int)
+    private final int ensureUnicodeCase(int)
+    public final java.lang.String escape(java.lang.String)
+    public final java.lang.String escapeReplacement(java.lang.String)
+    public final kotlin.text.Regex fromLiteral(java.lang.String)
 kotlin.text.Regex$Serialized$Companion
 kotlin.text.Regex$Serialized
 kotlin.text.Regex$findAll$1
 kotlin.text.Regex$findAll$2
 kotlin.text.Regex$special$$inlined$fromInt$1
 kotlin.text.Regex$splitToSequence$1
-kotlin.text.Regex
+kotlin.text.Regex:
+    private java.util.Set _options
+    public void <init>(java.lang.String,java.util.Set)
+    public void <init>(java.lang.String,kotlin.text.RegexOption)
+    public static final synthetic java.util.regex.Pattern access$getNativePattern$p(kotlin.text.Regex)
+    public final boolean containsMatchIn(java.lang.CharSequence)
+    public final kotlin.text.MatchResult find(java.lang.CharSequence,int)
+    public static synthetic kotlin.text.MatchResult find$default(kotlin.text.Regex,java.lang.CharSequence,int,int,java.lang.Object)
+    public final kotlin.sequences.Sequence findAll(java.lang.CharSequence,int)
+    public static synthetic kotlin.sequences.Sequence findAll$default(kotlin.text.Regex,java.lang.CharSequence,int,int,java.lang.Object)
+    public final java.util.Set getOptions()
+    public final java.lang.String getPattern()
+    public final kotlin.text.MatchResult matchAt(java.lang.CharSequence,int)
+    public final kotlin.text.MatchResult matchEntire(java.lang.CharSequence)
+    public final boolean matches(java.lang.CharSequence)
+    public final boolean matchesAt(java.lang.CharSequence,int)
+    public final java.lang.String replace(java.lang.CharSequence,kotlin.jvm.functions.Function1)
+    public final java.lang.String replaceFirst(java.lang.CharSequence,java.lang.String)
+    public final java.util.List split(java.lang.CharSequence,int)
+    public static synthetic java.util.List split$default(kotlin.text.Regex,java.lang.CharSequence,int,int,java.lang.Object)
+    public final kotlin.sequences.Sequence splitToSequence(java.lang.CharSequence,int)
+    public static synthetic kotlin.sequences.Sequence splitToSequence$default(kotlin.text.Regex,java.lang.CharSequence,int,int,java.lang.Object)
+    public final java.util.regex.Pattern toPattern()
+    private final java.lang.Object writeReplace()
 kotlin.text.RegexKt$fromInt$1$1
 kotlin.text.RegexKt
 kotlin.text.RegexOption
@@ -15393,7 +15435,6 @@ kotlin.text.StringsKt___StringsKt:
     public static final java.lang.CharSequence take(java.lang.CharSequence,int)
     public static final java.lang.String take(java.lang.String,int)
     public static final java.lang.CharSequence takeLast(java.lang.CharSequence,int)
-    public static final java.lang.String takeLast(java.lang.String,int)
     public static final java.lang.CharSequence takeLastWhile(java.lang.CharSequence,kotlin.jvm.functions.Function1)
     public static final java.lang.String takeLastWhile(java.lang.String,kotlin.jvm.functions.Function1)
     public static final java.lang.CharSequence takeWhile(java.lang.CharSequence,kotlin.jvm.functions.Function1)
@@ -22039,14 +22080,17 @@ com.baseflow.permissionhandler.ServiceManager:
     public static boolean isBluetoothServiceEnabled()
     public static boolean isLocationServiceEnablePreKitKat()
     public static boolean isLocationServiceEnabled()
+com.example.telecaller_app.CallResultCache:
+    public static final com.example.telecaller_app.CallResultCache INSTANCE
+    static void <clinit>()
+    public static java.util.Map getCachedCallResult()
 com.example.telecaller_app.CallTrackingReceiver$Companion
 com.example.telecaller_app.CallTrackingReceiver:
     public static final com.example.telecaller_app.CallTrackingReceiver$Companion Companion
-    public static long offhookTime
+    public static long callStartTime
     static void <clinit>()
-    public static int getCallDurationFromCallLog()
-    public static void handleOutgoingCall()
-    public static void handlePhoneState()
+    public static boolean hasCallLogPermission(android.content.Context)
+    public static void processCallEnd()
 com.example.telecaller_app.MainActivity$configureFlutterEngine$1$onListen$1:
     public static void invoke$3()
 com.example.telecaller_app.MainActivity$configureFlutterEngine$1:
@@ -22851,7 +22895,6 @@ io.flutter.plugin.common.EventChannel:
 io.flutter.plugin.common.JSONMethodCodec:
     public static java.lang.Object unwrapNull(java.lang.Object)
 io.flutter.plugin.common.MethodCall:
-    public static java.lang.Object argument()
     public static java.lang.Object arguments()
 io.flutter.plugin.common.MethodChannel$Result:
     public abstract void error(java.lang.String,java.lang.String,java.lang.Object)
@@ -23651,7 +23694,8 @@ kotlin.text.CharsKt__CharJVMKt
 kotlin.text.CharsKt__CharKt
 kotlin.text.DelimitedRangesSequence$iterator$1:
     public static kotlin.ranges.IntRange next()
-kotlin.text.StringsKt
+kotlin.text.Regex$Companion
+kotlin.text.Regex
 kotlin.text.StringsKt__IndentKt$getIndentFunction$1
 kotlin.text.StringsKt__IndentKt$getIndentFunction$2
 kotlin.text.StringsKt__StringsKt$rangesDelimitedBy$2:
@@ -23661,7 +23705,6 @@ kotlin.text.StringsKt__StringsKt$splitToSequence$1:
 kotlin.text.StringsKt__StringsKt:
     public static int indexOf$default(java.lang.String,char)
     public static synthetic java.lang.String substringAfterLast$default(java.lang.String)
-kotlin.text.StringsKt___StringsJvmKt
 kotlin.text.StringsKt___StringsKt
 kotlinx.coroutines.AbstractTimeSource
 kotlinx.coroutines.AbstractTimeSourceKt

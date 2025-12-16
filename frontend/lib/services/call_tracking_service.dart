@@ -328,6 +328,49 @@ class CallTrackingService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Retrieve cached call result from Android SharedPreferences
+  Future<CallData?> checkForCachedCallResult(String phoneNumber) async {
+    try {
+      const platform = MethodChannel('com.telecaller.app/call_tracking');
+
+      final result = await platform.invokeMethod<Map<dynamic, dynamic>>(
+        'getCachedCallResult',
+        {'phoneNumber': phoneNumber},
+      );
+
+      if (result != null) {
+        final phone = result['phoneNumber'] as String? ?? 'Unknown';
+        final duration = result['duration'] as int? ?? 0;
+        final timestamp = result['timestamp'] as int? ?? 0;
+        final callType = result['callType'] as String? ?? 'incoming';
+
+        print(
+          'CallTrackingService: Retrieved cached call result: phone=$phone, duration=$duration',
+        );
+
+        final callData = CallData(
+          phoneNumber: phone,
+          duration: duration,
+          startTime: DateTime.fromMillisecondsSinceEpoch(timestamp),
+          endTime: DateTime.now(),
+          callType:
+              callType == 'outgoing' ? CallType.outgoing : CallType.incoming,
+          callState: CallState.ended,
+        );
+
+        return callData;
+      }
+
+      print(
+        'CallTrackingService: No cached call result found for: $phoneNumber',
+      );
+      return null;
+    } catch (e) {
+      print('CallTrackingService: Error retrieving cached call result: $e');
+      return null;
+    }
+  }
+
   /// Check permissions status
   Future<Map<String, bool>> checkPermissions() async {
     return {

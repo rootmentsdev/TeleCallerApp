@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/followup_controller.dart';
+import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/details_screen.dart';
@@ -26,13 +27,18 @@ class _FollowupScreenState extends State<FollowupScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch follow-up leads when screen is first loaded
+    // Initialize controller with header controller and fetch follow-up leads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final controller = Provider.of<FollowupController>(
+      final headerController = Provider.of<HeaderController>(
         context,
         listen: false,
       );
-      controller.fetchFollowUpLeads();
+      final followupController = Provider.of<FollowupController>(
+        context,
+        listen: false,
+      );
+      followupController.init(headerController);
+      followupController.fetchFollowUpLeads();
     });
   }
 

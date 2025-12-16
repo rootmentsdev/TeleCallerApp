@@ -78,6 +78,19 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
+        // Set up method channel for call tracking
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.telecaller.app/call_tracking")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getCachedCallResult" -> {
+                        val phoneNumber = call.argument<String>("phoneNumber") ?: ""
+                        val cachedResult = CallResultCache.getCachedCallResult(this, phoneNumber)
+                        result.success(cachedResult)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         // Request necessary permissions on startup
         ensurePermissions()
     }

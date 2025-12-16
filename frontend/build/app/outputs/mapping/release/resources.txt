@@ -167,8 +167,8 @@ Marking attr:switchStyle:2130903359 reachable: referenced from C:\flutter_apps\t
 android.content.res.Resources#getIdentifier present: true
 Web content present: true
 Referenced Strings:
-android.settings.MANAGE_APP_ALL_FILES...
 exception
+android.settings.MANAGE_APP_ALL_FILES...
 cancel
 STRING_LIST
 http://
@@ -233,8 +233,8 @@ a
 b
 address
 ACTION_CLEAR_ACCESSIBILITY_FOCUS
-c
 user_query
+c
 SystemUiOverlay.top
 f
 RESULT_PARSE_EXCEPTION
@@ -272,6 +272,7 @@ SFIXED32_LIST_PACKED
 addSuppressed
 CSLCompat
 ACTION_SET_PROGRESS
+getCachedCallResult
 ACTION_SCROLL_FORWARD
 bufferEndSegment
 addressCountry
@@ -416,6 +417,7 @@ android.settings.APPLICATION_DETAILS_...
 _resumed
 TextInputType.multiline
 getChildId
+$context
 android.permission.RECEIVE_MMS
 FIXED64
 framework
@@ -427,6 +429,7 @@ New
 SystemChrome.setEnabledSystemUIOverlays
 onCallEnded
 kotlin.collections.Collection
+CallResultCache
 ReflectionGuard
 TextInputAction.send
 scaleX
@@ -464,8 +467,8 @@ kotlin.Throwable
 dev.flutter.pigeon.shared_preferences...
 parkedWorkersStack
 OP_POST_NOTIFICATION
-android.permission.CALL_PHONE
 FLOAT
+android.permission.CALL_PHONE
 android.permission.GET_ACCOUNTS
 handleLifecycleEvent
 COMPLETING_ALREADY
@@ -513,6 +516,7 @@ SystemChrome.setEnabledSystemUIMode
 permissions_handler
 UINT32
 AppCompatCustomView
+duration_
 suggest_flags
 android.widget.HorizontalScrollView
 receiveSegment
@@ -560,6 +564,7 @@ objectFieldOffset
 cached_engine_id
 ACTION_SELECT
 setRemoveOnCancelPolicy
+timestamp
 android.permission.BODY_SENSORS_BACKG...
 receive
 NO_ACTIVITY
@@ -631,18 +636,18 @@ INTERRUPTED_RCV
 getDescriptor
 MESSAGE_LIST
 keymap
-string
 font_variation_settings
 FlutterLoader
 bool
+string
 onRequestPermissionsResult
 deltaStart
 kotlin.coroutines.jvm.internal.BaseCo...
 android
 platformViewId
+callEnded
 java.lang.module.ModuleDescriptor
 description
-callEnded
 nameSuffix
 _isTerminated
 libcore.io.Memory
@@ -681,8 +686,8 @@ android.intent.action.VIEW
 short
 startY
 middleName
-startX
 window
+startX
 personFamilyName
 dev.flutter.pigeon.url_launcher_andro...
 Cancelling
@@ -701,6 +706,7 @@ dev.flutter.pigeon.url_launcher_andro...
 hybridFallback
 getBounds
 ACTION_PAGE_LEFT
+callType
 put
 TextInputType.text
 EmptyCoroutineContext
@@ -937,6 +943,7 @@ ACTION_CLICK
 editingValue
 TraceCompat
 android.speech.extra.LANGUAGE_MODEL
+call_result_cache
 SidecarCompat
 ordering
 DROP_LATEST
@@ -959,6 +966,7 @@ set
 clearFocus
 ACTION_IME_ENTER
 tail
+call_type_
 right
 PERMIT
 transition
@@ -1167,9 +1175,11 @@ pokeInt
 kotlin.Number
 android.support.customtabs.extra.SESSION
 DeviceOrientation.portraitDown
+incoming
 NULL
 TOO_LATE_TO_CANCEL
 shared_preferences
+ms
 birthDateMonth
 .preferences_pb
 dev.flutter.pigeon.shared_preferences...
@@ -1187,6 +1197,7 @@ androidx.datastore.preferences.protob...
 dispose
 phoneNational
 androidx.datastore.preferences.protob...
+phone_
 objectAnimator
 nm
 TextInputType.visiblePassword
@@ -1429,6 +1440,7 @@ getViewRootImpl
 appops
 delimiter
 permissions
+91
 tel:123123
 HapticFeedbackType.mediumImpact
 NONE
@@ -1507,6 +1519,7 @@ strokeAlpha
 sharedPreferencesDataStore
 URI_MASKABLE
 ON_CREATE
+date
 msg
 android.widget.Switch
 data
@@ -1572,6 +1585,7 @@ getBoundsMethod
 kotlin.Byte
 mAccessibilityDelegate
 bufferEnd
+timestamp_
 array
 alarm
 kotlin.collections.Set

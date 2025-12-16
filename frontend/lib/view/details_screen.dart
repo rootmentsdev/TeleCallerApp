@@ -47,6 +47,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
   bool _isCallActive = false;
   int _callDurationSeconds = 0;
   bool _hasCalled = false; // Track if call was initiated from lead screen
+  bool _isWaitingForDuration =
+      false; // Track if waiting for call log to write duration
 
   final List<Map<String, dynamic>> callSummary = [
     {
@@ -222,12 +224,19 @@ class _DetailsScreenState extends State<DetailsScreen> {
               case CallState.ended:
                 _isCallActive = false;
                 _callDurationSeconds = callData.duration;
-                // Auto-set call status based on duration
-                if (selectedCallStatus == null) {
-                  selectedCallStatus =
-                      callData.duration > 0
-                          ? LeadConstants.callStatusConnected
-                          : LeadConstants.callStatusNotConnected;
+
+                // If duration is 0, poll for the actual duration from cache
+                if (callData.duration == 0) {
+                  _isWaitingForDuration = true;
+                  _pollForDuration(callData.phoneNumber);
+                } else {
+                  // Auto-set call status based on duration
+                  if (selectedCallStatus == null) {
+                    selectedCallStatus =
+                        callData.duration > 0
+                            ? LeadConstants.callStatusConnected
+                            : LeadConstants.callStatusNotConnected;
+                  }
                 }
                 break;
             }
@@ -235,6 +244,59 @@ class _DetailsScreenState extends State<DetailsScreen> {
         }
       }
     });
+  }
+
+  /// Poll for duration from cache if initial duration was 0
+  Future<void> _pollForDuration(String phoneNumber) async {
+    final contactPhone = widget.contact["phone"] as String? ?? "";
+
+    // Poll up to 5 times, waiting 1 second between each attempt
+    for (int i = 0; i < 5; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+
+      if (!mounted) return;
+
+      try {
+        final callTrackingService = CallTrackingService();
+        final cachedResult = await callTrackingService.checkForCachedCallResult(
+          contactPhone,
+        );
+
+        if (cachedResult != null && cachedResult.duration > 0) {
+          print(
+            'DetailsScreen: ✅ Polled duration found: ${cachedResult.duration}s',
+          );
+
+          if (mounted) {
+            setState(() {
+              _callDurationSeconds = cachedResult.duration;
+              _isWaitingForDuration = false;
+              _isCallActive = false;
+
+              // Auto-set call status based on duration
+              if (selectedCallStatus == null) {
+                selectedCallStatus =
+                    cachedResult.duration > 0
+                        ? LeadConstants.callStatusConnected
+                        : LeadConstants.callStatusNotConnected;
+              }
+            });
+          }
+          return; // Duration found, stop polling
+        }
+      } catch (e) {
+        print('DetailsScreen: Error polling for duration: $e');
+      }
+    }
+
+    print('DetailsScreen: ⚠️ Duration not found after polling');
+
+    if (mounted) {
+      setState(() {
+        _isWaitingForDuration = false;
+        _isCallActive = false;
+      });
+    }
   }
 
   /// Check if phone numbers match (handles different formats)
@@ -593,18 +655,30 @@ class _DetailsScreenState extends State<DetailsScreen> {
     // Reset dirty flag after successful save
     _isDirty = false;
 
-    // Navigate back to previous screen (BottomNav) and switch to Reports tab
+    // Navigate back to previous screen (BottomNav)
     if (mounted) {
       // Pop back to BottomNav (not all the way to LoginScreen)
       Navigator.of(context).pop();
 
-      // Switch to Reports tab (index 3) in bottom navigation
-      // Set flag to navigate to Equary Calls tab when Report screen loads
-      ReportController.navigateToEquaryCalls();
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          BottomNavState.navigateToReports();
-        });
+      // Only navigate to Reports tab if this is a NEW lead (not previously called)
+      // Check if the lead was previously called
+      final repository = LeadRepository();
+      final lead = repository.getLeadById(leadId!);
+
+      if (lead != null) {
+        // Check if this was a new lead (not called before)
+        final wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
+
+        if (wasNewLead) {
+          // Only new leads move to "New Leads" report screen
+          ReportController.navigateToEquaryCalls();
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              BottomNavState.navigateToReports();
+            });
+          }
+        }
+        // If it was already called, just pop back - don't navigate to reports
       }
     }
   }
@@ -874,14 +948,20 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       const SizedBox(height: 24),
 
                       // Call Duration Display Section
-                      if (_callDurationSeconds > 0)
+                      if (_isWaitingForDuration || _callDurationSeconds > 0)
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.green[50],
+                            color:
+                                _isWaitingForDuration
+                                    ? Colors.blue[50]
+                                    : Colors.green[50],
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.green[300]!,
+                              color:
+                                  _isWaitingForDuration
+                                      ? Colors.blue[300]!
+                                      : Colors.green[300]!,
                               width: 1.5,
                             ),
                           ),
@@ -890,14 +970,30 @@ class _DetailsScreenState extends State<DetailsScreen> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: Colors.green[100],
+                                  color:
+                                      _isWaitingForDuration
+                                          ? Colors.blue[100]
+                                          : Colors.green[100],
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  Icons.timer,
-                                  size: 24,
-                                  color: Colors.green[700],
-                                ),
+                                child:
+                                    _isWaitingForDuration
+                                        ? SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.blue[700]!,
+                                                ),
+                                          ),
+                                        )
+                                        : Icon(
+                                          Icons.timer,
+                                          size: 24,
+                                          color: Colors.green[700],
+                                        ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -905,22 +1001,32 @@ class _DetailsScreenState extends State<DetailsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Call Duration",
+                                      _isWaitingForDuration
+                                          ? "Reading Call Duration..."
+                                          : "Call Duration",
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.green[600],
+                                        color:
+                                            _isWaitingForDuration
+                                                ? Colors.blue[600]
+                                                : Colors.green[600],
                                         fontFamily: TextConstant.dmSansRegular,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      FormatHelper.formatCallDurationWithUnits(
-                                        _callDurationSeconds,
-                                      ),
+                                      _isWaitingForDuration
+                                          ? "Writing to call log..."
+                                          : FormatHelper.formatCallDurationWithUnits(
+                                            _callDurationSeconds,
+                                          ),
                                       style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.green[700],
+                                        color:
+                                            _isWaitingForDuration
+                                                ? Colors.blue[700]
+                                                : Colors.green[700],
                                         fontFamily: TextConstant.dmSansMedium,
                                       ),
                                     ),
@@ -931,7 +1037,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           ),
                         ),
 
-                      if (_callDurationSeconds > 0) const SizedBox(height: 24),
+                      if (_isWaitingForDuration || _callDurationSeconds > 0)
+                        const SizedBox(height: 24),
 
                       // Call Status Dropdown
                       _buildDropdown(
