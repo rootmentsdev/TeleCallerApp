@@ -17,6 +17,11 @@ class CallTrackingController extends ChangeNotifier {
   CallData? _lastEndedCall;
   bool _isInitialized = false;
 
+  // Guard against duplicate callEnded handling
+  String? _lastHandledCallPhone;
+  int _lastHandledCallTime = 0;
+  static const int DUPLICATE_CALL_DEBOUNCE_MS = 2000;
+
   // Callbacks for UI integration
   Function(String phoneNumber, int duration)? onCallEnded;
   Function(CallData callData)? onCallStateChanged;
@@ -91,6 +96,23 @@ class CallTrackingController extends ChangeNotifier {
     print(
       'CallTrackingController: Processing ended call - Phone: ${callData.phoneNumber}, Duration: ${callData.duration}s',
     );
+
+    // Guard against duplicate callEnded handling for same phone
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final isDuplicate =
+        _lastHandledCallPhone == callData.phoneNumber &&
+        (now - _lastHandledCallTime) < DUPLICATE_CALL_DEBOUNCE_MS;
+
+    if (isDuplicate) {
+      print(
+        'CallTrackingController: Ignoring duplicate callEnded for ${callData.phoneNumber}',
+      );
+      return;
+    }
+
+    // Update duplicate guard
+    _lastHandledCallPhone = callData.phoneNumber;
+    _lastHandledCallTime = now;
 
     // Check if this call matches any existing lead
     _updateExistingLeadWithCallData(callData);

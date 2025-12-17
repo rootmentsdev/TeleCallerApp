@@ -202,30 +202,8 @@ class _LeadScreenState extends State<LeadScreen> {
                   height: 100,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: callSummary.length + 1, // +1 for Follow Up tab
+                    itemCount: callSummary.length,
                     itemBuilder: (context, index) {
-                      // Add Follow Up Calls tab at the end
-                      if (index == callSummary.length) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: SizedBox(
-                            width: 80,
-                            child: CallSummaryCard(
-                              title: "Follow Up\nCalls",
-                              count:
-                                  controller.getFollowUpLeadsCount().toString(),
-                              bgColor: const Color(0xFFD5E8FF),
-                              iconColor: const Color(0xFF2196F3),
-                              icon: Icons.event_note_outlined,
-                              isSelected: controller.selectedCallTypeIndex == 5,
-                              onTap: () {
-                                controller.setSelectedCallTypeIndex(5);
-                              },
-                            ),
-                          ),
-                        );
-                      }
-
                       final item = callSummary[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),

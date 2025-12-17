@@ -7,8 +7,7 @@ import 'package:telecaller_app/view/home_screen.dart';
 import 'package:telecaller_app/view/lead_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_screen.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
-import 'package:telecaller_app/widgets.dart/add_lead_bottom_sheet.dart';
-import 'package:telecaller_app/services/call_tracking_service.dart';
+import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/widgets.dart/add_lead_bottom_sheet.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
 
@@ -88,7 +87,32 @@ class BottomNavState extends State<BottomNav>
 
       // Show Add Lead bottom sheet for incoming calls
       if (callData != null && callData.callType == CallType.incoming) {
-        // Small delay to ensure UI is ready
+        // Check if lead already exists by phone number BEFORE showing popup
+        _checkAndShowAddLeadPopup(phoneNumber, duration, callData);
+      }
+    }
+  }
+
+  /// Check if lead exists, only show popup if it doesn't
+  void _checkAndShowAddLeadPopup(
+    String phoneNumber,
+    int duration,
+    CallData callData,
+  ) {
+    try {
+      // Clean phone number for lookup
+      final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+      final normalizedPhone =
+          cleanPhone.length >= 10
+              ? cleanPhone.substring(cleanPhone.length - 10)
+              : cleanPhone;
+
+      // Check if lead exists in repository
+      final leadRepository = LeadRepository();
+      final existingLead = leadRepository.searchLeadByPhone(normalizedPhone);
+
+      if (existingLead == null) {
+        // Lead does not exist - show popup
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
             showAddLeadBottomSheet(
@@ -99,7 +123,26 @@ class BottomNavState extends State<BottomNav>
             );
           }
         });
+        print('BottomNav: New lead detected - showing popup for $phoneNumber');
+      } else {
+        // Lead already exists - just update call status
+        print(
+          'BottomNav: Lead already exists for $phoneNumber - skipping popup',
+        );
       }
+    } catch (e) {
+      print('BottomNav: Error checking lead existence: $e');
+      // On error, show popup to be safe
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          showAddLeadBottomSheet(
+            context,
+            phoneNumber: phoneNumber,
+            callDuration: duration,
+            callData: callData,
+          );
+        }
+      });
     }
   }
 

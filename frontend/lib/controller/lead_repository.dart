@@ -297,6 +297,29 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
+  /// Search for lead by phone number (normalized to 10 digits)
+  LeadModel? searchLeadByPhone(String phoneNumber) {
+    try {
+      // Normalize phone number to 10 digits
+      final digits = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+      final normalizedPhone =
+          digits.length >= 10 ? digits.substring(digits.length - 10) : digits;
+
+      // Search for lead with matching phone
+      return _leads.firstWhere((lead) {
+        final leadPhone = lead.phone ?? '';
+        final leadDigits = leadPhone.replaceAll(RegExp(r'[^\d]'), '');
+        final leadNormalized =
+            leadDigits.length >= 10
+                ? leadDigits.substring(leadDigits.length - 10)
+                : leadDigits;
+        return leadNormalized == normalizedPhone;
+      });
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Get booking confirmation specific data for a lead
   Map<String, dynamic>? getBookingConfirmationData(String leadId) {
     return _bookingConfirmationData[leadId];

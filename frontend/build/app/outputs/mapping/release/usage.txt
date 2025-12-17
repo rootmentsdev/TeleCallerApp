@@ -9837,6 +9837,7 @@ com.example.telecaller_app.CallTrackingReceiver:
     public static final synthetic void access$setCallAnswerTime$cp(long)
     public static final synthetic void access$setCallEndProcessed$cp(boolean)
     public static final synthetic void access$setLastPhoneNumber$cp(java.lang.String)
+    public static final synthetic void access$setOffhookCaptured$cp(boolean)
     public static final synthetic void access$setOffhookOccurred$cp(boolean)
     public static final synthetic void access$setOutgoing$cp(boolean)
     public static final synthetic void access$setPreviousState$cp(int)

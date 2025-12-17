@@ -14,7 +14,8 @@ class FollowupScreen extends StatefulWidget {
   State<FollowupScreen> createState() => _FollowupScreenState();
 }
 
-class _FollowupScreenState extends State<FollowupScreen> {
+class _FollowupScreenState extends State<FollowupScreen>
+    with WidgetsBindingObserver, RouteAware {
   final List<String> categories = const [
     "All",
     "Loss of Sales",
@@ -27,6 +28,8 @@ class _FollowupScreenState extends State<FollowupScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     // Initialize controller with header controller and fetch follow-up leads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final headerController = Provider.of<HeaderController>(
@@ -39,6 +42,55 @@ class _FollowupScreenState extends State<FollowupScreen> {
       );
       followupController.init(headerController);
       followupController.fetchFollowUpLeads();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh follow-up leads when app resumes (in case lead was updated)
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        final followupController = Provider.of<FollowupController>(
+          context,
+          listen: false,
+        );
+        followupController.refresh();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when a route that was pushed on top of this route has been popped off
+    print('FollowupScreen: Route popped, refreshing follow-up leads');
+    if (mounted) {
+      final followupController = Provider.of<FollowupController>(
+        context,
+        listen: false,
+      );
+      followupController.refresh();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh when screen comes back into focus (defer to avoid build conflicts)
+    print('FollowupScreen: didChangeDependencies, refreshing follow-up leads');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final followupController = Provider.of<FollowupController>(
+          context,
+          listen: false,
+        );
+        followupController.refresh();
+      }
     });
   }
 

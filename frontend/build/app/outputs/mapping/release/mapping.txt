@@ -3,8 +3,8 @@
 # min_api: 21
 # common_typos_disable
 # {"id":"com.android.tools.r8.mapping","version":"2.2"}
-# pg_map_id: 0e39692
-# pg_map_hash: SHA-256 0e39692a1e18aed865c2769fa249060ac8c3bcf639a441eea08c752188b24c2a
+# pg_map_id: 6ba3701
+# pg_map_hash: SHA-256 6ba37013fa7e07a1ebc9287cc10011712487b8522478206b87edc9397766eb13
 _COROUTINE.ArtificialStackFrames -> R8$$REMOVED$$CLASS$$0:
 # {"id":"sourceFile","fileName":"CoroutineDebugging.kt"}
 _COROUTINE.CoroutineDebuggingKt -> R8$$REMOVED$$CLASS$$1:
@@ -37545,29 +37545,29 @@ androidx.profileinstaller.ProfileInstallerInitializer$$ExternalSyntheticLambda0 
     10:17:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
       # {"id":"com.android.tools.r8.synthesized"}
     18:19:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0:0 -> run
-    20:25:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):0:0 -> run
+    20:25:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):0:0 -> run
     20:25:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
-    26:29:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):282:282 -> run
+    26:29:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):323:323 -> run
     26:29:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
-    30:31:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):284:284 -> run
+    30:31:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):325:325 -> run
     30:31:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
     32:33:io.flutter.embedding.engine.dart.DartExecutor io.flutter.embedding.engine.FlutterEngine.getDartExecutor():512:512 -> run
-    32:33:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):285 -> run
+    32:33:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):326 -> run
     32:33:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
     34:37:io.flutter.plugin.common.BinaryMessenger io.flutter.embedding.engine.dart.DartExecutor.getBinaryMessenger():189:189 -> run
-    34:37:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):285 -> run
+    34:37:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):326 -> run
       # {"id":"com.android.tools.r8.rewriteFrame","conditions":["throws(Ljava/lang/NullPointerException;)"],"actions":["removeInnerFrames(1)"]}
     34:37:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
-    38:39:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):286:286 -> run
+    38:39:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):327:327 -> run
     38:39:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
-    40:43:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):284:284 -> run
+    40:43:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):325:325 -> run
     40:43:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
     44:46:void io.flutter.plugin.common.MethodChannel.invokeMethod(java.lang.String,java.lang.Object):102:102 -> run
-    44:46:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):287 -> run
+    44:46:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):328 -> run
     44:46:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
-    47:55:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):288:288 -> run
+    47:55:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):329:329 -> run
     47:55:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
-    56:77:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$5(java.lang.String,java.util.Map):290:290 -> run
+    56:77:void com.example.telecaller_app.CallTrackingReceiver.sendToFlutterMain$lambda$6(java.lang.String,java.util.Map):331:331 -> run
     56:77:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0 -> run
     78:82:void N.ProfileInstallerInitializer$$ExternalSyntheticLambda0.run():0:0 -> run
     83:88:void androidx.profileinstaller.ProfileInstallerInitializer.installAfterDelay(android.content.Context):108:108 -> run
@@ -48020,148 +48020,178 @@ com.example.telecaller_app.CallTrackingReceiver -> com.example.telecaller_app.Ca
     long callAnswerTime -> d
     int previousState -> e
     boolean offhookOccurred -> f
-    boolean callEndProcessed -> g
+    boolean offhookCaptured -> g
+    boolean callEndProcessed -> h
     1:4:void access$setCallEndProcessed$cp(boolean):17:17 -> <init>
     1:4:void <init>():17 -> <init>
-    1:12:java.lang.String cleanNumber(java.lang.String):262:262 -> a
+    1:12:java.lang.String cleanNumber(java.lang.String):303:303 -> a
     13:14:void kotlin.text.Regex.<init>(java.lang.String):0:0 -> a
-    13:14:java.lang.String cleanNumber(java.lang.String):264 -> a
+    13:14:java.lang.String cleanNumber(java.lang.String):305 -> a
     15:23:void onReceive(android.content.Context,android.content.Intent):88:88 -> a
     15:23:void kotlin.text.Regex.<init>(java.lang.String):88 -> a
-    15:23:java.lang.String cleanNumber(java.lang.String):264 -> a
+    15:23:java.lang.String cleanNumber(java.lang.String):305 -> a
     24:25:java.lang.String kotlin.text.Regex.replace(java.lang.CharSequence,java.lang.String):0:0 -> a
-    24:25:java.lang.String cleanNumber(java.lang.String):264 -> a
-    26:38:void processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):178:178 -> a
-    26:38:java.lang.String kotlin.text.Regex.replace(java.lang.CharSequence,java.lang.String):178 -> a
-    26:38:java.lang.String cleanNumber(java.lang.String):264 -> a
-    39:50:java.lang.String cleanNumber(java.lang.String):267:267 -> a
+    24:25:java.lang.String cleanNumber(java.lang.String):305 -> a
+    26:38:java.lang.String kotlin.text.Regex.replace(java.lang.CharSequence,java.lang.String):178:178 -> a
+    26:38:java.lang.String cleanNumber(java.lang.String):305 -> a
+    39:50:java.lang.String cleanNumber(java.lang.String):308:308 -> a
     51:59:boolean kotlin.text.StringsKt__StringsJVMKt.startsWith(java.lang.String,java.lang.String,boolean):421:421 -> a
     51:59:boolean kotlin.text.StringsKt__StringsJVMKt.startsWith$default(java.lang.String,java.lang.String,boolean,int,java.lang.Object):419 -> a
-    51:59:java.lang.String cleanNumber(java.lang.String):267 -> a
-    60:67:java.lang.String cleanNumber(java.lang.String):267:267 -> a
-    68:75:java.lang.String cleanNumber(java.lang.String):268:268 -> a
+    51:59:java.lang.String cleanNumber(java.lang.String):308 -> a
+    60:67:java.lang.String cleanNumber(java.lang.String):308:308 -> a
+    68:75:java.lang.String cleanNumber(java.lang.String):309:309 -> a
     76:84:boolean kotlin.text.StringsKt__StringsJVMKt.startsWith(java.lang.String,java.lang.String,boolean):421:421 -> a
     76:84:boolean kotlin.text.StringsKt__StringsJVMKt.startsWith$default(java.lang.String,java.lang.String,boolean,int,java.lang.Object):419 -> a
-    76:84:java.lang.String cleanNumber(java.lang.String):268 -> a
-    85:92:java.lang.String cleanNumber(java.lang.String):268:268 -> a
-    93:102:java.lang.String cleanNumber(java.lang.String):269:269 -> a
-    103:109:java.lang.String cleanNumber(java.lang.String):273:273 -> a
+    76:84:java.lang.String cleanNumber(java.lang.String):309 -> a
+    85:92:java.lang.String cleanNumber(java.lang.String):309:309 -> a
+    93:102:java.lang.String cleanNumber(java.lang.String):310:310 -> a
+    103:109:java.lang.String cleanNumber(java.lang.String):314:314 -> a
     110:119:boolean kotlin.text.StringsKt___StringsKt.all(java.lang.CharSequence,kotlin.jvm.functions.Function1):1064:1064 -> a
-    110:119:java.lang.String cleanNumber(java.lang.String):273 -> a
-    120:131:java.lang.String cleanNumber(java.lang.String):273:273 -> a
-    1:12:int getDurationFromCallLog(android.content.Context,java.lang.String):196:196 -> b
-    13:14:boolean hasCallLogPermission(android.content.Context):257:257 -> b
-    13:14:int getDurationFromCallLog(android.content.Context,java.lang.String):196 -> b
-    15:29:boolean hasCallLogPermission(android.content.Context):255:255 -> b
-    15:29:int getDurationFromCallLog(android.content.Context,java.lang.String):196 -> b
-    30:39:boolean kotlin.jvm.internal.Intrinsics.areEqual(java.lang.Object,java.lang.Object):169:169 -> b
-    30:39:int getDurationFromCallLog(android.content.Context,java.lang.String):197 -> b
-    40:43:int getDurationFromCallLog(android.content.Context,java.lang.String):200:200 -> b
-    44:45:int getDurationFromCallLog(android.content.Context,java.lang.String):201:201 -> b
-    46:49:int getDurationFromCallLog(android.content.Context,java.lang.String):202:202 -> b
-    50:51:int getDurationFromCallLog(android.content.Context,java.lang.String):203:203 -> b
-    52:55:int getDurationFromCallLog(android.content.Context,java.lang.String):204:204 -> b
-    56:57:int getDurationFromCallLog(android.content.Context,java.lang.String):205:205 -> b
-    58:63:int getDurationFromCallLog(android.content.Context,java.lang.String):200:200 -> b
-    64:69:int getDurationFromCallLog(android.content.Context,java.lang.String):209:209 -> b
-    70:77:int getDurationFromCallLog(android.content.Context,java.lang.String):210:210 -> b
-    78:85:int getDurationFromCallLog(android.content.Context,java.lang.String):211:211 -> b
-    86:92:int getDurationFromCallLog(android.content.Context,java.lang.String):212:212 -> b
-    93:98:int getDurationFromCallLog(android.content.Context,java.lang.String):215:215 -> b
-    99:127:int getDurationFromCallLog(android.content.Context,java.lang.String):216:216 -> b
-    128:147:int getDurationFromCallLog(android.content.Context,java.lang.String):219:219 -> b
-    148:156:int getDurationFromCallLog(android.content.Context,java.lang.String):223:223 -> b
-    157:169:int getDurationFromCallLog(android.content.Context,java.lang.String):208:208 -> b
-    170:191:int getDurationFromCallLog(android.content.Context,java.lang.String):228:228 -> b
-    1:2:boolean hasCallLogPermission(android.content.Context):257:257 -> c
-    1:2:java.lang.String getLatestCallNumber(android.content.Context):234 -> c
-    3:16:boolean hasCallLogPermission(android.content.Context):255:255 -> c
-    3:16:java.lang.String getLatestCallNumber(android.content.Context):234 -> c
-    17:20:java.lang.String getLatestCallNumber(android.content.Context):237:237 -> c
-    21:22:java.lang.String getLatestCallNumber(android.content.Context):238:238 -> c
-    23:28:java.lang.String getLatestCallNumber(android.content.Context):239:239 -> c
-    29:32:java.lang.String getLatestCallNumber(android.content.Context):242:242 -> c
-    33:38:java.lang.String getLatestCallNumber(android.content.Context):237:237 -> c
-    39:56:java.lang.String getLatestCallNumber(android.content.Context):246:246 -> c
-    57:69:java.lang.String getLatestCallNumber(android.content.Context):245:245 -> c
-    70:93:java.lang.String getLatestCallNumber(android.content.Context):249:249 -> c
-    1:19:void sendToFlutterMain(java.lang.String,java.util.Map):281:281 -> d
-    12:54:void onReceive(android.content.Context,android.content.Intent):50:50 -> onReceive
-    55:62:void onReceive(android.content.Context,android.content.Intent):52:52 -> onReceive
-    63:75:void onReceive(android.content.Context,android.content.Intent):53:53 -> onReceive
-    76:77:void onReceive(android.content.Context,android.content.Intent):54:54 -> onReceive
-    78:79:void onReceive(android.content.Context,android.content.Intent):55:55 -> onReceive
+    110:119:java.lang.String cleanNumber(java.lang.String):314 -> a
+    120:131:java.lang.String cleanNumber(java.lang.String):314:314 -> a
+    3:18:int getDurationFromCallLog(android.content.Context,java.lang.String):201:201 -> b
+    19:22:boolean hasCallLogPermission(android.content.Context):298:298 -> b
+    19:22:int getDurationFromCallLog(android.content.Context,java.lang.String):201 -> b
+    23:35:boolean hasCallLogPermission(android.content.Context):296:296 -> b
+    23:35:int getDurationFromCallLog(android.content.Context,java.lang.String):201 -> b
+    36:44:void processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):169:169 -> b
+    36:44:boolean kotlin.jvm.internal.Intrinsics.areEqual(java.lang.Object,java.lang.Object):169 -> b
+    36:44:int getDurationFromCallLog(android.content.Context,java.lang.String):202 -> b
+    45:48:int getDurationFromCallLog(android.content.Context,java.lang.String):206:206 -> b
+    49:50:int getDurationFromCallLog(android.content.Context,java.lang.String):207:207 -> b
+    51:54:int getDurationFromCallLog(android.content.Context,java.lang.String):208:208 -> b
+    55:56:int getDurationFromCallLog(android.content.Context,java.lang.String):209:209 -> b
+    57:60:int getDurationFromCallLog(android.content.Context,java.lang.String):210:210 -> b
+    61:63:int getDurationFromCallLog(android.content.Context,java.lang.String):211:211 -> b
+    64:67:int getDurationFromCallLog(android.content.Context,java.lang.String):206:206 -> b
+    68:74:int getDurationFromCallLog(android.content.Context,java.lang.String):214:214 -> b
+    75:80:int getDurationFromCallLog(android.content.Context,java.lang.String):215:215 -> b
+    81:88:int getDurationFromCallLog(android.content.Context,java.lang.String):216:216 -> b
+    89:96:int getDurationFromCallLog(android.content.Context,java.lang.String):217:217 -> b
+    97:107:int getDurationFromCallLog(android.content.Context,java.lang.String):218:218 -> b
+    108:140:int getDurationFromCallLog(android.content.Context,java.lang.String):222:222 -> b
+    141:166:int getDurationFromCallLog(android.content.Context,java.lang.String):225:225 -> b
+    167:174:int getDurationFromCallLog(android.content.Context,java.lang.String):229:229 -> b
+    175:191:int getDurationFromCallLog(android.content.Context,java.lang.String):214:214 -> b
+    192:199:int getDurationFromCallLog(android.content.Context,java.lang.String):235:235 -> b
+    200:203:int getDurationFromCallLog(android.content.Context,java.lang.String):236:236 -> b
+    204:210:int getDurationFromCallLog(android.content.Context,java.lang.String):237:237 -> b
+    211:214:int getDurationFromCallLog(android.content.Context,java.lang.String):239:239 -> b
+    215:218:int getDurationFromCallLog(android.content.Context,java.lang.String):241:241 -> b
+    219:228:int getDurationFromCallLog(android.content.Context,java.lang.String):244:244 -> b
+    229:234:int getDurationFromCallLog(android.content.Context,java.lang.String):239:239 -> b
+    235:240:int getDurationFromCallLog(android.content.Context,java.lang.String):248:248 -> b
+    241:248:int getDurationFromCallLog(android.content.Context,java.lang.String):249:249 -> b
+    249:255:int getDurationFromCallLog(android.content.Context,java.lang.String):250:250 -> b
+    256:264:void onReceive(android.content.Context,android.content.Intent):88:88 -> b
+    256:264:void kotlin.text.Regex.<init>(java.lang.String):88 -> b
+    256:264:int getDurationFromCallLog(android.content.Context,java.lang.String):250 -> b
+    265:266:int getDurationFromCallLog(android.content.Context,java.lang.String):250:250 -> b
+    267:279:java.lang.String kotlin.text.Regex.replace(java.lang.CharSequence,java.lang.String):178:178 -> b
+    267:279:int getDurationFromCallLog(android.content.Context,java.lang.String):250 -> b
+    280:283:int getDurationFromCallLog(android.content.Context,java.lang.String):250:250 -> b
+    284:289:void processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):169:169 -> b
+    284:289:boolean kotlin.jvm.internal.Intrinsics.areEqual(java.lang.Object,java.lang.Object):169 -> b
+    284:289:int getDurationFromCallLog(android.content.Context,java.lang.String):252 -> b
+    290:297:int getDurationFromCallLog(android.content.Context,java.lang.String):253:253 -> b
+    298:305:int getDurationFromCallLog(android.content.Context,java.lang.String):254:254 -> b
+    306:314:int getDurationFromCallLog(android.content.Context,java.lang.String):255:255 -> b
+    315:353:int getDurationFromCallLog(android.content.Context,java.lang.String):258:258 -> b
+    354:367:int getDurationFromCallLog(android.content.Context,java.lang.String):247:247 -> b
+    368:390:int getDurationFromCallLog(android.content.Context,java.lang.String):269:269 -> b
+    1:2:boolean hasCallLogPermission(android.content.Context):298:298 -> c
+    1:2:java.lang.String getLatestCallNumber(android.content.Context):275 -> c
+    3:16:boolean hasCallLogPermission(android.content.Context):296:296 -> c
+    3:16:java.lang.String getLatestCallNumber(android.content.Context):275 -> c
+    17:20:java.lang.String getLatestCallNumber(android.content.Context):278:278 -> c
+    21:22:java.lang.String getLatestCallNumber(android.content.Context):279:279 -> c
+    23:28:java.lang.String getLatestCallNumber(android.content.Context):280:280 -> c
+    29:32:java.lang.String getLatestCallNumber(android.content.Context):283:283 -> c
+    33:38:java.lang.String getLatestCallNumber(android.content.Context):278:278 -> c
+    39:56:java.lang.String getLatestCallNumber(android.content.Context):287:287 -> c
+    57:69:java.lang.String getLatestCallNumber(android.content.Context):286:286 -> c
+    70:93:java.lang.String getLatestCallNumber(android.content.Context):290:290 -> c
+    1:19:void sendToFlutterMain(java.lang.String,java.util.Map):322:322 -> d
+    12:54:void onReceive(android.content.Context,android.content.Intent):52:52 -> onReceive
+    55:62:void onReceive(android.content.Context,android.content.Intent):54:54 -> onReceive
+    63:75:void onReceive(android.content.Context,android.content.Intent):55:55 -> onReceive
+    76:77:void onReceive(android.content.Context,android.content.Intent):56:56 -> onReceive
+    78:79:void onReceive(android.content.Context,android.content.Intent):57:57 -> onReceive
     80:95:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> onReceive
-    80:95:void onReceive(android.content.Context,android.content.Intent):58 -> onReceive
-    96:105:void onReceive(android.content.Context,android.content.Intent):58:58 -> onReceive
-    106:108:void onReceive(android.content.Context,android.content.Intent):56:56 -> onReceive
-    109:137:void onReceive(android.content.Context,android.content.Intent):60:60 -> onReceive
-    138:147:void onReceive(android.content.Context,android.content.Intent):50:50 -> onReceive
-    148:151:void onReceive(android.content.Context,android.content.Intent):64:64 -> onReceive
-    152:157:void onReceive(android.content.Context,android.content.Intent):65:65 -> onReceive
-    158:192:void onReceive(android.content.Context,android.content.Intent):67:67 -> onReceive
-    193:202:void onReceive(android.content.Context,android.content.Intent):70:70 -> onReceive
-    203:209:void onReceive(android.content.Context,android.content.Intent):71:71 -> onReceive
-    210:215:void onReceive(android.content.Context,android.content.Intent):72:72 -> onReceive
-    216:217:void onReceive(android.content.Context,android.content.Intent):74:74 -> onReceive
-    218:219:void onReceive(android.content.Context,android.content.Intent):75:75 -> onReceive
-    220:222:void onReceive(android.content.Context,android.content.Intent):76:76 -> onReceive
-    223:224:void onReceive(android.content.Context,android.content.Intent):77:77 -> onReceive
+    80:95:void onReceive(android.content.Context,android.content.Intent):60 -> onReceive
+    96:105:void onReceive(android.content.Context,android.content.Intent):60:60 -> onReceive
+    106:108:void onReceive(android.content.Context,android.content.Intent):58:58 -> onReceive
+    109:137:void onReceive(android.content.Context,android.content.Intent):62:62 -> onReceive
+    138:147:void onReceive(android.content.Context,android.content.Intent):52:52 -> onReceive
+    148:151:void onReceive(android.content.Context,android.content.Intent):66:66 -> onReceive
+    152:157:void onReceive(android.content.Context,android.content.Intent):67:67 -> onReceive
+    158:192:void onReceive(android.content.Context,android.content.Intent):69:69 -> onReceive
+    193:202:void onReceive(android.content.Context,android.content.Intent):72:72 -> onReceive
+    203:209:void onReceive(android.content.Context,android.content.Intent):73:73 -> onReceive
+    210:215:void onReceive(android.content.Context,android.content.Intent):74:74 -> onReceive
+    216:217:void onReceive(android.content.Context,android.content.Intent):76:76 -> onReceive
+    218:219:void onReceive(android.content.Context,android.content.Intent):77:77 -> onReceive
+    220:222:void onReceive(android.content.Context,android.content.Intent):78:78 -> onReceive
+    223:224:void onReceive(android.content.Context,android.content.Intent):79:79 -> onReceive
     225:231:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> onReceive
-    225:231:void onReceive(android.content.Context,android.content.Intent):81 -> onReceive
-    232:237:void onReceive(android.content.Context,android.content.Intent):81:81 -> onReceive
+    225:231:void onReceive(android.content.Context,android.content.Intent):83 -> onReceive
+    232:237:void onReceive(android.content.Context,android.content.Intent):83:83 -> onReceive
     238:242:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> onReceive
-    238:242:void onReceive(android.content.Context,android.content.Intent):81 -> onReceive
-    243:252:void onReceive(android.content.Context,android.content.Intent):81:81 -> onReceive
-    253:255:void onReceive(android.content.Context,android.content.Intent):79:79 -> onReceive
-    256:276:void onReceive(android.content.Context,android.content.Intent):83:83 -> onReceive
-    277:284:void onReceive(android.content.Context,android.content.Intent):86:86 -> onReceive
-    285:288:void onReceive(android.content.Context,android.content.Intent):87:87 -> onReceive
-    289:290:void onReceive(android.content.Context,android.content.Intent):88:88 -> onReceive
-    291:292:void onReceive(android.content.Context,android.content.Intent):89:89 -> onReceive
-    293:300:void onReceive(android.content.Context,android.content.Intent):90:90 -> onReceive
-    301:307:void onReceive(android.content.Context,android.content.Intent):92:92 -> onReceive
-    308:313:void onReceive(android.content.Context,android.content.Intent):93:93 -> onReceive
-    314:340:void onReceive(android.content.Context,android.content.Intent):96:96 -> onReceive
-    341:347:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> onReceive
-    341:347:void onReceive(android.content.Context,android.content.Intent):100 -> onReceive
-    348:353:void onReceive(android.content.Context,android.content.Intent):100:100 -> onReceive
-    354:358:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> onReceive
-    354:358:void onReceive(android.content.Context,android.content.Intent):100 -> onReceive
-    359:368:void onReceive(android.content.Context,android.content.Intent):100:100 -> onReceive
-    369:372:void onReceive(android.content.Context,android.content.Intent):98:98 -> onReceive
-    373:380:void onReceive(android.content.Context,android.content.Intent):105:105 -> onReceive
-    381:384:void onReceive(android.content.Context,android.content.Intent):107:107 -> onReceive
-    385:386:void onReceive(android.content.Context,android.content.Intent):108:108 -> onReceive
-    387:391:void onReceive(android.content.Context,android.content.Intent):109:109 -> onReceive
-    392:393:void processCallEnd(android.content.Context):119:119 -> onReceive
-    392:393:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    394:395:void processCallEnd(android.content.Context):120:120 -> onReceive
-    394:395:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    396:397:void processCallEnd(android.content.Context):121:121 -> onReceive
-    396:397:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    398:399:void processCallEnd(android.content.Context):122:122 -> onReceive
-    398:399:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
+    238:242:void onReceive(android.content.Context,android.content.Intent):83 -> onReceive
+    243:252:void onReceive(android.content.Context,android.content.Intent):83:83 -> onReceive
+    253:255:void onReceive(android.content.Context,android.content.Intent):81:81 -> onReceive
+    256:276:void onReceive(android.content.Context,android.content.Intent):85:85 -> onReceive
+    277:284:void onReceive(android.content.Context,android.content.Intent):88:88 -> onReceive
+    285:288:void onReceive(android.content.Context,android.content.Intent):90:90 -> onReceive
+    289:290:void onReceive(android.content.Context,android.content.Intent):91:91 -> onReceive
+    291:292:void onReceive(android.content.Context,android.content.Intent):92:92 -> onReceive
+    293:294:void onReceive(android.content.Context,android.content.Intent):93:93 -> onReceive
+    295:302:void onReceive(android.content.Context,android.content.Intent):94:94 -> onReceive
+    303:309:void onReceive(android.content.Context,android.content.Intent):96:96 -> onReceive
+    310:315:void onReceive(android.content.Context,android.content.Intent):97:97 -> onReceive
+    316:342:void onReceive(android.content.Context,android.content.Intent):100:100 -> onReceive
+    343:349:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> onReceive
+    343:349:void onReceive(android.content.Context,android.content.Intent):104 -> onReceive
+    350:355:void onReceive(android.content.Context,android.content.Intent):104:104 -> onReceive
+    356:360:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> onReceive
+    356:360:void onReceive(android.content.Context,android.content.Intent):104 -> onReceive
+    361:370:void onReceive(android.content.Context,android.content.Intent):104:104 -> onReceive
+    371:374:void onReceive(android.content.Context,android.content.Intent):102:102 -> onReceive
+    375:380:void onReceive(android.content.Context,android.content.Intent):107:107 -> onReceive
+    381:388:void onReceive(android.content.Context,android.content.Intent):111:111 -> onReceive
+    389:392:void onReceive(android.content.Context,android.content.Intent):113:113 -> onReceive
+    393:394:void onReceive(android.content.Context,android.content.Intent):114:114 -> onReceive
+    395:399:void onReceive(android.content.Context,android.content.Intent):115:115 -> onReceive
     400:401:void processCallEnd(android.content.Context):125:125 -> onReceive
-    400:401:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    402:405:void processCallEnd(android.content.Context):126:126 -> onReceive
-    402:405:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
+    400:401:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    402:403:void processCallEnd(android.content.Context):126:126 -> onReceive
+    402:403:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    404:405:void processCallEnd(android.content.Context):127:127 -> onReceive
+    404:405:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
     406:407:void processCallEnd(android.content.Context):128:128 -> onReceive
-    406:407:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    408:409:void processCallEnd(android.content.Context):129:129 -> onReceive
-    408:409:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    410:411:void processCallEnd(android.content.Context):130:130 -> onReceive
-    410:411:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    412:413:void processCallEnd(android.content.Context):132:132 -> onReceive
-    412:413:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    414:422:void processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):192:192 -> onReceive
-    414:422:void processCallEnd(android.content.Context):192 -> onReceive
-    414:422:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    423:425:void processCallEnd(android.content.Context):132:132 -> onReceive
-    423:425:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
-    426:429:void processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):192:192 -> onReceive
-    426:429:void processCallEnd(android.content.Context):192 -> onReceive
-    426:429:void onReceive(android.content.Context,android.content.Intent):110 -> onReceive
+    406:407:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    408:409:void processCallEnd(android.content.Context):131:131 -> onReceive
+    408:409:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    410:413:void processCallEnd(android.content.Context):132:132 -> onReceive
+    410:413:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    414:415:void processCallEnd(android.content.Context):134:134 -> onReceive
+    414:415:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    416:417:void processCallEnd(android.content.Context):135:135 -> onReceive
+    416:417:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    418:419:void processCallEnd(android.content.Context):136:136 -> onReceive
+    418:419:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    420:421:void processCallEnd(android.content.Context):137:137 -> onReceive
+    420:421:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    422:423:void processCallEnd(android.content.Context):139:139 -> onReceive
+    422:423:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    424:432:void processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):197:197 -> onReceive
+    424:432:void processCallEnd(android.content.Context):197 -> onReceive
+    424:432:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    433:435:void processCallEnd(android.content.Context):139:139 -> onReceive
+    433:435:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
+    436:439:void processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):197:197 -> onReceive
+    436:439:void processCallEnd(android.content.Context):197 -> onReceive
+    436:439:void onReceive(android.content.Context,android.content.Intent):116 -> onReceive
 com.example.telecaller_app.CallTrackingReceiver$$ExternalSyntheticLambda1 -> f0.a:
 # {"id":"sourceFile","fileName":"R8$$SyntheticClass"}
 # {"id":"com.android.tools.r8.synthesized"}
@@ -48179,38 +48209,41 @@ com.example.telecaller_app.CallTrackingReceiver$$ExternalSyntheticLambda1 -> f0.
       # {"id":"com.android.tools.r8.synthesized"}
     1:1:void f0.CallTrackingReceiver$$ExternalSyntheticLambda1.<init>(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):0:0 -> <init>
       # {"id":"com.android.tools.r8.synthesized"}
-    6:35:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):0:0 -> run
+    4:29:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):0:0 -> run
       # {"id":"com.android.tools.r8.residualsignature","signature":"()V"}
-    36:38:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):135:135 -> run
-    39:44:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):138:138 -> run
-    45:50:boolean kotlin.jvm.internal.Intrinsics.areEqual(java.lang.Object,java.lang.Object):169:169 -> run
-    45:50:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):138 -> run
-    51:54:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):139:139 -> run
-    55:69:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):140:140 -> run
-    70:81:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):146:146 -> run
-    82:85:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):148:148 -> run
-    86:113:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):149:149 -> run
-    114:120:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):153:153 -> run
-    121:123:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):154:154 -> run
-    124:127:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):155:155 -> run
-    128:154:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):156:156 -> run
-    155:166:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):161:161 -> run
-    167:188:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):164:164 -> run
-    189:217:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):167:167 -> run
-    218:228:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):171:171 -> run
-    229:237:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):179:179 -> run
-    238:240:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):175:175 -> run
-    241:242:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):183:183 -> run
-    243:248:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):185:185 -> run
-    249:253:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> run
-    249:253:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):185 -> run
-    254:259:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):186:186 -> run
-    260:265:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> run
-    260:265:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):186 -> run
-    266:272:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):186:186 -> run
-    273:276:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):184:184 -> run
-    277:280:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):182:182 -> run
-    281:302:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):190:190 -> run
+    30:32:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):142:142 -> run
+    33:38:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):145:145 -> run
+    39:44:boolean kotlin.jvm.internal.Intrinsics.areEqual(java.lang.Object,java.lang.Object):169:169 -> run
+    39:44:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):145 -> run
+    45:48:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):146:146 -> run
+    49:63:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):147:147 -> run
+    64:69:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):153:153 -> run
+    70:75:boolean kotlin.jvm.internal.Intrinsics.areEqual(java.lang.Object,java.lang.Object):169:169 -> run
+    70:75:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):153 -> run
+    76:79:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):154:154 -> run
+    80:83:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):155:155 -> run
+    84:113:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):156:156 -> run
+    114:118:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):159:159 -> run
+    119:121:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):160:160 -> run
+    122:127:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):161:161 -> run
+    128:159:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):163:163 -> run
+    160:165:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):169:169 -> run
+    166:175:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):172:172 -> run
+    176:204:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):173:173 -> run
+    205:214:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):176:176 -> run
+    215:223:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):184:184 -> run
+    224:226:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):180:180 -> run
+    227:228:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):188:188 -> run
+    229:234:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):190:190 -> run
+    235:239:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> run
+    235:239:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):190 -> run
+    240:245:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):191:191 -> run
+    246:251:kotlin.Pair kotlin.TuplesKt.to(java.lang.Object,java.lang.Object):43:43 -> run
+    246:251:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):191 -> run
+    252:258:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):191:191 -> run
+    259:262:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):189:189 -> run
+    263:266:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):187:187 -> run
+    267:288:void com.example.telecaller_app.CallTrackingReceiver.processCallEnd$lambda$0(java.lang.String,com.example.telecaller_app.CallTrackingReceiver,android.content.Context,boolean,long,boolean):195:195 -> run
 com.example.telecaller_app.CallTrackingReceiver$Companion -> R8$$REMOVED$$CLASS$$98:
 # {"id":"sourceFile","fileName":"CallTrackingReceiver.kt"}
 com.example.telecaller_app.MainActivity -> com.example.telecaller_app.MainActivity:
@@ -49317,11 +49350,11 @@ io.flutter.embedding.android.FlutterActivity -> i0.d:
     734:736:void io.flutter.embedding.android.FlutterActivityAndFragmentDelegate.onAttach(android.content.Context):220 -> onCreate
     734:736:void onCreate(android.os.Bundle):645 -> onCreate
     737:738:void com.example.telecaller_app.CallTrackingReceiver.access$setFlutterEngine$cp(io.flutter.embedding.engine.FlutterEngine):17:17 -> onCreate
-    737:738:void com.example.telecaller_app.CallTrackingReceiver$Companion.setFlutterEngine(io.flutter.embedding.engine.FlutterEngine):32 -> onCreate
+    737:738:void com.example.telecaller_app.CallTrackingReceiver$Companion.setFlutterEngine(io.flutter.embedding.engine.FlutterEngine):33 -> onCreate
     737:738:void com.example.telecaller_app.MainActivity.configureFlutterEngine(io.flutter.embedding.engine.FlutterEngine):31 -> onCreate
     737:738:void io.flutter.embedding.android.FlutterActivityAndFragmentDelegate.onAttach(android.content.Context):220 -> onCreate
     737:738:void onCreate(android.os.Bundle):645 -> onCreate
-    739:745:void com.example.telecaller_app.CallTrackingReceiver$Companion.setFlutterEngine(io.flutter.embedding.engine.FlutterEngine):33:33 -> onCreate
+    739:745:void com.example.telecaller_app.CallTrackingReceiver$Companion.setFlutterEngine(io.flutter.embedding.engine.FlutterEngine):34:34 -> onCreate
     739:745:void com.example.telecaller_app.MainActivity.configureFlutterEngine(io.flutter.embedding.engine.FlutterEngine):31 -> onCreate
     739:745:void io.flutter.embedding.android.FlutterActivityAndFragmentDelegate.onAttach(android.content.Context):220 -> onCreate
     739:745:void onCreate(android.os.Bundle):645 -> onCreate

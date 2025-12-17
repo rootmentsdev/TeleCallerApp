@@ -25,19 +25,28 @@ class ReportController extends ChangeNotifier {
   bool get isLoadingReports => _isLoadingReports;
   String? get reportsError => _reportsError;
 
-  // Static flag to indicate navigation to Equary Calls tab after call save
+  // Static flags to indicate navigation after call save
   static bool _shouldNavigateToEquaryCalls = false;
+  static bool _shouldNavigateToFollowUp = false;
 
-  // Static method to trigger navigation to Equary Calls tab
+  // Static method to trigger navigation to Equary Calls tab (New Leads - tab 5)
   static void navigateToEquaryCalls() {
     _shouldNavigateToEquaryCalls = true;
   }
 
-  // Check and handle navigation flag
+  // Static method to trigger navigation to Follow-up tab (tab 6)
+  static void navigateToFollowUp() {
+    _shouldNavigateToFollowUp = true;
+  }
+
+  // Check and handle navigation flags
   void checkNavigationFlag() {
     if (_shouldNavigateToEquaryCalls) {
       _shouldNavigateToEquaryCalls = false;
-      setSelectedCallTypeIndex(5); // Equary Calls tab
+      setSelectedCallTypeIndex(5); // New Leads tab
+    } else if (_shouldNavigateToFollowUp) {
+      _shouldNavigateToFollowUp = false;
+      setSelectedCallTypeIndex(6); // Follow-up tab
     }
   }
 
@@ -203,17 +212,18 @@ class ReportController extends ChangeNotifier {
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
 
     // Special handling for tab 6 (Follow-up Leads)
-    // Shows: Only leads with followUpDate set
+    // Shows: Only leads with followUpDate set that have been called
     if (_selectedCallTypeIndex == 6) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
       // Get all leads from repository
       List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
 
-      // Filter only leads with follow-up date set
+      // Filter only leads with follow-up date set AND have been called
       List<dynamic> followUpLeads =
           allLeads.where((lead) {
-            return lead.followUpDate != null;
+            return lead.followUpDate != null &&
+                LeadConstants.isCalledStatus(lead.callStatus);
           }).toList();
 
       // Filter by store if specified

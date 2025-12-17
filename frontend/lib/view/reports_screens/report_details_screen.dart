@@ -3,8 +3,10 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -21,7 +23,7 @@ class ReportDetailsScreen extends StatefulWidget {
 }
 
 class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
-  bool callNow = true; // Default to true for completed calls
+  bool callNow = false; // Default to false - report screen is read-only
   String? selectedCallStatus;
   String? selectedReason;
   final TextEditingController customReasonController = TextEditingController();
@@ -205,6 +207,14 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
           if (mounted) {
             Navigator.pop(context);
+
+            // If this is a follow-up lead, navigate to follow-up tab in report screen
+            if (markAsFollowUp && followUpDate != null) {
+              ReportController.navigateToFollowUp();
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                BottomNavState.navigateToReports();
+              });
+            }
           }
         }
       } else {

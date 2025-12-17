@@ -246,6 +246,7 @@ kotlin.String
 sidecarDeviceState
 o
 r
+s
 java.lang.Module
 SUSPEND
 GridLayoutManager
@@ -948,6 +949,7 @@ SidecarCompat
 ordering
 DROP_LATEST
 _exceptionsHolder
+logNumber
 transparent
 java.
 SystemSoundType.click

@@ -3,6 +3,7 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
+import 'package:telecaller_app/utils/lead_constants.dart';
 
 /// Controller for Followup Screen
 class FollowupController extends ChangeNotifier {
@@ -13,6 +14,7 @@ class FollowupController extends ChangeNotifier {
   int _selectedTabIndex = 0; // 0: Today, 1: Upcoming, 2: Overdue
   bool _isLoading = false;
   String? _error;
+  VoidCallback? _repositoryListener;
 
   // Initialize with header controller
   void init(HeaderController headerController) {
@@ -20,6 +22,10 @@ class FollowupController extends ChangeNotifier {
       _headerController?.removeListener(_onHeaderChanged);
       _headerController = headerController;
       _headerController?.addListener(_onHeaderChanged);
+    }
+    // Set up repository listener to refresh when leads change (only once)
+    if (_repositoryListener == null) {
+      setupRepositoryListener();
     }
   }
 
@@ -30,6 +36,10 @@ class FollowupController extends ChangeNotifier {
   @override
   void dispose() {
     _headerController?.removeListener(_onHeaderChanged);
+    // Remove repository listener
+    if (_repositoryListener != null) {
+      _repository.removeListener(_repositoryListener!);
+    }
     super.dispose();
   }
 
@@ -60,8 +70,19 @@ class FollowupController extends ChangeNotifier {
   List<LeadModel> getCurrentLeads() {
     final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
-    // Get all leads with follow-up dates
-    final allFollowUpLeads = _repository.followUpLeads;
+    // Get all leads with follow-up dates that have NOT been called yet
+    final allFollowUpLeads =
+        _repository.followUpLeads.where((lead) {
+          final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+          print(
+            'FollowupController: Lead ${lead.name} - callStatus: ${lead.callStatus}, isCalled: $isCalled',
+          );
+          return !isCalled;
+        }).toList();
+
+    print(
+      'FollowupController: Total uncalled follow-up leads: ${allFollowUpLeads.length}',
+    );
 
     List<LeadModel> currentLeads = [];
 
@@ -237,8 +258,19 @@ class FollowupController extends ChangeNotifier {
   }
 
   void refresh() {
+    print(
+      'FollowupController: Refreshing, current follow-up leads: ${_repository.followUpLeads.length}',
+    );
     notifyListeners();
-    _repository.addListener(notifyListeners);
+  }
+
+  /// Set up listener for repository changes
+  void setupRepositoryListener() {
+    _repositoryListener = () {
+      print('FollowupController: Repository changed, notifying listeners');
+      notifyListeners();
+    };
+    _repository.addListener(_repositoryListener!);
   }
 
   /// Fetch all leads from API to populate follow-up data

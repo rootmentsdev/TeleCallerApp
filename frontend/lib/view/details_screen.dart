@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
@@ -225,6 +226,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 _isCallActive = false;
                 _callDurationSeconds = callData.duration;
 
+                print(
+                  'DetailsScreen: Call ended - Phone: ${callData.phoneNumber}, Duration: ${callData.duration}s',
+                );
+
                 // If duration is 0, poll for the actual duration from cache
                 if (callData.duration == 0) {
                   _isWaitingForDuration = true;
@@ -244,6 +249,47 @@ class _DetailsScreenState extends State<DetailsScreen> {
         }
       }
     });
+
+    // Also set up direct MethodChannel listener for onCallEnded events
+    // This ensures we catch the duration even if CallTrackingController doesn't
+    try {
+      const platform = MethodChannel('com.telecaller.app/call_tracking');
+      platform.setMethodCallHandler((call) async {
+        if (call.method == 'onCallEnded') {
+          final phoneNumber = call.arguments['phoneNumber'] as String? ?? '';
+          final duration = call.arguments['duration'] as int? ?? 0;
+          final contactPhone = widget.contact["phone"] as String? ?? "";
+
+          print(
+            'DetailsScreen: Direct onCallEnded - Phone: $phoneNumber, Duration: ${duration}s',
+          );
+
+          if (_isPhoneNumberMatch(phoneNumber, contactPhone) && mounted) {
+            setState(() {
+              _isCallActive = false;
+              _callDurationSeconds = duration;
+
+              if (duration > 0) {
+                // Auto-set call status based on duration
+                if (selectedCallStatus == null) {
+                  selectedCallStatus = LeadConstants.callStatusConnected;
+                }
+                _isWaitingForDuration = false;
+              } else {
+                // Duration is 0, poll for it
+                _isWaitingForDuration = true;
+                _pollForDuration(phoneNumber);
+              }
+            });
+          }
+        }
+        return null;
+      });
+    } catch (e) {
+      print(
+        'DetailsScreen: Error setting up direct MethodChannel listener: $e',
+      );
+    }
   }
 
   /// Poll for duration from cache if initial duration was 0
@@ -660,25 +706,38 @@ class _DetailsScreenState extends State<DetailsScreen> {
       // Pop back to BottomNav (not all the way to LoginScreen)
       Navigator.of(context).pop();
 
-      // Only navigate to Reports tab if this is a NEW lead (not previously called)
-      // Check if the lead was previously called
-      final repository = LeadRepository();
-      final lead = repository.getLeadById(leadId!);
+      // Navigate to appropriate report tab based on lead type
+      if (leadId != null) {
+        final repository = LeadRepository();
+        final lead = repository.getLeadById(leadId);
 
-      if (lead != null) {
-        // Check if this was a new lead (not called before)
-        final wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
+        if (lead != null) {
+          // Check if this is a follow-up lead (has followUpDate set)
+          final isFollowUpLead = lead.followUpDate != null;
 
-        if (wasNewLead) {
-          // Only new leads move to "New Leads" report screen
-          ReportController.navigateToEquaryCalls();
-          if (mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              BottomNavState.navigateToReports();
-            });
+          if (isFollowUpLead) {
+            // Follow-up leads move to "Follow-up" report screen (tab 6)
+            ReportController.navigateToFollowUp();
+            if (mounted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                BottomNavState.navigateToReports();
+              });
+            }
+          } else {
+            // Non-follow-up leads: check if they were originally new
+            final wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
+            if (wasNewLead) {
+              // New leads move to "New Leads" report screen (tab 5)
+              ReportController.navigateToEquaryCalls();
+              if (mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  BottomNavState.navigateToReports();
+                });
+              }
+            }
           }
+          // If it was already called and not a follow-up, just pop back
         }
-        // If it was already called, just pop back - don't navigate to reports
       }
     }
   }

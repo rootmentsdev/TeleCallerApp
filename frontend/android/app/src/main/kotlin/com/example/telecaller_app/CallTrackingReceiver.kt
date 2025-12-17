@@ -26,6 +26,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
         private var callAnswerTime: Long = 0
         private var previousState = TelephonyManager.CALL_STATE_IDLE
         private var offhookOccurred = false
+        private var offhookCaptured = false  // Guard: capture OFFHOOK timestamp only once
         private var callEndProcessed = false  // Prevent duplicate onCallEnded events
 
         fun setFlutterEngine(engine: FlutterEngine) {
@@ -40,6 +41,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
             callAnswerTime = 0
             previousState = TelephonyManager.CALL_STATE_IDLE
             offhookOccurred = false
+            offhookCaptured = false
             callEndProcessed = false
         }
     }
@@ -84,7 +86,9 @@ class CallTrackingReceiver : BroadcastReceiver() {
                     }
 
                     TelephonyManager.EXTRA_STATE_OFFHOOK -> {
-                        if (previousState != TelephonyManager.CALL_STATE_OFFHOOK) {
+                        // Capture OFFHOOK timestamp only once per call
+                        if (!offhookCaptured) {
+                            offhookCaptured = true
                             offhookOccurred = true
                             previousState = TelephonyManager.CALL_STATE_OFFHOOK
                             callAnswerTime = System.currentTimeMillis()
@@ -93,12 +97,14 @@ class CallTrackingReceiver : BroadcastReceiver() {
                                 lastPhoneNumber = cleanNumber(phoneNumber)
                             }
                             
-                            Log.d(TAG, "✅ OFFHOOK at: $callAnswerTime, Phone: $lastPhoneNumber")
+                            Log.d(TAG, "✅ OFFHOOK captured at: $callAnswerTime, Phone: $lastPhoneNumber")
                             
                             sendToFlutterMain(
                                 "onCallStateChanged",
                                 mapOf("state" to "answered", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
                             )
+                        } else {
+                            Log.d(TAG, "⚠️ Ignoring duplicate OFFHOOK event")
                         }
                     }
 
@@ -128,6 +134,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
         callAnswerTime = 0
         previousState = TelephonyManager.CALL_STATE_IDLE
         offhookOccurred = false
+        offhookCaptured = false  // Reset guard for next call
 
         Thread {
             try {
@@ -142,33 +149,31 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
                 var duration = 0
 
-                // Only fetch duration if call was answered
-                if (offhookSnapshot && answerTimeSnapshot > 0) {
-                    // Call was answered - get duration from call log
+                // Try to get duration from call log first (most reliable)
+                if (number != null && number != "Unknown") {
                     duration = getDurationFromCallLog(context, number)
-                    Log.d(TAG, "📊 First read: duration=$duration for $number (call was answered)")
-
-                    // Retry logic: if call log shows 0, retry after 2s
-                    if (duration == 0) {
-                        Log.w(TAG, "⏳ Call was answered but call log duration=0, retrying after 2s...")
+                    if (duration > 0) {
+                        Log.d(TAG, "✅ Got duration from call log: $number, duration=${duration}s")
+                    } else if (offhookSnapshot) {
+                        // If call log didn't have duration but call was answered, retry after 2 seconds
+                        Log.w(TAG, "⏳ Duration still 0, retrying call log read after 2 seconds...")
                         Thread.sleep(2000)
                         duration = getDurationFromCallLog(context, number)
-                        Log.d(TAG, "📊 Retry read: duration=$duration for $number")
-                    }
-
-                    // If still 0, use calculated time as fallback
-                    if (duration == 0) {
-                        val calculatedDuration = ((System.currentTimeMillis() - answerTimeSnapshot) / 1000).toInt()
-                        if (calculatedDuration > 0) {
-                            duration = calculatedDuration
-                            Log.d(TAG, "⚠️ Using calculated duration: ${duration}s (call log was 0)")
+                        if (duration > 0) {
+                            Log.d(TAG, "✅ Got duration on retry: $number, duration=${duration}s")
                         }
-                    } else {
-                        Log.d(TAG, "✅ Final: $number, duration=${duration}s (from call log)")
                     }
-                } else {
+                }
+
+                // If call log didn't have duration but call was answered, calculate from timestamps
+                if (duration == 0 && offhookSnapshot && answerTimeSnapshot > 0) {
+                    // Call was answered - calculate actual talk time (from answer to end)
+                    // This excludes ringing time completely
+                    duration = ((System.currentTimeMillis() - answerTimeSnapshot) / 1000).toInt()
+                    Log.d(TAG, "✅ Calculated talk time: $number, duration=${duration}s (from answer to end, no ringing)")
+                } else if (duration == 0) {
                     // Call was not answered - duration is 0
-                    Log.d(TAG, "🔴 Call not answered: duration=0")
+                    Log.d(TAG, "🔴 Call not answered or no duration found: duration=0")
                 }
 
                 // Cache and send to Flutter
@@ -197,7 +202,8 @@ class CallTrackingReceiver : BroadcastReceiver() {
         if (phoneNumber == null || phoneNumber == "Unknown") return 0
 
         return try {
-            val cursor = context.contentResolver.query(
+            // Try exact match first
+            var cursor = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
                 arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE),
                 "${CallLog.Calls.NUMBER} = ?",
@@ -205,7 +211,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
                 "${CallLog.Calls.DATE} DESC"
             )
 
-            cursor?.use {
+            var result = cursor?.use {
                 if (it.moveToFirst()) {
                     val duration = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.DURATION))
                     val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
@@ -213,17 +219,52 @@ class CallTrackingReceiver : BroadcastReceiver() {
                     
                     // Only use if call is recent (within last 30 seconds)
                     if (ageMs < 30000) {
-                        Log.d(TAG, "📞 Call log: duration=$duration, age=${ageMs}ms")
+                        Log.d(TAG, "📞 Call log (exact match): duration=$duration, age=${ageMs}ms, phone=$phoneNumber")
                         duration
                     } else {
                         Log.w(TAG, "⚠️ Call log entry too old: ${ageMs}ms")
                         0
                     }
                 } else {
-                    Log.w(TAG, "⚠️ No call log entry found for $phoneNumber")
+                    Log.w(TAG, "⚠️ No exact call log entry found for $phoneNumber")
                     0
                 }
             } ?: 0
+
+            // If exact match didn't work, try with last 10 digits
+            if (result == 0 && phoneNumber.length >= 10) {
+                val last10 = phoneNumber.takeLast(10)
+                Log.d(TAG, "Trying last 10 digits: $last10")
+                
+                cursor = context.contentResolver.query(
+                    CallLog.Calls.CONTENT_URI,
+                    arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE, CallLog.Calls.NUMBER),
+                    null,
+                    null,
+                    "${CallLog.Calls.DATE} DESC LIMIT 5"
+                )
+
+                result = cursor?.use {
+                    while (it.moveToNext()) {
+                        val logNumber = it.getString(it.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
+                        val logNumberLast10 = logNumber.replace(Regex("[^0-9]"), "").takeLast(10)
+                        
+                        if (logNumberLast10 == last10) {
+                            val duration = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.DURATION))
+                            val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
+                            val ageMs = System.currentTimeMillis() - date
+                            
+                            if (ageMs < 30000) {
+                                Log.d(TAG, "📞 Call log (last 10 match): duration=$duration, age=${ageMs}ms, logNumber=$logNumber")
+                                return@use duration
+                            }
+                        }
+                    }
+                    0
+                } ?: 0
+            }
+
+            result
         } catch (e: Exception) {
             Log.e(TAG, "Call log error: ${e.message}")
             0
