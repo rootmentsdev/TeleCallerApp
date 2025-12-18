@@ -367,6 +367,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
           category: lead.category,
           createdAt: lead.createdAt,
           callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
+          source: lead.source,
+          leadType: lead.leadType,
         );
 
         // Update locally first

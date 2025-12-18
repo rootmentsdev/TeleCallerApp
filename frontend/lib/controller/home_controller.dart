@@ -87,7 +87,7 @@ class HomeController extends ChangeNotifier {
     final storeFilter =
         (store == null || store == 'All Stores')
             ? null
-            : StoreLocations.resolveSelection(store).location;
+            : StoreLocations.resolveSelection(store)!.location;
 
     List<T> filterStore<T extends LeadModel>(List<T> leads) {
       if (storeFilter == null) return leads;
@@ -215,7 +215,7 @@ class HomeController extends ChangeNotifier {
     final storeFilter =
         (store == null || store == 'All Stores')
             ? null
-            : StoreLocations.resolveSelection(store).location;
+            : StoreLocations.resolveSelection(store)!.location;
 
     return [
       {

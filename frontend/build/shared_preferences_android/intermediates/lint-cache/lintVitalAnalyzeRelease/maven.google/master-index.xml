@@ -39,6 +39,7 @@
   <androidx.compose.material/>
   <androidx.compose.material3/>
   <androidx.compose.material3.adaptive/>
+  <androidx.compose.remote/>
   <androidx.compose.runtime/>
   <androidx.compose.ui/>
   <androidx.concurrent/>

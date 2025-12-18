@@ -160,6 +160,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
           category: lead.category,
           createdAt: lead.createdAt,
           callDuration: lead.callDuration,
+          source: lead.source,
+          leadType: lead.leadType,
         );
 
         // Update locally

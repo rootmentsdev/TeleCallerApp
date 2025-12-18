@@ -5,6 +5,7 @@ import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
 import 'package:telecaller_app/view/reports_screens/just_dial_details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
@@ -370,11 +371,56 @@ class _ReportScreenState extends State<ReportScreen> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Icon(
-                                        Icons.arrow_forward_ios,
-                                        size: 12,
-                                        color: Colors.grey[400],
-                                      ),
+                                      // Call Duration Badge (if available)
+                                      if (contact["callDuration"] != null &&
+                                          (contact["callDuration"] as int?) !=
+                                              null &&
+                                          (contact["callDuration"] as int?)! >
+                                              0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green[50],
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.green[300]!,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.timer,
+                                                size: 12,
+                                                color: Colors.green[700],
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                FormatHelper.formatCallDurationWithUnits(
+                                                  contact["callDuration"]
+                                                      as int?,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.green[700],
+                                                  fontFamily:
+                                                      TextConstant.dmSansMedium,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      else
+                                        Icon(
+                                          Icons.arrow_forward_ios,
+                                          size: 12,
+                                          color: Colors.grey[400],
+                                        ),
                                       const SizedBox(height: 4),
                                       Text(
                                         contact["date"]!,

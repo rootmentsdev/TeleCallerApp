@@ -129,6 +129,8 @@ class CallTrackingController extends ChangeNotifier {
           category: existingLead.category,
           callDuration: callData.duration, // Update call duration
           createdAt: existingLead.createdAt,
+          source: existingLead.source,
+          leadType: existingLead.leadType,
         );
 
         await _leadRepository.updateLead(updatedLead);

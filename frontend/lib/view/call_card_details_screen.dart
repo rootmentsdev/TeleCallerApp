@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
+import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 
@@ -35,7 +36,7 @@ class CallCardDetailsScreen extends StatelessWidget {
         final storeFilter =
             (store == null || store == 'All Stores')
                 ? null
-                : StoreLocations.resolveSelection(store).location;
+                : StoreLocations.resolveSelection(store)!.location;
 
         // Get leads based on call status (title)
         List<dynamic> leads = repository.getLeadsByDate(date);
@@ -46,24 +47,25 @@ class CallCardDetailsScreen extends StatelessWidget {
         }
 
         // Filter by call status based on title
-        leads = leads.where((lead) {
-          final callStatus = lead.callStatus ?? '';
-          switch (title) {
-            case 'Connected Calls':
-              return callStatus.toLowerCase().contains('connected');
-            case 'Not Connected':
-              return callStatus.toLowerCase().contains('not connected');
-            case 'Call Back Later':
-              return callStatus.toLowerCase().contains('call back');
-            case 'Confirmed / Converted':
-              return callStatus.toLowerCase().contains('confirmed');
-            case 'Cancelled / Rejected':
-              return callStatus.toLowerCase().contains('cancelled') ||
-                  callStatus.toLowerCase().contains('rejected');
-            default:
-              return false;
-          }
-        }).toList();
+        leads =
+            leads.where((lead) {
+              final callStatus = lead.callStatus ?? '';
+              switch (title) {
+                case 'Connected Calls':
+                  return callStatus.toLowerCase().contains('connected');
+                case 'Not Connected':
+                  return callStatus.toLowerCase().contains('not connected');
+                case 'Call Back Later':
+                  return callStatus.toLowerCase().contains('call back');
+                case 'Confirmed / Converted':
+                  return callStatus.toLowerCase().contains('confirmed');
+                case 'Cancelled / Rejected':
+                  return callStatus.toLowerCase().contains('cancelled') ||
+                      callStatus.toLowerCase().contains('rejected');
+                default:
+                  return false;
+              }
+            }).toList();
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -199,9 +201,7 @@ class CallCardDetailsScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey[200]!,
-                                ),
+                                border: Border.all(color: Colors.grey[200]!),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.03),
@@ -222,11 +222,7 @@ class CallCardDetailsScreen extends StatelessWidget {
                                     color: bgColor.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Icon(
-                                    icon,
-                                    color: iconColor,
-                                    size: 24,
-                                  ),
+                                  child: Icon(icon, color: iconColor, size: 24),
                                 ),
                                 title: Text(
                                   lead.name,
@@ -253,14 +249,60 @@ class CallCardDetailsScreen extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        dateStr,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[500],
-                                          fontFamily:
-                                              TextConstant.dmSansRegular,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            dateStr,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[500],
+                                              fontFamily:
+                                                  TextConstant.dmSansRegular,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          // Call Duration Badge
+                                          if (lead.callDuration != null &&
+                                              lead.callDuration! > 0)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green[50],
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: Colors.green[300]!,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.timer,
+                                                    size: 10,
+                                                    color: Colors.green[700],
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    FormatHelper.formatCallDurationWithUnits(
+                                                      lead.callDuration,
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.green[700],
+                                                      fontFamily:
+                                                          TextConstant
+                                                              .dmSansMedium,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ],
                                   ),

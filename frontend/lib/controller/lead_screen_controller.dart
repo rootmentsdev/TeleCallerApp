@@ -173,9 +173,9 @@ class LeadScreenController extends ChangeNotifier {
       final storeFilter = _headerController?.selectedStore;
       if (storeFilter != null && storeFilter != "All Stores") {
         final selectedLocation =
-            StoreLocations.resolveSelection(storeFilter).location;
+            StoreLocations.resolveSelection(storeFilter)!.location;
         final selectedBrand =
-            StoreLocations.resolveSelection(storeFilter).brand;
+            StoreLocations.resolveSelection(storeFilter)!.brand;
 
         // Normalize for case-insensitive comparison
         final normalizedSelectedLocation =
@@ -346,8 +346,8 @@ class LeadScreenController extends ChangeNotifier {
     // We need to match against the selected store which is "Brand - Location"
     if (store != null && store != 'All Stores') {
       // Extract location from selected store for comparison
-      final selectedLocation = StoreLocations.resolveSelection(store).location;
-      final selectedBrand = StoreLocations.resolveSelection(store).brand;
+      final selectedLocation = StoreLocations.resolveSelection(store)!.location;
+      final selectedBrand = StoreLocations.resolveSelection(store)!.brand;
 
       // Normalize for case-insensitive comparison
       final normalizedSelectedLocation = selectedLocation.toLowerCase().trim();
@@ -572,7 +572,7 @@ class LeadScreenController extends ChangeNotifier {
 
     // Filter by store if specified
     if (store != null && store != 'All Stores') {
-      final selectedLocation = StoreLocations.resolveSelection(store).location;
+      final selectedLocation = StoreLocations.resolveSelection(store)!.location;
       leads = leads.where((lead) => lead.location == selectedLocation).toList();
     }
 

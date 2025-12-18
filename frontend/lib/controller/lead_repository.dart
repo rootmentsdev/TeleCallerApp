@@ -560,6 +560,8 @@ class LeadRepository extends ChangeNotifier {
               category: LeadConstants.categoryBookingConfirmation,
               callDuration: lead.callDuration,
               createdAt: lead.createdAt,
+              source: lead.source,
+              leadType: lead.leadType,
             );
             _leads.add(bookingLead);
 
@@ -996,6 +998,8 @@ class LeadRepository extends ChangeNotifier {
               category: LeadConstants.categoryRentOut,
               callDuration: lead.callDuration,
               createdAt: lead.createdAt,
+              source: lead.source,
+              leadType: lead.leadType,
             );
             _leads.add(rentOutLead);
           } else {
@@ -1061,6 +1065,8 @@ class LeadRepository extends ChangeNotifier {
           category: lead.category,
           callDuration: lead.callDuration,
           createdAt: lead.createdAt,
+          source: lead.source,
+          leadType: lead.leadType,
         );
         await updateLead(updatedLead);
       }
@@ -1112,6 +1118,8 @@ class LeadRepository extends ChangeNotifier {
           category: lead.category,
           callDuration: lead.callDuration,
           createdAt: lead.createdAt,
+          source: lead.source,
+          leadType: lead.leadType,
         );
         await updateLead(updatedLead);
       }
@@ -1161,6 +1169,8 @@ class LeadRepository extends ChangeNotifier {
           category: lead.category,
           callDuration: lead.callDuration,
           createdAt: lead.createdAt,
+          source: lead.source,
+          leadType: lead.leadType,
         );
         await updateLead(updatedLead);
       }

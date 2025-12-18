@@ -135,7 +135,8 @@ class FollowupController extends ChangeNotifier {
 
     // Filter by store if selected - extract location from "Brand - Location" format
     if (_selectedStore != null && _selectedStore != 'All Stores') {
-      final location = StoreLocations.resolveSelection(_selectedStore).location;
+      final location =
+          StoreLocations.resolveSelection(_selectedStore)!.location;
       currentLeads =
           currentLeads.where((lead) => lead.location == location).toList();
     }

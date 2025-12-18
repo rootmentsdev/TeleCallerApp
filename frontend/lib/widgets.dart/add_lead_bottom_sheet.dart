@@ -72,7 +72,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     final selectedStore = headerController.selectedStore;
     if (selectedStore != null && selectedStore != 'All Stores') {
       final storeInfo = StoreLocations.resolveSelection(selectedStore);
-      _selectedBrand = storeInfo.brand;
+      _selectedBrand = storeInfo!.brand;
       _selectedLocation = storeInfo.location;
     }
   }
