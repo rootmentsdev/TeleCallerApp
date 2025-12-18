@@ -7,6 +7,7 @@ import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 
 class AddLeadBottomSheet extends StatefulWidget {
   final String? prefilledPhoneNumber;
@@ -573,12 +574,20 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lead saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+
+        // If follow-up date is set, navigate to follow-up screen
+        if (_markAsFollowUp && _followUpDate != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            BottomNavState.navigateToFollowUp();
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Lead saved successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       print('AddLeadBottomSheet: Error saving lead: $e');

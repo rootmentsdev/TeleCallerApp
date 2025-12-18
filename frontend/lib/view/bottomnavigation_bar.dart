@@ -9,8 +9,6 @@ import 'package:telecaller_app/view/reports_screens/report_screen.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
 import 'package:telecaller_app/widgets.dart/add_lead_bottom_sheet.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
-import 'package:telecaller_app/widgets.dart/add_lead_bottom_sheet.dart';
-import 'package:telecaller_app/services/call_tracking_service.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key, this.initialIndex});
@@ -124,6 +122,11 @@ class BottomNavState extends State<BottomNav>
   // Static method to change index
   static void navigateToReports() {
     _instance?.changeIndex(3);
+  }
+
+  // Static method to navigate to follow-up screen
+  static void navigateToFollowUp() {
+    _instance?.changeIndex(4);
   }
 
   late final AnimationController _controller;

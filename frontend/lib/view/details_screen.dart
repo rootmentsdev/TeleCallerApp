@@ -655,30 +655,39 @@ class _DetailsScreenState extends State<DetailsScreen> {
     // Reset dirty flag after successful save
     _isDirty = false;
 
-    // Navigate back to previous screen (BottomNav)
+    // Navigate based on follow-up status
     if (mounted) {
-      // Pop back to BottomNav (not all the way to LoginScreen)
-      Navigator.of(context).pop();
+      // If follow-up date is set, navigate to follow-up screen
+      if (markAsFollowUp && followUpDate != null) {
+        Navigator.of(context).pop();
+        // Navigate to follow-up screen (index 4 in bottom nav)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          BottomNavState.navigateToFollowUp();
+        });
+      } else {
+        // Pop back to BottomNav (not all the way to LoginScreen)
+        Navigator.of(context).pop();
 
-      // Only navigate to Reports tab if this is a NEW lead (not previously called)
-      // Check if the lead was previously called
-      final repository = LeadRepository();
-      final lead = repository.getLeadById(leadId!);
+        // Only navigate to Reports tab if this is a NEW lead (not previously called)
+        // Check if the lead was previously called
+        final repository = LeadRepository();
+        final lead = repository.getLeadById(leadId!);
 
-      if (lead != null) {
-        // Check if this was a new lead (not called before)
-        final wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
+        if (lead != null) {
+          // Check if this was a new lead (not called before)
+          final wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
 
-        if (wasNewLead) {
-          // Only new leads move to "New Leads" report screen
-          ReportController.navigateToEquaryCalls();
-          if (mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              BottomNavState.navigateToReports();
-            });
+          if (wasNewLead) {
+            // Only new leads move to "New Leads" report screen
+            ReportController.navigateToEquaryCalls();
+            if (mounted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                BottomNavState.navigateToReports();
+              });
+            }
           }
+          // If it was already called, just pop back - don't navigate to reports
         }
-        // If it was already called, just pop back - don't navigate to reports
       }
     }
   }

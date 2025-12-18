@@ -4,7 +4,7 @@ import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/view/details_screen.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 
 class FollowupScreen extends StatefulWidget {
@@ -268,14 +268,14 @@ class _FollowupScreenState extends State<FollowupScreen> {
   Widget _buildCallItem(Map<String, dynamic> call, BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Open details screen when follow-up lead is clicked
+        // Open report details screen (read-only view) when follow-up lead is clicked
         Navigator.push(
           context,
           MaterialPageRoute(
             builder:
-                (context) => DetailsScreen(
+                (context) => ReportDetailsScreen(
                   contact: call,
-                  callTypeIndex: 0, // All Calls (generic lead type)
+                  callTypeIndex: 6, // Follow-up tab
                 ),
           ),
         );

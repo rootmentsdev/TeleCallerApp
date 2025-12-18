@@ -5,6 +5,7 @@ import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -205,6 +206,16 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
           if (mounted) {
             Navigator.pop(context);
+
+            // If this is a follow-up screen (callTypeIndex == 6) and follow-up is marked as done,
+            // navigate to report screen's follow-up tab
+            if (widget.callTypeIndex == 6 && !markAsFollowUp) {
+              // Follow-up is done (no longer needs follow-up), navigate to report screen
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                // Navigate to reports screen and set follow-up tab
+                BottomNavState.navigateToReports();
+              });
+            }
           }
         }
       } else {

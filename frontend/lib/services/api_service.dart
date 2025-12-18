@@ -501,7 +501,7 @@ class ApiService {
 
       // Add optional fields if provided
       if (remarks != null && remarks.isNotEmpty) {
-        requestBody[''] = remarks;
+        requestBody['remarks'] = remarks;
       }
       if (followUpFlag) {
         requestBody['follow_up_flag'] = followUpFlag;
