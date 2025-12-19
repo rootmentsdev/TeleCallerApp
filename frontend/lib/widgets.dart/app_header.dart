@@ -121,11 +121,7 @@ class AppHeader extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value:
-                              headerController.selectedStore ==
-                                      StoreLocations.allStoresLabel
-                                  ? null
-                                  : headerController.selectedStore,
+                          value: headerController.selectedStore,
                           isExpanded: true,
                           dropdownColor: ColorConstant.primaryColor,
                           icon: const Icon(
@@ -153,7 +149,9 @@ class AppHeader extends StatelessWidget {
                                 );
                               }).toList(),
                           onChanged: (String? newValue) {
-                            headerController.setSelectedStore(newValue);
+                            if (newValue != null) {
+                              headerController.setSelectedStore(newValue);
+                            }
                           },
                         ),
                       ),
@@ -178,11 +176,7 @@ class AppHeader extends StatelessWidget {
                               Expanded(
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButton<String>(
-                                    value:
-                                        headerController.selectedStore ==
-                                                StoreLocations.allStoresLabel
-                                            ? null
-                                            : headerController.selectedStore,
+                                    value: headerController.selectedStore,
                                     isExpanded: true,
                                     dropdownColor: ColorConstant.primaryColor,
                                     icon: const Icon(
@@ -212,9 +206,11 @@ class AppHeader extends StatelessWidget {
                                           );
                                         }).toList(),
                                     onChanged: (String? newValue) {
-                                      headerController.setSelectedStore(
-                                        newValue,
-                                      );
+                                      if (newValue != null) {
+                                        headerController.setSelectedStore(
+                                          newValue,
+                                        );
+                                      }
                                     },
                                   ),
                                 ),

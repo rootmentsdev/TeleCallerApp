@@ -10,8 +10,6 @@ class StoreSelection {
 class StoreLocations {
   StoreLocations._(); // Prevent instantiation
 
-  static const String allStoresLabel = 'All Stores';
-
   /// Store lists by brand
   static const List<String> suitorGuyStores = [
     'Trivandrum',
@@ -55,10 +53,8 @@ class StoreLocations {
   }
 
   /// Combined store dropdown options
-  static List<String> buildStoreOptions({bool includeAll = true}) {
+  static List<String> buildStoreOptions() {
     final List<String> options = [];
-
-    if (includeAll) options.add(allStoresLabel);
 
     brandStores.forEach((brand, locations) {
       for (final location in locations) {
@@ -74,10 +70,8 @@ class StoreLocations {
     final fallbackBrand = defaultBrand;
     final fallbackLocation = defaultLocationForBrand(defaultBrand);
 
-    // Handle null or "All Stores"
-    if (storeOption == null ||
-        storeOption.isEmpty ||
-        storeOption == allStoresLabel) {
+    // Handle null or empty
+    if (storeOption == null || storeOption.isEmpty) {
       return StoreSelection(brand: fallbackBrand, location: fallbackLocation);
     }
 

@@ -5,11 +5,20 @@ import 'package:telecaller_app/utils/store_location.dart';
 /// This is used across Home Screen, Lead Screen, and Report Screen
 class HeaderController extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
-  String? _selectedStore;
+  late String _selectedStore;
+
+  HeaderController() {
+    // Initialize with first available store (no "All Stores")
+    final stores = StoreLocations.buildStoreOptions();
+    _selectedStore =
+        stores.isNotEmpty
+            ? stores.first
+            : '${StoreLocations.defaultBrand} - ${StoreLocations.defaultLocationForBrand(StoreLocations.defaultBrand)}';
+  }
 
   // Getters
   DateTime get selectedDate => _selectedDate;
-  String? get selectedStore => _selectedStore ?? StoreLocations.allStoresLabel;
+  String get selectedStore => _selectedStore;
 
   // Setters
   void setSelectedDate(DateTime date) {
@@ -21,7 +30,7 @@ class HeaderController extends ChangeNotifier {
     }
   }
 
-  void setSelectedStore(String? store) {
+  void setSelectedStore(String store) {
     if (_selectedStore != store) {
       _selectedStore = store;
       notifyListeners();
@@ -31,7 +40,11 @@ class HeaderController extends ChangeNotifier {
   // Reset to defaults
   void reset() {
     _selectedDate = DateTime.now();
-    _selectedStore = null;
+    final stores = StoreLocations.buildStoreOptions();
+    _selectedStore =
+        stores.isNotEmpty
+            ? stores.first
+            : '${StoreLocations.defaultBrand} - ${StoreLocations.defaultLocationForBrand(StoreLocations.defaultBrand)}';
     notifyListeners();
   }
 }

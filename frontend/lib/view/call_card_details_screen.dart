@@ -46,24 +46,25 @@ class CallCardDetailsScreen extends StatelessWidget {
         }
 
         // Filter by call status based on title
-        leads = leads.where((lead) {
-          final callStatus = lead.callStatus ?? '';
-          switch (title) {
-            case 'Connected Calls':
-              return callStatus.toLowerCase().contains('connected');
-            case 'Not Connected':
-              return callStatus.toLowerCase().contains('not connected');
-            case 'Call Back Later':
-              return callStatus.toLowerCase().contains('call back');
-            case 'Confirmed / Converted':
-              return callStatus.toLowerCase().contains('confirmed');
-            case 'Cancelled / Rejected':
-              return callStatus.toLowerCase().contains('cancelled') ||
-                  callStatus.toLowerCase().contains('rejected');
-            default:
-              return false;
-          }
-        }).toList();
+        leads =
+            leads.where((lead) {
+              final callStatus = lead.callStatus ?? '';
+              switch (title) {
+                case 'Connected Calls':
+                  return callStatus.toLowerCase().contains('connected');
+                case 'Not Connected':
+                  return callStatus.toLowerCase().contains('not connected');
+                case 'Call Back Later':
+                  return callStatus.toLowerCase().contains('call back');
+                case 'Confirmed / Converted':
+                  return callStatus.toLowerCase().contains('confirmed');
+                case 'Cancelled / Rejected':
+                  return callStatus.toLowerCase().contains('cancelled') ||
+                      callStatus.toLowerCase().contains('rejected');
+                default:
+                  return false;
+              }
+            }).toList();
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -199,9 +200,7 @@ class CallCardDetailsScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey[200]!,
-                                ),
+                                border: Border.all(color: Colors.grey[200]!),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.03),
@@ -222,11 +221,7 @@ class CallCardDetailsScreen extends StatelessWidget {
                                     color: bgColor.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Icon(
-                                    icon,
-                                    color: iconColor,
-                                    size: 24,
-                                  ),
+                                  child: Icon(icon, color: iconColor, size: 24),
                                 ),
                                 title: Text(
                                   lead.name,
