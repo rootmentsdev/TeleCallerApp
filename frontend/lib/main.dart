@@ -1,3 +1,4 @@
+import 'package:clarity_flutter/clarity_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
@@ -15,6 +16,7 @@ import 'package:telecaller_app/services/api_service.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  final config = ClarityConfig(projectId: "uns0n3uysr");
   // Set up session expiry callback
   ApiService.onSessionExpired = () {
     // Clear auth and navigate to login
@@ -25,12 +27,17 @@ void main() {
     );
   };
 
-  runApp(const MyApp());
+  runApp(ClarityWidget(app: MyApp(), clarityConfig: config));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
