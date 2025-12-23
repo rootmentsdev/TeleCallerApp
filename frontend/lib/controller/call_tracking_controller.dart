@@ -28,76 +28,36 @@ class CallTrackingController extends ChangeNotifier {
   bool get isCallActive => _callTrackingService.isCallActive;
   int get currentCallDuration => _callTrackingService.currentCallDuration;
 
-  /// Initialize call tracking
   Future<bool> initialize() async {
     if (_isInitialized) return true;
-
     try {
-      // Initialize call tracking service
-      final success = await _callTrackingService.initialize();
-      if (!success) {
-        print(
-          'CallTrackingController: Failed to initialize call tracking service',
-        );
-        return false;
-      }
-
-      // Subscribe to call events
+      if (!await _callTrackingService.initialize()) return false;
       _subscribeToCallEvents();
-
       _isInitialized = true;
-      print('CallTrackingController: Successfully initialized');
       return true;
     } catch (e) {
-      print('CallTrackingController: Error during initialization: $e');
       return false;
     }
   }
 
-  /// Subscribe to call tracking events
   void _subscribeToCallEvents() {
-    // Listen to all call state changes
-    _callDataSubscription = _callTrackingService.onCallData.listen(
-      (callData) {
-        print('CallTrackingController: Call state changed: $callData');
-        _currentCall = callData;
+    _callDataSubscription = _callTrackingService.onCallData.listen((callData) {
+      _currentCall = callData;
+      onCallStateChanged?.call(callData);
+      notifyListeners();
+    }, onError: (_) {});
 
-        // Notify UI about call state change
-        onCallStateChanged?.call(callData);
-        notifyListeners();
-      },
-      onError: (error) {
-        print('CallTrackingController: Call data stream error: $error');
-      },
-    );
-
-    // Listen specifically to call ended events
     _callEndedSubscription = _callTrackingService.onCallEnded.listen(
-      (callData) {
-        print('CallTrackingController: Call ended: $callData');
-        _handleCallEnded(callData);
-      },
-      onError: (error) {
-        print('CallTrackingController: Call ended stream error: $error');
-      },
+      _handleCallEnded,
+      onError: (_) {},
     );
   }
 
-  /// Handle call ended event
   void _handleCallEnded(CallData callData) {
     _lastEndedCall = callData;
     _currentCall = null;
-
-    print(
-      'CallTrackingController: Processing ended call - Phone: ${callData.phoneNumber}, Duration: ${callData.duration}s',
-    );
-
-    // Check if this call matches any existing lead
     _updateExistingLeadWithCallData(callData);
-
-    // Notify UI callback
     onCallEnded?.call(callData.phoneNumber, callData.duration);
-
     notifyListeners();
   }
 

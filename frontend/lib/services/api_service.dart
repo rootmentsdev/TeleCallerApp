@@ -135,8 +135,7 @@ class ApiService {
 
     try {
       final headers = await _getAuthHeaders();
-      print('ApiService: Fetching Rent-Out leads');
-      print('ApiService: URL => $url');
+      print('ApiService: Fetching Rent-Out leads from: $url');
 
       final response = await http.get(url, headers: headers);
 
@@ -153,6 +152,9 @@ class ApiService {
           }
           if (decoded.containsKey('data')) {
             return {'data': decoded['data']};
+          }
+          if (decoded.containsKey('return')) {
+            return {'data': decoded['return']};
           }
           // If map but no known key, wrap entire thing
           return {
@@ -171,7 +173,28 @@ class ApiService {
         );
       }
     } catch (e) {
-      print('ApiService: Error fetching Rent-Out leads: $e');
+      rethrow;
+    }
+  }
+
+  // Function to get Return lead details
+  Future<Map<String, dynamic>> getReturn(String id) async {
+    final url = Uri.parse(ApiConfig.getReturn(id));
+
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load Return lead: Status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
       rethrow;
     }
   }

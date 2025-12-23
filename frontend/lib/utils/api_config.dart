@@ -12,7 +12,7 @@ class ApiConfig {
   static const String lossOfSale = "lossOfSale";
   static const String walkIn = "general";
   static const String bookingConfirmation = "bookingConfirmation";
-  static const String rentOut = "rentOutFeedback";
+  static const String rentOut = "return";
 
   // Sources
   static const String sourceWalkIn = "Walk-in";
@@ -31,7 +31,9 @@ class ApiConfig {
     String url = "$leadsEndpoint?leadType=$lossOfSale";
 
     if (store != null && store.isNotEmpty) {
-      url += "&store=${Uri.encodeComponent(store)}";
+      // Extract just the location from "Brand - Location" format
+      final location = store.contains(' - ') ? store.split(' - ').last : store;
+      url += "&store=${Uri.encodeComponent(location)}";
     }
 
     if (enquiryFrom != null && enquiryTo != null) {
@@ -57,7 +59,9 @@ class ApiConfig {
     String url = "$leadsEndpoint?leadType=$bookingConfirmation";
 
     if (store != null && store.isNotEmpty) {
-      url += "&store=${Uri.encodeComponent(store)}";
+      // Extract just the location from "Brand - Location" format
+      final location = store.contains(' - ') ? store.split(' - ').last : store;
+      url += "&store=${Uri.encodeComponent(location)}";
     }
 
     return url;
@@ -67,7 +71,9 @@ class ApiConfig {
     String url = "$leadsEndpoint?leadType=$rentOut";
 
     if (store != null && store.isNotEmpty) {
-      url += "&store=${Uri.encodeComponent(store)}";
+      // Extract just the location from "Brand - Location" format
+      final location = store.contains(' - ') ? store.split(' - ').last : store;
+      url += "&store=${Uri.encodeComponent(location)}";
     }
 
     return url;
@@ -177,6 +183,10 @@ class ApiConfig {
 
   static String updateBookingConfirmation(String id) {
     return "$pagesEndpoint/booking-confirmation/$id";
+  }
+
+  static String getReturn(String id) {
+    return "$pagesEndpoint/return/$id";
   }
 
   /// Reports API endpoint

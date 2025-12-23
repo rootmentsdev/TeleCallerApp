@@ -43,7 +43,6 @@ class ReportController extends ChangeNotifier {
 
   // Force refresh data from repository
   Future<void> forceRefreshData() async {
-    print('ReportController: Force refreshing data');
     await _repository.forceReloadFromStorage();
     notifyListeners();
   }
@@ -496,7 +495,6 @@ class ReportController extends ChangeNotifier {
   }
 
   /// Fetch reports from API
-  /// This fetches edited leads (reports) from the backend API
   Future<void> fetchReportsFromApi({
     String? leadType,
     String? editedBy,
@@ -509,11 +507,6 @@ class ReportController extends ChangeNotifier {
       _isLoadingReports = true;
       _reportsError = null;
       notifyListeners();
-
-      print('ReportController: Fetching reports from API');
-      print(
-        'ReportController: leadType=$leadType, dateFrom=$dateFrom, dateTo=$dateTo, page=$page',
-      );
 
       final response = await _apiService.getReports(
         leadType: leadType,
@@ -528,17 +521,11 @@ class ReportController extends ChangeNotifier {
       _reports = reportsResponse.reports;
       _pagination = reportsResponse.pagination;
 
-      print('ReportController: Fetched ${_reports.length} reports');
-      print(
-        'ReportController: Pagination - page=${_pagination?.page}, total=${_pagination?.total}',
-      );
-
       _isLoadingReports = false;
       notifyListeners();
     } catch (e) {
       _isLoadingReports = false;
       _reportsError = e.toString();
-      print('ReportController: Error fetching reports: $e');
       notifyListeners();
       rethrow;
     }
@@ -589,11 +576,6 @@ class ReportController extends ChangeNotifier {
         break;
     }
 
-    print(
-      'ReportController: Fetching reports for date: $dateStr, leadType: $leadType',
-    );
-
-    // Fetch reports with date filter
     await fetchReportsFromApi(
       leadType: leadType,
       dateFrom: dateStr,

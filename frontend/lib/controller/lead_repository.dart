@@ -14,17 +14,14 @@ class LeadRepository extends ChangeNotifier {
   LeadRepository._internal() {
     // Initialize asynchronously without blocking
     _initialize().catchError((error) {
-      // Silently handle initialization errors - app should still work
-      print('LeadRepository: Error during initialization: $error');
+      // Silently handle initialization errors
     });
   }
 
   /// Force reload data from SharedPreferences
   /// This should be called after login to ensure data is properly loaded
   Future<void> forceReloadFromStorage() async {
-    print('LeadRepository: Force reloading data from storage');
     await _loadLeads();
-    print('LeadRepository: Loaded ${_leads.length} leads from storage');
     notifyListeners();
   }
 
@@ -33,72 +30,12 @@ class LeadRepository extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final leadsJson = prefs.getString(_storageKey);
-
-      print('=== LeadRepository Data Integrity Check ===');
-      print('SharedPreferences key: $_storageKey');
-      print('Raw JSON exists: ${leadsJson != null}');
-      print('Raw JSON length: ${leadsJson?.length ?? 0}');
-      print('In-memory leads count: ${_leads.length}');
-
       if (leadsJson != null && leadsJson.isNotEmpty) {
         try {
-          final List<dynamic> leadsList = json.decode(leadsJson);
-          print('Parsed leads from storage: ${leadsList.length}');
-
-          // Count different types
-          int calledCount = 0;
-          int followUpCount = 0;
-          int enquiryCount = 0;
-
-          for (final leadMap in leadsList) {
-            final callStatus = leadMap['callStatus']?.toString() ?? '';
-            final followUpDate = leadMap['followUpDate']?.toString();
-
-            if (LeadConstants.isCalledStatus(callStatus)) {
-              calledCount++;
-            }
-            if (followUpDate != null && followUpDate.isNotEmpty) {
-              followUpCount++;
-            }
-            if (LeadConstants.isCalledStatus(callStatus) ||
-                (followUpDate != null && followUpDate.isNotEmpty)) {
-              enquiryCount++;
-            }
-          }
-
-          print('Storage breakdown:');
-          print('  - Called leads: $calledCount');
-          print('  - Follow-up leads: $followUpCount');
-          print('  - Enquiry leads: $enquiryCount');
-        } catch (e) {
-          print('Error parsing stored JSON: $e');
-        }
+          json.decode(leadsJson);
+        } catch (e) {}
       }
-
-      // Check in-memory data
-      final memoryCalledCount =
-          _leads
-              .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
-              .length;
-      final memoryFollowUpCount =
-          _leads.where((lead) => lead.needsFollowUp).length;
-      final memoryEnquiryCount =
-          _leads
-              .where(
-                (lead) =>
-                    LeadConstants.isCalledStatus(lead.callStatus) ||
-                    lead.needsFollowUp,
-              )
-              .length;
-
-      print('In-memory breakdown:');
-      print('  - Called leads: $memoryCalledCount');
-      print('  - Follow-up leads: $memoryFollowUpCount');
-      print('  - Enquiry leads: $memoryEnquiryCount');
-      print('=== End Data Integrity Check ===');
-    } catch (e) {
-      print('LeadRepository: Error in data integrity check: $e');
-    }
+    } catch (e) {}
   }
 
   final List<LeadModel> _leads = [];
@@ -117,7 +54,6 @@ class LeadRepository extends ChangeNotifier {
     // Initialize asynchronously if not already done (for immediate access)
     if (!_isInitialized) {
       _initialize().then((_) => _isInitialized = true).catchError((error) {
-        print('LeadRepository: Error initializing in allLeads getter: $error');
         return false;
       });
     }
@@ -162,13 +98,8 @@ class LeadRepository extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final leadsJson = prefs.getString(_storageKey);
 
-      print('LeadRepository: Loading leads from SharedPreferences');
-      print('LeadRepository: Raw JSON length: ${leadsJson?.length ?? 0}');
-
       if (leadsJson != null && leadsJson.isNotEmpty) {
         final List<dynamic> leadsList = json.decode(leadsJson);
-        print('LeadRepository: Parsed ${leadsList.length} leads from storage');
-
         _leads.clear();
         _leads.addAll(
           leadsList
@@ -177,36 +108,11 @@ class LeadRepository extends ChangeNotifier {
               )
               .toList(),
         );
-
-        // Count different types of leads for debugging
-        final calledLeads =
-            _leads
-                .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
-                .length;
-        final followUpLeads = _leads.where((lead) => lead.needsFollowUp).length;
-        final enquiryLeads =
-            _leads
-                .where(
-                  (lead) =>
-                      LeadConstants.isCalledStatus(lead.callStatus) ||
-                      lead.needsFollowUp,
-                )
-                .length;
-
-        print('LeadRepository: Loaded leads breakdown:');
-        print('  - Total leads: ${_leads.length}');
-        print('  - Called leads: $calledLeads');
-        print('  - Follow-up leads: $followUpLeads');
-        print('  - Enquiry leads (called + follow-up): $enquiryLeads');
-
-        // Notify listeners that leads have been loaded from persistence
         notifyListeners();
       } else {
-        print('LeadRepository: No leads found in SharedPreferences');
         _leads.clear();
       }
     } catch (e) {
-      print('LeadRepository: Error loading leads from SharedPreferences: $e');
       // If loading fails, start with empty list
       _leads.clear();
     }
@@ -219,24 +125,7 @@ class LeadRepository extends ChangeNotifier {
         _leads.map((lead) => lead.toMap()).toList(),
       );
       await prefs.setString(_storageKey, leadsJson);
-
-      // Count different types of leads for debugging
-      final calledLeads =
-          _leads
-              .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
-              .length;
-      final followUpLeads = _leads.where((lead) => lead.needsFollowUp).length;
-
-      print(
-        'LeadRepository: Saved ${_leads.length} leads to SharedPreferences',
-      );
-      print('  - Called leads: $calledLeads');
-      print('  - Follow-up leads: $followUpLeads');
-      print('  - JSON size: ${leadsJson.length} characters');
-    } catch (e) {
-      // Handle save error silently or log it
-      print('LeadRepository: Error saving leads: $e');
-    }
+    } catch (e) {}
   }
 
   // ========== CRUD Operations ==========
@@ -271,16 +160,10 @@ class LeadRepository extends ChangeNotifier {
       final oldLead = _leads[index];
       _leads[index] = updatedLead;
 
-      // Check if lead should be moved to reports
-      // Move to reports if the lead status changed from uncalled to called
       final wasUncalled = LeadConstants.isUncalledStatus(oldLead.callStatus);
       final isNowCalled = LeadConstants.isCalledStatus(updatedLead.callStatus);
 
       if (wasUncalled && isNowCalled && updatedLead.followUpDate == null) {
-        print(
-          'LeadRepository: Lead ${updatedLead.id} (${updatedLead.name}) status changed from "${oldLead.callStatus}" to "${updatedLead.callStatus}", moving to reports',
-        );
-        // Remove from active leads (move to reports)
         _leads.removeAt(index);
       }
 
@@ -484,69 +367,48 @@ class LeadRepository extends ChangeNotifier {
 
   // ========== API Integration ==========
 
+  /// Parse API response to extract leads data
+  List<dynamic> _parseResponseToLeadsList(Map<String, dynamic> response) {
+    if (response.containsKey('data')) {
+      final data = response['data'];
+      if (data is List) return data;
+      if (data is Map<String, dynamic> && data.containsKey('leads')) {
+        final leads = data['leads'];
+        if (leads is List) return leads;
+      }
+    }
+    if (response.containsKey('leads') && response['leads'] is List)
+      return response['leads'] as List;
+    if (response.containsKey('results') && response['results'] is List)
+      return response['results'] as List;
+
+    for (var entry in response.entries) {
+      if (entry.value is List) return entry.value as List;
+    }
+    return [];
+  }
+
   /// Fetch Booking Confirmation leads from API and sync with repository
-  /// This will replace existing booking confirmation leads with fresh data from API
   Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
     try {
       await ensureInitialized();
-
-      // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getBookingConfirmationLeads(
         store: storeFilter,
       );
+      final leadsData = _parseResponseToLeadsList(response);
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // If no recognized key, check if any value is a list
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
-
-      // Remove existing booking confirmation leads (to avoid duplicates)
-      // Remove existing booking confirmation leads (to avoid duplicates)
-      // BUT: Preserve booking confirmation leads that have follow-up dates set
       _leads.removeWhere(
         (lead) =>
             lead.category == LeadConstants.categoryBookingConfirmation &&
-            !lead.needsFollowUp, // Keep if it has follow-up date
+            !lead.needsFollowUp,
       );
-
-      // Convert API data to LeadModel and add to repository
-      int failedCount = 0;
 
       for (var leadData in leadsData) {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
-            // Ensure category is set to Booking Confirmation
             final bookingLead = LeadModel(
               id: lead.id,
               name: lead.name,
@@ -563,51 +425,34 @@ class LeadRepository extends ChangeNotifier {
             );
             _leads.add(bookingLead);
 
-            // Store booking confirmation specific data
-            final bookingNumber =
-                leadData['booking_number']?.toString() ??
-                leadData['bookingNumber']?.toString() ??
-                '';
-            final enquiryDate =
-                leadData['enquiry_date']?.toString() ??
-                leadData['enquiryDate']?.toString();
-            final functionDate =
-                leadData['function_date']?.toString() ??
-                leadData['functionDate']?.toString();
-            final securityAmount =
-                leadData['security_amount']?.toString() ??
-                leadData['securityAmount']?.toString();
-
             _bookingConfirmationData[lead.id] = {
-              'bookingNumber': bookingNumber,
-              'enquiryDate': enquiryDate,
-              'functionDate': functionDate,
-              'securityAmount': securityAmount,
+              'bookingNumber':
+                  leadData['booking_number']?.toString() ??
+                  leadData['bookingNumber']?.toString() ??
+                  '',
+              'enquiryDate':
+                  leadData['enquiry_date']?.toString() ??
+                  leadData['enquiryDate']?.toString(),
+              'functionDate':
+                  leadData['function_date']?.toString() ??
+                  leadData['functionDate']?.toString(),
+              'securityAmount':
+                  leadData['security_amount']?.toString() ??
+                  leadData['securityAmount']?.toString(),
             };
-          } else {
-            failedCount++;
           }
         } catch (e) {
-          failedCount++;
-          print('LeadRepository: Error parsing booking confirmation lead: $e');
+          // Continue processing other leads
         }
-      }
-
-      if (failedCount > 0) {
-        print(
-          'LeadRepository: Failed to parse $failedCount booking confirmation leads',
-        );
       }
 
       await _saveLeads();
     } catch (e) {
-      print('LeadRepository: Error fetching Booking Confirmation leads: $e');
       rethrow;
     }
   }
 
   /// Fetch Loss of Sale leads from API and sync with repository
-  /// This will replace existing loss of sale leads with fresh data from API
   Future<void> fetchLossOfSaleLeadsFromApi({
     String? store,
     String? enquiryFrom,
@@ -619,7 +464,6 @@ class LeadRepository extends ChangeNotifier {
   }) async {
     try {
       await ensureInitialized();
-
       final response = await _apiService.getLossOfSaleLeads(
         store: store,
         enquiryFrom: enquiryFrom,
@@ -629,72 +473,25 @@ class LeadRepository extends ChangeNotifier {
         visitFrom: visitFrom,
         visitTo: visitTo,
       );
+      final leadsData = _parseResponseToLeadsList(response);
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // If no recognized key, check if any value is a list
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
-
-      // Remove existing loss of sale leads (to avoid duplicates)
-      // BUT: Preserve loss of sale leads that have follow-up dates set
       _leads.removeWhere(
         (lead) =>
             lead.category == LeadConstants.categoryLossOfSales &&
-            !lead.needsFollowUp, // Keep if it has follow-up date
+            !lead.needsFollowUp,
       );
-
-      // Convert API data to LeadModel and add to repository
-      int failedCount = 0;
 
       for (var leadData in leadsData) {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
-          if (lead != null) {
-            _leads.add(lead);
-          } else {
-            failedCount++;
-          }
+          if (lead != null) _leads.add(lead);
         } catch (e) {
-          failedCount++;
-          print('LeadRepository: Error parsing lead: $e');
+          // Continue processing other leads
         }
-      }
-
-      if (failedCount > 0) {
-        print('LeadRepository: Failed to parse $failedCount leads');
       }
 
       await _saveLeads();
     } catch (e) {
-      print('LeadRepository: Error fetching Loss of Sale leads: $e');
       rethrow;
     }
   }
@@ -919,70 +716,29 @@ class LeadRepository extends ChangeNotifier {
         createdAt: createdAt,
       );
     } catch (e) {
-      print('Error parsing API lead: $e');
       return null;
     }
   }
 
   /// Fetch Rent-Out leads from API and sync with repository
-  /// This will replace existing rent-out leads with fresh data from API
   Future<void> fetchRentOutLeadsFromApi({String? store}) async {
     try {
       await ensureInitialized();
-
-      // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getRentOutLeads(store: storeFilter);
+      final leadsData = _parseResponseToLeadsList(response);
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // Fallback: take first list in map
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
-
-      // Remove existing rent-out leads (to avoid duplicates)
-      // BUT: Preserve rent-out leads that have follow-up dates set
       _leads.removeWhere(
         (lead) =>
             lead.category == LeadConstants.categoryRentOut &&
-            !lead.needsFollowUp, // Keep if it has follow-up date
+            !lead.needsFollowUp,
       );
-
-      int failedCount = 0;
 
       for (var leadData in leadsData) {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
-            // Ensure category is Rent-Out
             final rentOutLead = LeadModel(
               id: lead.id,
               name: lead.name,
@@ -998,23 +754,16 @@ class LeadRepository extends ChangeNotifier {
               createdAt: lead.createdAt,
             );
             _leads.add(rentOutLead);
-          } else {
-            failedCount++;
           }
         } catch (e) {
-          failedCount++;
-          print('LeadRepository: Error parsing Rent-Out lead: $e');
+          // Continue processing other leads
         }
-      }
-
-      if (failedCount > 0) {
-        print('LeadRepository: Failed to parse $failedCount Rent-Out leads');
       }
 
       await _saveLeads();
     } catch (e) {
-      print('LeadRepository: Error fetching Rent-Out leads: $e');
-      rethrow;
+      // Silently handle Rent-Out fetch errors - endpoint may not be available
+      // This prevents the entire lead fetch from failing
     }
   }
 
@@ -1045,7 +794,6 @@ class LeadRepository extends ChangeNotifier {
         remarks: remarks,
       );
 
-      // Update local lead if it exists
       final lead = getLeadById(id);
       if (lead != null) {
         final updatedLead = LeadModel(
@@ -1065,7 +813,6 @@ class LeadRepository extends ChangeNotifier {
         await updateLead(updatedLead);
       }
     } catch (e) {
-      print('LeadRepository: Error updating Loss of Sale lead: $e');
       rethrow;
     }
   }
@@ -1093,7 +840,6 @@ class LeadRepository extends ChangeNotifier {
         remarks: remarks,
       );
 
-      // Update local lead if it exists
       final lead = getLeadById(id);
       if (lead != null) {
         final updatedLead = LeadModel(
@@ -1116,7 +862,6 @@ class LeadRepository extends ChangeNotifier {
         await updateLead(updatedLead);
       }
     } catch (e) {
-      print('LeadRepository: Error updating Rent-Out lead: $e');
       rethrow;
     }
   }
@@ -1142,7 +887,6 @@ class LeadRepository extends ChangeNotifier {
         remarks: remarks,
       );
 
-      // Update local lead if it exists
       final lead = getLeadById(id);
       if (lead != null) {
         final updatedLead = LeadModel(
@@ -1165,13 +909,11 @@ class LeadRepository extends ChangeNotifier {
         await updateLead(updatedLead);
       }
     } catch (e) {
-      print('LeadRepository: Error updating Booking Confirmation lead: $e');
       rethrow;
     }
   }
 
   /// Fetch all leads from API and sync with repository
-  /// This will fetch all leads (across all categories) with pagination, store filter, and date filter support
   Future<void> fetchAllLeadsFromApi({
     String? store,
     int? page,
@@ -1188,8 +930,6 @@ class LeadRepository extends ChangeNotifier {
   }) async {
     try {
       await ensureInitialized();
-
-      // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getAllLeads(
@@ -1206,48 +946,9 @@ class LeadRepository extends ChangeNotifier {
         dateField: dateField,
         createdAt: createdAt,
       );
+      final leadsData = _parseResponseToLeadsList(response);
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // If no recognized key, check if any value is a list
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
-
-      // Debug: Print how many leads were received
-      print('LeadRepository: Received ${leadsData.length} leads from API');
-
-      // If page is specified, we might want to merge/update existing leads
-      // Otherwise, replace all leads with fresh data from API
-      // BUT: Preserve called leads and follow-up leads so they remain available for reports screen
       if (page == null || page == 1) {
-        // Store called leads and follow-up leads before clearing
         final preservedLeads =
             _leads
                 .where(
@@ -1256,66 +957,29 @@ class LeadRepository extends ChangeNotifier {
                       lead.needsFollowUp,
                 )
                 .toList();
-
-        print(
-          'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh',
-        );
-
-        // Log details of preserved leads for debugging
-        for (final lead in preservedLeads) {
-          print(
-            '  - Preserving: ${lead.name} (${lead.callStatus}, followUp: ${lead.followUpDate != null})',
-          );
-        }
-
         _leads.clear();
-
-        // Restore called leads and follow-up leads so they remain available for reports
         _leads.addAll(preservedLeads);
-
-        print('LeadRepository: Restored ${_leads.length} preserved leads');
       }
-
-      // Convert API data to LeadModel and add to repository
-      int failedCount = 0;
 
       for (var leadData in leadsData) {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
-            // Check if lead already exists (by ID) to avoid duplicates
             final existingIndex = _leads.indexWhere((l) => l.id == lead.id);
             if (existingIndex != -1) {
-              // Update existing lead
               _leads[existingIndex] = lead;
             } else {
-              // Add new lead
               _leads.add(lead);
             }
-          } else {
-            failedCount++;
           }
         } catch (e) {
-          failedCount++;
-          print('LeadRepository: Error parsing lead: $e');
+          // Continue processing other leads
         }
       }
-
-      if (failedCount > 0) {
-        print('LeadRepository: Failed to parse $failedCount leads');
-      }
-
-      print(
-        'LeadRepository: Successfully added ${_leads.length} leads to repository',
-      );
-      print(
-        'LeadRepository: Sample lead - name: ${_leads.isNotEmpty ? _leads.first.name : "none"}, location: ${_leads.isNotEmpty ? _leads.first.location : "none"}, category: ${_leads.isNotEmpty ? _leads.first.category : "none"}',
-      );
 
       await _saveLeads();
       notifyListeners();
     } catch (e) {
-      print('LeadRepository: Error fetching all leads: $e');
       rethrow;
     }
   }
@@ -1324,31 +988,13 @@ class LeadRepository extends ChangeNotifier {
   Future<void> moveToReport(String id) async {
     try {
       await ensureInitialized();
-
-      // Find the lead to move
       final leadIndex = _leads.indexWhere((lead) => lead.id == id);
-      if (leadIndex == -1) {
-        print('LeadRepository: Lead with id $id not found');
-        return;
-      }
+      if (leadIndex == -1) return;
 
-      final lead = _leads[leadIndex];
-      print(
-        'LeadRepository: Moving lead to report - ID: $id, Name: ${lead.name}, Category: ${lead.category}',
-      );
-
-      // Remove the lead from active leads list
       _leads.removeAt(leadIndex);
-
-      // Save the updated leads list
       await _saveLeads();
-
-      // Notify listeners that the lead has been moved
       notifyListeners();
-
-      print('LeadRepository: Successfully moved lead $id to report screen');
     } catch (e) {
-      print('LeadRepository: Error moving lead to report: $e');
       rethrow;
     }
   }
@@ -1361,23 +1007,13 @@ class LeadRepository extends ChangeNotifier {
     DateTime? date,
   }) async {
     try {
-      // Format date for API (YYYY-MM-DD)
       String? dateStr;
       if (date != null) {
         dateStr =
-            '${date.year.toString().padLeft(4, '0')}-'
-            '${date.month.toString().padLeft(2, '0')}-'
-            '${date.day.toString().padLeft(2, '0')}';
+            '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       }
-
-      final response = await _apiService.getCallSummary(
-        store: store,
-        date: dateStr,
-      );
-
-      return response;
+      return await _apiService.getCallSummary(store: store, date: dateStr);
     } catch (e) {
-      print('LeadRepository: Error fetching call summary from API: $e');
       rethrow;
     }
   }

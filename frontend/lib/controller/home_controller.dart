@@ -22,20 +22,11 @@ class HomeController extends ChangeNotifier {
       _headerController = headerController;
       _headerController?.addListener(_onHeaderChanged);
     }
-    // Debug data integrity on home screen init
-    _debugDataOnInit();
-    // Fetch calls overview when initialized
+    _repository.debugDataIntegrity();
     fetchCallsOverviewFromApi();
   }
 
-  // Debug data integrity when home screen initializes
-  Future<void> _debugDataOnInit() async {
-    print('HomeController: Debugging data on init');
-    await _repository.debugDataIntegrity();
-  }
-
   void _onHeaderChanged() {
-    // Fetch new data when header (date/store) changes
     fetchCallsOverviewFromApi();
     notifyListeners();
   }
@@ -71,7 +62,6 @@ class HomeController extends ChangeNotifier {
     } catch (e) {
       _isLoadingCallsOverview = false;
       _callsOverviewError = e.toString();
-      print('HomeController: Error fetching calls overview: $e');
       notifyListeners();
     }
   }

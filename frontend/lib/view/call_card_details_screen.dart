@@ -256,6 +256,11 @@ class CallCardDetailsScreen extends StatelessWidget {
                                           fontFamily:
                                               TextConstant.dmSansRegular,
                                         ),
+
+
+
+
+
                                       ),
                                     ],
                                   ),

@@ -40,73 +40,19 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   void _onHeaderChanged() {
-    // When header (store/date) changes, refresh data from API for current filters
     notifyListeners();
-
-    // Get current store and date filters
     final store = _headerController?.selectedStore;
     final storeParam = (store == null || store == 'All Stores') ? null : store;
     final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
-    // Fetch all lead types with store and date filters when header changes
-    // This ensures all tabs show filtered data
-    if (storeParam != null) {
-      // Fetch all leads (for "All Calls" tab)
-      // GET /api/pages/leads?store=Suitor Guy - Edappally&enquiryDateFrom=2024-12-08&enquiryDateTo=2024-12-08
-      fetchAllLeadsFromApi(store: storeParam, date: selectedDate).catchError((
-        e,
-      ) {
-        print(
-          'LeadScreenController: Error fetching all leads on header change: $e',
-        );
-      });
+    _fetchAllLeadTypes(storeParam, selectedDate);
+  }
 
-      // Fetch Loss of Sale leads with store filter
-      // GET /api/pages/leads?leadType=lossOfSale&store=Suitor Guy - Edappally
-      fetchLossOfSaleLeadsFromApi(store: storeParam).catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Loss of Sale leads on header change: $e',
-        );
-      });
-
-      // Fetch Rent Out leads with store filter
-      // GET /api/pages/leads?leadType=rentOutFeedback&store=Suitor Guy - Edappally
-      fetchRentOutLeadsFromApi(store: storeParam).catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Rent-Out leads on header change: $e',
-        );
-      });
-
-      // Fetch Booking Confirmation leads with store filter
-      // GET /api/pages/leads?leadType=bookingConfirmation&store=Suitor Guy - Edappally
-      fetchBookingConfirmationLeadsFromApi(store: storeParam).catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Booking Confirmation leads on header change: $e',
-        );
-      });
-    } else {
-      // If "All Stores" is selected, fetch without store filter but with date filter
-      fetchAllLeadsFromApi(date: selectedDate).catchError((e) {
-        print(
-          'LeadScreenController: Error fetching all leads (no store filter): $e',
-        );
-      });
-      fetchLossOfSaleLeadsFromApi().catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Loss of Sale leads (no store filter): $e',
-        );
-      });
-      fetchRentOutLeadsFromApi().catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Rent-Out leads (no store filter): $e',
-        );
-      });
-      fetchBookingConfirmationLeadsFromApi().catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Booking Confirmation leads (no store filter): $e',
-        );
-      });
-    }
+  void _fetchAllLeadTypes(String? store, DateTime date) {
+    fetchAllLeadsFromApi(store: store, date: date).catchError((_) {});
+    fetchLossOfSaleLeadsFromApi(store: store).catchError((_) {});
+    fetchRentOutLeadsFromApi(store: store).catchError((_) {});
+    fetchBookingConfirmationLeadsFromApi(store: store).catchError((_) {});
   }
 
   void _onRepositoryChanged() {
@@ -129,6 +75,53 @@ class LeadScreenController extends ChangeNotifier {
 
   void _removeLeadFromActiveLists(String id) {
     _repository.allLeads.removeWhere((lead) => lead.id == id);
+  }
+
+  bool _matchesStore(String? leadLocation, String storeFilter) {
+    if (leadLocation == null || leadLocation.isEmpty) return false;
+
+    final selectedLocation =
+        StoreLocations.resolveSelection(storeFilter).location;
+    final selectedBrand = StoreLocations.resolveSelection(storeFilter).brand;
+    final normalizedLocation = selectedLocation.toLowerCase().trim();
+    final normalizedBrand = selectedBrand.toLowerCase().trim();
+    final normalizedStore = storeFilter.toLowerCase().trim();
+    final leadLoc = leadLocation.toLowerCase().trim();
+
+    // Extract location from "SG-Edappally" format
+    final extractedLoc =
+        leadLoc.startsWith('sg-')
+            ? leadLoc.substring(3)
+            : leadLoc.contains('-')
+            ? leadLoc.split('-').last.trim()
+            : leadLoc;
+
+    return leadLoc == normalizedStore ||
+        leadLoc == normalizedLocation ||
+        extractedLoc == normalizedLocation ||
+        leadLoc.contains(normalizedLocation) ||
+        extractedLoc.contains(normalizedLocation) ||
+        normalizedLocation.contains(leadLoc) ||
+        normalizedLocation.contains(extractedLoc) ||
+        leadLoc.contains(normalizedBrand) ||
+        (normalizedStore.contains(' - ') &&
+            _matchesStoreParts(leadLoc, extractedLoc, normalizedStore));
+  }
+
+  bool _matchesStoreParts(
+    String leadLoc,
+    String extractedLoc,
+    String normalizedStore,
+  ) {
+    final parts = normalizedStore.split(' - ');
+    if (parts.length <= 1) return false;
+    final storeLocPart = parts.last;
+    return leadLoc == storeLocPart ||
+        leadLoc.contains(storeLocPart) ||
+        storeLocPart.contains(leadLoc) ||
+        extractedLoc == storeLocPart ||
+        extractedLoc.contains(storeLocPart) ||
+        storeLocPart.contains(extractedLoc);
   }
 
   @override
@@ -157,111 +150,30 @@ class LeadScreenController extends ChangeNotifier {
   // Get call summary data (filtered by store and date)
   // Only count leads that haven't been called yet
   List<Map<String, dynamic>> getCallSummary() {
-    // Note: store and date filters are handled in getUncalledLeadsCount
-
-    // Helper function to count uncalled leads
     int getUncalledLeadsCount({String? category, bool followUpOnly = false}) {
       final date = _headerController?.selectedDate ?? DateTime.now();
-
-      // STEP 1: get leads by category with date filter
       List<LeadModel> leads =
           category != null
               ? _repository.getLeadsByCategory(category, date: date)
               : _repository.getLeadsByDate(date);
 
-      // STEP 2: filter by store using the same logic as getFilteredLeads
       final storeFilter = _headerController?.selectedStore;
       if (storeFilter != null && storeFilter != "All Stores") {
-        final selectedLocation =
-            StoreLocations.resolveSelection(storeFilter).location;
-        final selectedBrand =
-            StoreLocations.resolveSelection(storeFilter).brand;
-
-        // Normalize for case-insensitive comparison
-        final normalizedSelectedLocation =
-            selectedLocation.toLowerCase().trim();
-        final normalizedSelectedBrand = selectedBrand.toLowerCase().trim();
-        final normalizedStore = storeFilter.toLowerCase().trim();
-
         leads =
-            leads.where((lead) {
-              if (lead.location == null || lead.location!.isEmpty) return false;
-
-              final leadLocation = lead.location!.toLowerCase().trim();
-
-              // Extract location from API formats like "SG-Edappally" or "SG-Edappal"
-              String extractedLeadLocation;
-              if (leadLocation.startsWith('sg-')) {
-                // Handle "SG-Edappally" format - extract location part
-                extractedLeadLocation = leadLocation.substring(
-                  3,
-                ); // Remove "sg-" prefix
-              } else if (leadLocation.contains('-')) {
-                // Handle other formats with dashes
-                final parts = leadLocation.split('-');
-                extractedLeadLocation = parts.last.trim();
-              } else {
-                // Just location name
-                extractedLeadLocation = leadLocation;
-              }
-
-              // Try exact match first
-              if (leadLocation == normalizedStore) return true;
-
-              // Try matching location part
-              if (leadLocation == normalizedSelectedLocation) return true;
-              if (extractedLeadLocation == normalizedSelectedLocation)
-                return true;
-
-              // Try contains matching
-              if (leadLocation.contains(normalizedSelectedLocation))
-                return true;
-              if (extractedLeadLocation.contains(normalizedSelectedLocation))
-                return true;
-              if (normalizedSelectedLocation.contains(leadLocation))
-                return true;
-              if (normalizedSelectedLocation.contains(extractedLeadLocation))
-                return true;
-
-              // Try brand matching
-              if (leadLocation.contains(normalizedSelectedBrand)) return true;
-
-              // Handle "Brand - Location" format extraction
-              final storeParts = normalizedStore.split(' - ');
-              if (storeParts.length > 1) {
-                final storeLocationPart = storeParts.last;
-                if (leadLocation == storeLocationPart ||
-                    leadLocation.contains(storeLocationPart) ||
-                    storeLocationPart.contains(leadLocation)) {
-                  return true;
-                }
-                if (extractedLeadLocation == storeLocationPart ||
-                    extractedLeadLocation.contains(storeLocationPart) ||
-                    storeLocationPart.contains(extractedLeadLocation)) {
-                  return true;
-                }
-              }
-
-              return false;
-            }).toList();
+            leads
+                .where((lead) => _matchesStore(lead.location, storeFilter))
+                .toList();
       }
 
-      // STEP 3: DO NOT FILTER BY DATE
-      // (This is the reason counts were 0 before)
-
-      // STEP 4: Handle follow-up filter
       if (followUpOnly) {
-        // For Follow Up tab - show only leads with follow-up dates
         leads = leads.where((lead) => lead.followUpDate != null).toList();
       } else {
-        // For other tabs - count only uncalled leads
         leads =
             leads
                 .where(
                   (lead) => LeadConstants.isUncalledStatus(lead.callStatus),
                 )
                 .toList();
-        // Exclude leads with follow-up dates (they appear in Follow-up tab)
         leads = leads.where((lead) => lead.followUpDate == null).toList();
       }
 
@@ -320,166 +232,23 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   // Get filtered leads based on selected call type
-  // For "All Calls" tab (index 0), show all leads regardless of call status
-  // For other tabs, only show leads that haven't been called yet
   List<LeadDisplayModel> getFilteredLeads() {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
-
     final store = _headerController?.selectedStore;
     final date = _headerController?.selectedDate ?? DateTime.now();
 
-    // Get leads filtered by category, store, and date
     List<LeadModel> filteredLeads = _repository.getLeadsByCategory(
       category,
       date: date,
     );
 
-    // Debug: Print initial lead count
-    print(
-      'LeadScreenController: getFilteredLeads - Initial leads count: ${filteredLeads.length}, category: $category, store: $store',
-    );
-
-    // Filter by store - match store field from API
-    // API may return store as:
-    // - "KANNUR" (just location, uppercase)
-    // - "Suitor Guy - Perinthalmanna" (full "Brand - Location" format)
-    // We need to match against the selected store which is "Brand - Location"
     if (store != null && store != 'All Stores') {
-      // Extract location from selected store for comparison
-      final selectedLocation = StoreLocations.resolveSelection(store).location;
-      final selectedBrand = StoreLocations.resolveSelection(store).brand;
-
-      // Normalize for case-insensitive comparison
-      final normalizedSelectedLocation = selectedLocation.toLowerCase().trim();
-      final normalizedSelectedBrand = selectedBrand.toLowerCase().trim();
-      final normalizedStore = store.toLowerCase().trim();
-
       filteredLeads =
-          filteredLeads.where((lead) {
-            if (lead.location == null || lead.location!.isEmpty) return false;
-
-            final leadLocation = lead.location!.toLowerCase().trim();
-
-            // Extract location from API formats like "SG-Edappally" or "SG-Edappal"
-            String? extractedLeadLocation;
-            if (leadLocation.startsWith('sg-')) {
-              // Handle "SG-Edappally" format - extract location part
-              extractedLeadLocation = leadLocation.substring(
-                3,
-              ); // Remove "sg-" prefix
-            } else if (leadLocation.contains('-')) {
-              // Handle other formats with dashes
-              final parts = leadLocation.split('-');
-              extractedLeadLocation = parts.last.trim();
-            } else {
-              // Just location name
-              extractedLeadLocation = leadLocation;
-            }
-
-            // Try exact match first (full "Brand - Location" format, case-insensitive)
-            if (leadLocation == normalizedStore) return true;
-
-            // Try matching just the location part (case-insensitive)
-            if (leadLocation == normalizedSelectedLocation) return true;
-            if (extractedLeadLocation == normalizedSelectedLocation)
-              return true;
-
-            // Try matching if lead.location contains the selected location (case-insensitive)
-            if (leadLocation.contains(normalizedSelectedLocation)) return true;
-            if (extractedLeadLocation.contains(normalizedSelectedLocation))
-              return true;
-
-            // Try reverse - if selected location contains lead location
-            if (normalizedSelectedLocation.contains(leadLocation)) return true;
-            if (normalizedSelectedLocation.contains(extractedLeadLocation))
-              return true;
-
-            // Try matching if lead.location contains the selected brand (case-insensitive)
-            if (leadLocation.contains(normalizedSelectedBrand)) return true;
-
-            // Handle cases where API returns formats like "SG-Edappally"
-            // and we're filtering by "Suitor Guy - Edappal" or "Suitor Guy - Edappally"
-            final storeParts = normalizedStore.split(' - ');
-            if (storeParts.length > 1) {
-              final storeLocationPart =
-                  storeParts.last; // Get "edappal" from "suitor guy - edappal"
-
-              // Match if lead location equals the location part, or contains it
-              if (leadLocation == storeLocationPart ||
-                  leadLocation.contains(storeLocationPart) ||
-                  storeLocationPart.contains(leadLocation)) {
-                return true;
-              }
-
-              // Match extracted location (e.g., "edappally" from "sg-edappally")
-              if (extractedLeadLocation == storeLocationPart ||
-                  extractedLeadLocation.contains(storeLocationPart) ||
-                  storeLocationPart.contains(extractedLeadLocation)) {
-                return true;
-              }
-            } else {
-              // If store format is just location (shouldn't happen, but handle it)
-              if (leadLocation == normalizedStore ||
-                  leadLocation.contains(normalizedStore) ||
-                  normalizedStore.contains(leadLocation)) {
-                return true;
-              }
-              if (extractedLeadLocation == normalizedStore ||
-                  extractedLeadLocation.contains(normalizedStore) ||
-                  normalizedStore.contains(extractedLeadLocation)) {
-                return true;
-              }
-            }
-
-            return false;
-          }).toList();
-
-      // Debug: Print after store filter
-      print(
-        'LeadScreenController: After store filter: ${filteredLeads.length} leads',
-      );
-      final totalLeadsBeforeFilter =
-          _repository.getLeadsByCategory(category, date: date).length;
-      if (filteredLeads.isEmpty && totalLeadsBeforeFilter > 0) {
-        // Debug: Show sample lead locations for troubleshooting
-        final sampleLeads =
-            _repository
-                .getLeadsByCategory(category, date: date)
-                .take(5)
-                .toList();
-        print(
-          'LeadScreenController: DEBUG - Store filter returned 0 leads but ${totalLeadsBeforeFilter} leads exist',
-        );
-        print(
-          'LeadScreenController: Sample lead locations: ${sampleLeads.map((l) => l.location).join(", ")}',
-        );
-        print('LeadScreenController: Selected store: "$store"');
-        print(
-          'LeadScreenController: Extracted location: "$selectedLocation" (normalized: "$normalizedSelectedLocation")',
-        );
-        print(
-          'LeadScreenController: Extracted brand: "$selectedBrand" (normalized: "$normalizedSelectedBrand")',
-        );
-
-        // Test matching logic
-        for (var sampleLead in sampleLeads) {
-          if (sampleLead.location != null) {
-            final sampleLocation = sampleLead.location!.toLowerCase().trim();
-            final matches =
-                sampleLocation == normalizedStore ||
-                sampleLocation == normalizedSelectedLocation ||
-                sampleLocation.contains(normalizedSelectedLocation) ||
-                normalizedSelectedLocation.contains(sampleLocation);
-            print(
-              'LeadScreenController: Sample lead "${sampleLead.name}" location "${sampleLead.location}" -> matches: $matches',
-            );
-          }
-        }
-      }
+          filteredLeads
+              .where((lead) => _matchesStore(lead.location, store))
+              .toList();
     }
 
-    // Filter by date - but for All Calls, Loss of Sale, Rent-Out, and Booking Confirmation, show all leads (date filter is handled by API)
-    // For other categories, filter by selected date
     if (_selectedCallTypeIndex != 0 &&
         _selectedCallTypeIndex != 1 &&
         _selectedCallTypeIndex != 2 &&
@@ -493,50 +262,27 @@ class LeadScreenController extends ChangeNotifier {
           }).toList();
     }
 
-    // Filter out leads that have been called (only show uncalled leads)
-    // EXCEPT for "All Calls" tab (index 0) which should show all leads
     if (_selectedCallTypeIndex != 0) {
-      final beforeCallStatusFilter = filteredLeads.length;
       filteredLeads =
           filteredLeads
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
               .toList();
-      print(
-        'LeadScreenController: After call status filter: ${filteredLeads.length} leads (was $beforeCallStatusFilter)',
-      );
     }
 
-    // Exclude leads with follow-up dates (they appear in Follow-up tab in Reports screen)
-    final beforeFollowUpFilter = filteredLeads.length;
     filteredLeads =
         filteredLeads.where((lead) => lead.followUpDate == null).toList();
-    print(
-      'LeadScreenController: After follow-up filter: ${filteredLeads.length} leads (was $beforeFollowUpFilter, removed ${beforeFollowUpFilter - filteredLeads.length} follow-up leads)',
-    );
 
-    // Debug: Print final count
-    print(
-      'LeadScreenController: Final filtered leads count: ${filteredLeads.length}',
-    );
-
-    // Convert to display models
-    // If we're showing only the newly added lead, return only that one (if present)
-    // But only for "All Calls" tab - other tabs should show all leads
     if (_showOnlyNewLead &&
         _focusedNewLeadId != null &&
         _selectedCallTypeIndex == 0) {
       final matches =
           filteredLeads.where((l) => l.id == _focusedNewLeadId).toList();
       if (matches.isNotEmpty) {
-        // Auto-clear after showing once
         Future.delayed(const Duration(milliseconds: 100), () {
-          if (_focusedNewLeadId == matches.first.id) {
-            clearShowOnlyNewLead();
-          }
+          if (_focusedNewLeadId == matches.first.id) clearShowOnlyNewLead();
         });
         return [LeadDisplayModel.fromLead(matches.first)];
       }
-      // If not found in filtered list, clear the flag and show all leads
       clearShowOnlyNewLead();
     }
 

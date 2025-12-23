@@ -50,20 +50,14 @@ class BottomNavState extends State<BottomNav>
         listen: false,
       );
 
-      // Initialize call tracking
       callTrackingController.initialize().then((success) {
         if (success) {
-          print('BottomNav: Call tracking initialized successfully');
-
-          // Set up callback for when calls end
           callTrackingController.setOnCallEndedCallback((
             phoneNumber,
             duration,
           ) {
             _handleCallEnded(phoneNumber, duration);
           });
-        } else {
-          print('BottomNav: Failed to initialize call tracking');
         }
       });
     });
@@ -71,22 +65,14 @@ class BottomNavState extends State<BottomNav>
 
   /// Handle call ended event - show Add Lead bottom sheet for incoming calls
   void _handleCallEnded(String phoneNumber, int duration) {
-    print(
-      'BottomNav: Call ended - Phone: $phoneNumber, Duration: ${duration}s',
-    );
-
-    // Only show for calls with duration > 0 (answered calls)
     if (duration > 0 && mounted) {
-      // Get call data from controller
       final callTrackingController = Provider.of<CallTrackingController>(
         context,
         listen: false,
       );
       final callData = callTrackingController.lastEndedCall;
 
-      // Show Add Lead bottom sheet for incoming calls
       if (callData != null && callData.callType == CallType.incoming) {
-        // Small delay to ensure UI is ready
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
             showAddLeadBottomSheet(
