@@ -314,10 +314,26 @@ class ReportController extends ChangeNotifier {
               leadData['phone_number']?.toString() ??
               leadData['phone']?.toString() ??
               '';
-          final leadLocation =
+
+          // Normalize store name (Calicut -> Kozhikode, etc.)
+          var leadLocation =
               leadData['store']?.toString() ??
               leadData['location']?.toString() ??
               '';
+
+          // Apply store name normalization
+          if (leadLocation.isNotEmpty && !leadLocation.contains(' - ')) {
+            leadLocation = StoreLocations.normalizeStoreName(leadLocation);
+          } else if (leadLocation.isNotEmpty && leadLocation.contains(' - ')) {
+            final parts = leadLocation.split(' - ');
+            if (parts.length == 2) {
+              final normalizedLocation = StoreLocations.normalizeStoreName(
+                parts[1],
+              );
+              leadLocation = '${parts[0]} - $normalizedLocation';
+            }
+          }
+
           final callStatus =
               leadData['call_status']?.toString() ??
               leadData['callStatus']?.toString() ??

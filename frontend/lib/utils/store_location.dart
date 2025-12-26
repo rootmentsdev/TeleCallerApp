@@ -10,6 +10,16 @@ class StoreSelection {
 class StoreLocations {
   StoreLocations._(); // Prevent instantiation
 
+  /// Store name normalization mapping (backend names -> frontend names)
+  static const Map<String, String> storeNameNormalization = {
+    'Calicut': 'Kozhikode',
+    'calicut': 'Kozhikode',
+    'CALICUT': 'Kozhikode',
+    'Cochin': 'Edappally',
+    'cochin': 'Edappally',
+    'COCHIN': 'Edappally',
+  };
+
   /// Store lists by brand
   static const List<String> suitorGuyStores = [
     'Trivandrum',
@@ -42,6 +52,19 @@ class StoreLocations {
     'Suitor Guy': suitorGuyStores,
     'Zorucci': zorucciStores,
   };
+
+  /// Normalize store name from backend format
+  static String normalizeStoreName(String? storeName) {
+    if (storeName == null || storeName.isEmpty) return '';
+
+    // Check if it's in the normalization map
+    if (storeNameNormalization.containsKey(storeName)) {
+      return storeNameNormalization[storeName]!;
+    }
+
+    // Return as-is if not in map
+    return storeName;
+  }
 
   /// Default brand (first entry in map)
   static String get defaultBrand => brandStores.keys.first;

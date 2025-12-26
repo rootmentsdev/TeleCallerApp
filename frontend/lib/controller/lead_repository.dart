@@ -608,10 +608,25 @@ class LeadRepository extends ChangeNotifier {
           leadData['contact']?.toString() ??
           '';
       final brand = leadData['brand']?.toString();
-      // Backend uses 'store' field directly (e.g., "Zurocci - Perinthalmanna")
-      final location =
+      // Backend uses 'store' field directly (e.g., "Suitor Guy - Calicut")
+      // Normalize store name (Calicut -> Kozhikode, etc.)
+      var location =
           leadData['store']?.toString() ?? // Backend field name
           leadData['location']?.toString();
+
+      // If location is just the city name, normalize it
+      if (location != null && !location.contains(' - ')) {
+        location = StoreLocations.normalizeStoreName(location);
+      } else if (location != null && location.contains(' - ')) {
+        // If it's "Brand - Location" format, normalize the location part
+        final parts = location.split(' - ');
+        if (parts.length == 2) {
+          final normalizedLocation = StoreLocations.normalizeStoreName(
+            parts[1],
+          );
+          location = '${parts[0]} - $normalizedLocation';
+        }
+      }
       final leadStatus =
           leadData['lead_status']?.toString() ?? // Backend field name
           leadData['leadStatus']?.toString();
