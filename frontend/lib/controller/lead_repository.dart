@@ -464,8 +464,10 @@ class LeadRepository extends ChangeNotifier {
   }) async {
     try {
       await ensureInitialized();
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getLossOfSaleLeads(
-        store: store,
+        store: storeFilter,
         enquiryFrom: enquiryFrom,
         enquiryTo: enquiryTo,
         functionFrom: functionFrom,
@@ -741,7 +743,10 @@ class LeadRepository extends ChangeNotifier {
       await ensureInitialized();
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
-      final response = await _apiService.getRentOutLeads(store: storeFilter);
+      final response = await _apiService.getRentOutLeads(
+        store: storeFilter,
+        limit: 1000,
+      );
       final leadsData = _parseResponseToLeadsList(response);
 
       _leads.removeWhere(

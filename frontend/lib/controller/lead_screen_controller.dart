@@ -199,7 +199,7 @@ class LeadScreenController extends ChangeNotifier {
         "icon": Icons.trending_down,
       },
       {
-        "title": "Rent-Out Calls",
+        "title": "Return",
         "count":
             getUncalledLeadsCount(
               category: LeadConstants.categoryRentOut,
@@ -298,7 +298,7 @@ class LeadScreenController extends ChangeNotifier {
       case 1:
         return "Loss of Sale";
       case 2:
-        return "Rent-Out Calls";
+        return "Return";
       case 3:
         return "Booking Confirmation";
       case 4:

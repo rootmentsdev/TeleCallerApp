@@ -151,7 +151,7 @@ class ReportController extends ChangeNotifier {
         "icon": Icons.trending_down,
       },
       {
-        "title": "Rent-Out Calls",
+        "title": "Return",
         "count":
             getCalledLeadsCount(
               category: LeadConstants.categoryRentOut,
@@ -474,7 +474,7 @@ class ReportController extends ChangeNotifier {
       case 1:
         return "Loss of sale calls";
       case 2:
-        return "Rent-Out calls";
+        return "Return calls";
       case 3:
         return "Booking Confirmation calls";
       case 4:

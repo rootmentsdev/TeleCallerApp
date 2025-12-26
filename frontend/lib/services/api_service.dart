@@ -130,8 +130,14 @@ class ApiService {
   }
 
   // Function to get Rent-out leads
-  Future<Map<String, dynamic>> getRentOutLeads({String? store}) async {
-    final url = Uri.parse(ApiConfig.rentOutLeads(store: store));
+  Future<Map<String, dynamic>> getRentOutLeads({
+    String? store,
+    int? page,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      ApiConfig.rentOutLeads(store: store, page: page, limit: limit),
+    );
 
     try {
       final headers = await _getAuthHeaders();

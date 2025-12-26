@@ -77,7 +77,7 @@ class StoreLocations {
 
   /// Combined store dropdown options
   static List<String> buildStoreOptions() {
-    final List<String> options = [];
+    final List<String> options = ['All Stores'];
 
     brandStores.forEach((brand, locations) {
       for (final location in locations) {
@@ -96,6 +96,11 @@ class StoreLocations {
     // Handle null or empty
     if (storeOption == null || storeOption.isEmpty) {
       return StoreSelection(brand: fallbackBrand, location: fallbackLocation);
+    }
+
+    // Handle "All Stores" special case
+    if (storeOption == 'All Stores') {
+      return StoreSelection(brand: 'All', location: 'Stores');
     }
 
     final parts = storeOption.split(' - ');

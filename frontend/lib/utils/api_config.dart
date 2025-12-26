@@ -67,13 +67,24 @@ class ApiConfig {
     return url;
   }
 
-  static String rentOutLeads({String? store}) {
+  static String rentOutLeads({String? store, int? page, int? limit}) {
     String url = "$leadsEndpoint?leadType=$rentOut";
 
     if (store != null && store.isNotEmpty) {
       // Extract just the location from "Brand - Location" format
       final location = store.contains(' - ') ? store.split(' - ').last : store;
       url += "&store=${Uri.encodeComponent(location)}";
+    }
+
+    // Add pagination parameters
+    if (page != null) {
+      url += "&page=$page";
+    }
+    if (limit != null) {
+      url += "&limit=$limit";
+    } else {
+      // Default to high limit to get all records
+      url += "&limit=1000";
     }
 
     return url;

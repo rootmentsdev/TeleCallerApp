@@ -115,7 +115,7 @@ class HomeController extends ChangeNotifier {
         "icon": Icons.trending_down,
       },
       {
-        "title": "Rent-Out Calls",
+        "title": "Return",
         "count": count(LeadConstants.categoryRentOut).toString(),
         "bgColor": const Color(0xFFFFF7CC),
         "iconColor": const Color(0xFFFFCC00),
@@ -158,7 +158,6 @@ class HomeController extends ChangeNotifier {
     final notConnected = apiData['not_connected']?.toString() ?? '0';
     final callBackLater = apiData['call_back_later']?.toString() ?? '0';
     final confirmed = apiData['confirmed']?.toString() ?? '0';
-    final cancelled = apiData['cancelled']?.toString() ?? '0';
 
     return [
       {
