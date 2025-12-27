@@ -22,7 +22,6 @@ class CallSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -41,18 +40,24 @@ class CallSummaryCard extends StatelessWidget {
                 child: Icon(icon, color: iconColor, size: 20),
               ),
               Positioned(
-                bottom: -4,
-                right: -4,
+                bottom: -6,
+                right: -6,
                 child: Container(
-                  height: 22,
-                  width: 22,
+                  constraints: const BoxConstraints(
+                    minHeight: 26,
+                    minWidth: 26,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: iconColor.withOpacity(0.3),
+                        color: iconColor.withValues(alpha: 0.3),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -61,10 +66,11 @@ class CallSummaryCard extends StatelessWidget {
                   child: Text(
                     count,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: count.length > 2 ? 10 : 12,
                       fontWeight: FontWeight.bold,
                       color: iconColor,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),

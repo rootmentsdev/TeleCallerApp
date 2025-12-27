@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:telecaller_app/utils/store_location.dart';
 
-/// Shared controller for header state (store and date)
+/// Shared controller for header state (store and date/date range)
 /// This is used across Home Screen, Lead Screen, and Report Screen
 class HeaderController extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
+  DateTime? _dateRangeStart;
+  DateTime? _dateRangeEnd;
+  bool _isRangeMode = false;
   late String _selectedStore;
 
   HeaderController() {
-    // Initialize with first available store (no "All Stores")
-    final stores = StoreLocations.buildStoreOptions();
-    _selectedStore =
-        stores.isNotEmpty
-            ? stores.first
-            : '${StoreLocations.defaultBrand} - ${StoreLocations.defaultLocationForBrand(StoreLocations.defaultBrand)}';
+    _selectedStore = 'All Stores';
   }
 
   // Getters
   DateTime get selectedDate => _selectedDate;
+  DateTime? get dateRangeStart => _dateRangeStart;
+  DateTime? get dateRangeEnd => _dateRangeEnd;
+  bool get isRangeMode => _isRangeMode;
   String get selectedStore => _selectedStore;
 
   // Setters
@@ -26,8 +26,27 @@ class HeaderController extends ChangeNotifier {
         _selectedDate.month != date.month ||
         _selectedDate.day != date.day) {
       _selectedDate = date;
+      _isRangeMode = false;
+      _dateRangeStart = null;
+      _dateRangeEnd = null;
       notifyListeners();
     }
+  }
+
+  void setDateRange(DateTime start, DateTime end) {
+    _dateRangeStart = start;
+    _dateRangeEnd = end;
+    _isRangeMode = true;
+    _selectedDate = start;
+    notifyListeners();
+  }
+
+  void clearDateRange() {
+    _isRangeMode = false;
+    _dateRangeStart = null;
+    _dateRangeEnd = null;
+    _selectedDate = DateTime.now();
+    notifyListeners();
   }
 
   void setSelectedStore(String store) {
@@ -37,14 +56,12 @@ class HeaderController extends ChangeNotifier {
     }
   }
 
-  // Reset to defaults
   void reset() {
     _selectedDate = DateTime.now();
-    final stores = StoreLocations.buildStoreOptions();
-    _selectedStore =
-        stores.isNotEmpty
-            ? stores.first
-            : '${StoreLocations.defaultBrand} - ${StoreLocations.defaultLocationForBrand(StoreLocations.defaultBrand)}';
+    _selectedStore = 'All Stores';
+    _isRangeMode = false;
+    _dateRangeStart = null;
+    _dateRangeEnd = null;
     notifyListeners();
   }
 }

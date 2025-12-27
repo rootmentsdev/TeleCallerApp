@@ -240,6 +240,23 @@ class LeadRepository extends ChangeNotifier {
     }).toList();
   }
 
+  List<LeadModel> getLeadsByDateRange(DateTime startDate, DateTime endDate) {
+    // Filter leads by date range (inclusive)
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+
+    return _leads.where((lead) {
+      final leadDate = lead.createdAt;
+      return leadDate.isAfter(start) && leadDate.isBefore(end) ||
+          (leadDate.year == start.year &&
+              leadDate.month == start.month &&
+              leadDate.day == start.day) ||
+          (leadDate.year == end.year &&
+              leadDate.month == end.month &&
+              leadDate.day == end.day);
+    }).toList();
+  }
+
   List<LeadModel> getLeadsByStoreAndDate(String? store, DateTime date) {
     // Apply store filter first
     List<LeadModel> baseList = _leads;

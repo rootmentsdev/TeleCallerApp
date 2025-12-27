@@ -161,112 +161,137 @@ class AppHeader extends StatelessWidget {
                   Row(
                     children: [
                       // Store Dropdown
-                      Container(
-                        height: 50,
-                        width: showDate ? 200 : null,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Row(
-                            children: [
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: headerController.selectedStore,
-                                    isExpanded: true,
-                                    dropdownColor: ColorConstant.primaryColor,
-                                    icon: const Icon(
-                                      Icons.keyboard_arrow_down,
-                                      color: Colors.white,
-                                    ),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                    ),
-                                    hint: const Text(
-                                      "Select Store",
-                                      style: TextStyle(color: Colors.white70),
-                                    ),
-                                    items:
-                                        StoreLocations.buildStoreOptions().map((
-                                          String store,
-                                        ) {
-                                          return DropdownMenuItem<String>(
-                                            value: store,
-                                            child: Text(
-                                              store,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            ),
+                      Expanded(
+                        flex: showDate ? 1 : 2,
+                        child: Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: headerController.selectedStore,
+                                      isExpanded: true,
+                                      dropdownColor: ColorConstant.primaryColor,
+                                      icon: const Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: Colors.white,
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                      hint: const Text(
+                                        "Select Store",
+                                        style: TextStyle(color: Colors.white70),
+                                      ),
+                                      items:
+                                          StoreLocations.buildStoreOptions()
+                                              .map((String store) {
+                                                return DropdownMenuItem<String>(
+                                                  value: store,
+                                                  child: Text(
+                                                    store,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                );
+                                              })
+                                              .toList(),
+                                      onChanged: (String? newValue) {
+                                        if (newValue != null) {
+                                          headerController.setSelectedStore(
+                                            newValue,
                                           );
-                                        }).toList(),
-                                    onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        headerController.setSelectedStore(
-                                          newValue,
-                                        );
-                                      }
-                                    },
+                                        }
+                                      },
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                       if (showDate) ...[
-                        const SizedBox(width: 16),
-                        // Date Picker
-                        InkWell(
-                          onTap: () async {
-                            DateTime? pickedDate = await showDatePicker(
-                              context: context,
-                              initialDate: headerController.selectedDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2101),
-                            );
-                            if (pickedDate != null) {
-                              headerController.setSelectedDate(pickedDate);
-                            }
-                          },
-                          child: Container(
-                            height: 50,
-                            width: 128,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white12),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
+                        const SizedBox(width: 12),
+                        // Date Range Picker
+                        Expanded(
+                          flex: 1,
+                          child: InkWell(
+                            onTap: () async {
+                              final DateTimeRange?
+                              pickedRange = await showDateRangePicker(
+                                context: context,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2101),
+                                currentDate: headerController.selectedDate,
+                                initialDateRange:
+                                    headerController.isRangeMode
+                                        ? DateTimeRange(
+                                          start:
+                                              headerController.dateRangeStart ??
+                                              DateTime.now(),
+                                          end:
+                                              headerController.dateRangeEnd ??
+                                              DateTime.now(),
+                                        )
+                                        : null,
+                              );
+                              if (pickedRange != null) {
+                                headerController.setDateRange(
+                                  pickedRange.start,
+                                  pickedRange.end,
+                                );
+                              }
+                            },
+                            child: Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white12),
                               ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today_outlined,
-                                    color: Colors.white70,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Text(
-                                      "Date",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_today_outlined,
+                                      color: Colors.white70,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        headerController.isRangeMode
+                                            ? '${headerController.dateRangeStart?.day}/${headerController.dateRangeStart?.month} - ${headerController.dateRangeEnd?.day}/${headerController.dateRangeEnd?.month}'
+                                            : '${headerController.selectedDate.day}/${headerController.selectedDate.month}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                  ),
-                                  const Icon(
-                                    Icons.keyboard_arrow_down,
-                                    color: Colors.white,
-                                  ),
-                                ],
+                                    const SizedBox(width: 8),
+                                    const Icon(
+                                      Icons.keyboard_arrow_down,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

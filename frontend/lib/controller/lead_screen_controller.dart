@@ -147,18 +147,42 @@ class LeadScreenController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get call summary data (filtered by store and date)
+  // Get call summary data (filtered by store and date/date range)
   // Only count leads that haven't been called yet
   List<Map<String, dynamic>> getCallSummary() {
     int getUncalledLeadsCount({String? category, bool followUpOnly = false}) {
-      final date = _headerController?.selectedDate ?? DateTime.now();
-      List<LeadModel> leads =
-          category != null
-              ? _repository.getLeadsByCategory(category, date: date)
-              : _repository.getLeadsByDate(date);
+      final headerController = _headerController;
+      if (headerController == null) return 0;
 
-      final storeFilter = _headerController?.selectedStore;
-      if (storeFilter != null && storeFilter != "All Stores") {
+      List<LeadModel> leads;
+
+      // Use date range if available, otherwise use single date
+      if (headerController.isRangeMode &&
+          headerController.dateRangeStart != null &&
+          headerController.dateRangeEnd != null) {
+        leads =
+            category != null
+                ? _repository
+                    .getLeadsByDateRange(
+                      headerController.dateRangeStart!,
+                      headerController.dateRangeEnd!,
+                    )
+                    .where((lead) => lead.category == category)
+                    .toList()
+                : _repository.getLeadsByDateRange(
+                  headerController.dateRangeStart!,
+                  headerController.dateRangeEnd!,
+                );
+      } else {
+        final date = headerController.selectedDate;
+        leads =
+            category != null
+                ? _repository.getLeadsByCategory(category, date: date)
+                : _repository.getLeadsByDate(date);
+      }
+
+      final storeFilter = headerController.selectedStore;
+      if (storeFilter != "All Stores") {
         leads =
             leads
                 .where((lead) => _matchesStore(lead.location, storeFilter))
@@ -234,32 +258,35 @@ class LeadScreenController extends ChangeNotifier {
   // Get filtered leads based on selected call type
   List<LeadDisplayModel> getFilteredLeads() {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
-    final store = _headerController?.selectedStore;
-    final date = _headerController?.selectedDate ?? DateTime.now();
+    final headerController = _headerController;
+    if (headerController == null) return [];
 
-    List<LeadModel> filteredLeads = _repository.getLeadsByCategory(
-      category,
-      date: date,
-    );
+    final store = headerController.selectedStore;
 
-    if (store != null && store != 'All Stores') {
+    List<LeadModel> filteredLeads;
+
+    // Use date range if available, otherwise use single date
+    if (headerController.isRangeMode &&
+        headerController.dateRangeStart != null &&
+        headerController.dateRangeEnd != null) {
+      filteredLeads = _repository.getLeadsByDateRange(
+        headerController.dateRangeStart!,
+        headerController.dateRangeEnd!,
+      );
+      if (category != null) {
+        filteredLeads =
+            filteredLeads.where((lead) => lead.category == category).toList();
+      }
+    } else {
+      final date = headerController.selectedDate;
+      filteredLeads = _repository.getLeadsByCategory(category, date: date);
+    }
+
+    if (store != 'All Stores') {
       filteredLeads =
           filteredLeads
               .where((lead) => _matchesStore(lead.location, store))
               .toList();
-    }
-
-    if (_selectedCallTypeIndex != 0 &&
-        _selectedCallTypeIndex != 1 &&
-        _selectedCallTypeIndex != 2 &&
-        _selectedCallTypeIndex != 3) {
-      filteredLeads =
-          filteredLeads.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
     }
 
     if (_selectedCallTypeIndex != 0) {
