@@ -55,13 +55,28 @@ class ApiConfig {
     return "$leadsEndpoint?leadType=$walkIn&source=$sourceWalkIn";
   }
 
-  static String bookingConfirmationLeads({String? store}) {
+  static String bookingConfirmationLeads({
+    String? store,
+    int? page,
+    int? limit,
+  }) {
     String url = "$leadsEndpoint?leadType=$bookingConfirmation";
 
     if (store != null && store.isNotEmpty) {
       // Extract just the location from "Brand - Location" format
       final location = store.contains(' - ') ? store.split(' - ').last : store;
       url += "&store=${Uri.encodeComponent(location)}";
+    }
+
+    // Add pagination parameters
+    if (page != null) {
+      url += "&page=$page";
+    }
+    if (limit != null) {
+      url += "&limit=$limit";
+    } else {
+      // Default to high limit to get all records
+      url += "&limit=1000";
     }
 
     return url;

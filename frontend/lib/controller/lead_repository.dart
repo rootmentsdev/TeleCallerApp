@@ -396,6 +396,7 @@ class LeadRepository extends ChangeNotifier {
           (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getBookingConfirmationLeads(
         store: storeFilter,
+        limit: 1000,
       );
       final leadsData = _parseResponseToLeadsList(response);
 

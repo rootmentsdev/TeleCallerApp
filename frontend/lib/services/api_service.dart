@@ -87,8 +87,16 @@ class ApiService {
   // Function to get Booking Confirmation leads
   Future<Map<String, dynamic>> getBookingConfirmationLeads({
     String? store,
+    int? page,
+    int? limit,
   }) async {
-    final url = Uri.parse(ApiConfig.bookingConfirmationLeads(store: store));
+    final url = Uri.parse(
+      ApiConfig.bookingConfirmationLeads(
+        store: store,
+        page: page,
+        limit: limit,
+      ),
+    );
 
     try {
       final headers = await _getAuthHeaders();

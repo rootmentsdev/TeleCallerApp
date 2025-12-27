@@ -115,6 +115,11 @@ class BottomNavState extends State<BottomNav>
     _instance?.changeIndex(4);
   }
 
+  // Static method to navigate to lead screen
+  static void navigateToLeadScreen() {
+    _instance?.changeIndex(1);
+  }
+
   late final AnimationController _controller;
 
   final _pages = [

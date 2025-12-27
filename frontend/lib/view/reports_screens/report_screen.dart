@@ -87,7 +87,7 @@ class _ReportScreenState extends State<ReportScreen> {
         final tabs = [
           "All Calls",
           "Loss of Sale",
-          "rent out calls",
+          "Return Calls",
           "booking calls",
           "Just Dial",
           "New Leads",
@@ -243,7 +243,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                 : reportController.selectedCallTypeIndex == 1
                                 ? "No loss of sale calls found"
                                 : reportController.selectedCallTypeIndex == 2
-                                ? "No Rent Out calls found"
+                                ? "No Return calls found"
                                 : reportController.selectedCallTypeIndex == 3
                                 ? "No Booking confirmation Dial calls found"
                                 : reportController.selectedCallTypeIndex == 4

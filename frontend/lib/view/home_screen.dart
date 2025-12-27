@@ -10,8 +10,8 @@ import 'package:telecaller_app/widgets.dart/call_card.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/widgets.dart/call_summary_card.dart';
 import 'package:telecaller_app/view/call_card_details_screen.dart';
-import 'package:telecaller_app/view/lead_screen.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
+import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -98,12 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     );
                                 leadController.setSelectedCallTypeIndex(index);
 
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const LeadScreen(),
-                                  ),
-                                );
+                                // Navigate to lead screen using BottomNav
+                                BottomNavState.navigateToLeadScreen();
                               },
                             ),
                           ),
