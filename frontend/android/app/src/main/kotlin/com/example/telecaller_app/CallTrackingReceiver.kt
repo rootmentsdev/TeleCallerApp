@@ -120,6 +120,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
         val outgoingSnapshot = isOutgoing
         val offhookSnapshot = offhookOccurred
         val answerTimeSnapshot = callAnswerTime
+        val endTimeSnapshot = System.currentTimeMillis()
 
         // Reset state immediately
         lastPhoneNumber = null
@@ -142,29 +143,17 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
                 var duration = 0
 
-                // Only fetch duration if call was answered
+                // Only calculate duration if call was answered
                 if (offhookSnapshot && answerTimeSnapshot > 0) {
-                    // Call was answered - get duration from call log
-                    duration = getDurationFromCallLog(context, number)
-                    Log.d(TAG, "📊 First read: duration=$duration for $number (call was answered)")
-
-                    // Retry logic: if call log shows 0, retry after 2s
-                    if (duration == 0) {
-                        Log.w(TAG, "⏳ Call was answered but call log duration=0, retrying after 2s...")
-                        Thread.sleep(2000)
-                        duration = getDurationFromCallLog(context, number)
-                        Log.d(TAG, "📊 Retry read: duration=$duration for $number")
-                    }
-
-                    // If still 0, use calculated time as fallback
-                    if (duration == 0) {
-                        val calculatedDuration = ((System.currentTimeMillis() - answerTimeSnapshot) / 1000).toInt()
-                        if (calculatedDuration > 0) {
-                            duration = calculatedDuration
-                            Log.d(TAG, "⚠️ Using calculated duration: ${duration}s (call log was 0)")
-                        }
+                    // Calculate duration from answer time (OFFHOOK) to end time (IDLE)
+                    // This excludes ringing time
+                    val calculatedDuration = ((endTimeSnapshot - answerTimeSnapshot) / 1000).toInt()
+                    
+                    if (calculatedDuration > 0) {
+                        duration = calculatedDuration
+                        Log.d(TAG, "✅ Call answered: duration=${duration}s (calculated from answer time)")
                     } else {
-                        Log.d(TAG, "✅ Final: $number, duration=${duration}s (from call log)")
+                        Log.w(TAG, "⚠️ Call answered but duration is 0")
                     }
                 } else {
                     // Call was not answered - duration is 0
@@ -190,44 +179,6 @@ class CallTrackingReceiver : BroadcastReceiver() {
                 Log.e(TAG, "Error in processCallEnd: ${e.message}")
             }
         }.start()
-    }
-
-    private fun getDurationFromCallLog(context: Context, phoneNumber: String?): Int {
-        if (!hasCallLogPermission(context)) return 0
-        if (phoneNumber == null || phoneNumber == "Unknown") return 0
-
-        return try {
-            val cursor = context.contentResolver.query(
-                CallLog.Calls.CONTENT_URI,
-                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE),
-                "${CallLog.Calls.NUMBER} = ?",
-                arrayOf(phoneNumber),
-                "${CallLog.Calls.DATE} DESC"
-            )
-
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    val duration = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.DURATION))
-                    val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
-                    val ageMs = System.currentTimeMillis() - date
-                    
-                    // Only use if call is recent (within last 30 seconds)
-                    if (ageMs < 30000) {
-                        Log.d(TAG, "📞 Call log: duration=$duration, age=${ageMs}ms")
-                        duration
-                    } else {
-                        Log.w(TAG, "⚠️ Call log entry too old: ${ageMs}ms")
-                        0
-                    }
-                } else {
-                    Log.w(TAG, "⚠️ No call log entry found for $phoneNumber")
-                    0
-                }
-            } ?: 0
-        } catch (e: Exception) {
-            Log.e(TAG, "Call log error: ${e.message}")
-            0
-        }
     }
 
     private fun getLatestCallNumber(context: Context): String? {

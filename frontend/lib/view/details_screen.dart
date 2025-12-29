@@ -178,6 +178,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
             setState(() {
               _callDurationSeconds = duration;
               _isCallActive = false;
+              _isWaitingForDuration = false;
               // Auto-set status to Connected if call had duration
               if (selectedCallStatus == null) {
                 selectedCallStatus = "Connected";
@@ -188,6 +189,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
             setState(() {
               _isCallActive = false;
               _callDurationSeconds = 0;
+              _isWaitingForDuration = false;
             });
           }
         }
