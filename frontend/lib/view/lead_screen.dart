@@ -215,6 +215,8 @@ class _LeadScreenState extends State<LeadScreen> {
                             bgColor: item["bgColor"],
                             iconColor: item["iconColor"],
                             icon: item["icon"],
+                            context: context,
+                            callType: item["callType"],
                             isSelected:
                                 controller.selectedCallTypeIndex == index,
                             onTap: () async {

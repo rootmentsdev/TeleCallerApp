@@ -200,7 +200,20 @@ class ApiService {
       final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final decoded = json.decode(response.body);
+
+        // Normalize snake_case to camelCase
+        if (decoded is Map<String, dynamic>) {
+          final normalized = <String, dynamic>{};
+          decoded.forEach((key, value) {
+            // Convert snake_case to camelCase
+            final camelKey = _snakeToCamel(key);
+            normalized[camelKey] = value;
+          });
+          return normalized;
+        }
+
+        return decoded;
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
       } else {
@@ -211,6 +224,21 @@ class ApiService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Convert snake_case to camelCase
+  String _snakeToCamel(String str) {
+    List<String> parts = str.split('_');
+    if (parts.length == 1) return str;
+
+    String camel = parts[0];
+    for (int i = 1; i < parts.length; i++) {
+      String part = parts[i];
+      if (part.isNotEmpty) {
+        camel += part[0].toUpperCase() + part.substring(1);
+      }
+    }
+    return camel;
   }
 
   // Function to get all leads with pagination, store filter, and date filters

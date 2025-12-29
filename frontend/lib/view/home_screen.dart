@@ -89,6 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               bgColor: item["bgColor"],
                               iconColor: item["iconColor"],
                               icon: item["icon"],
+                              context: context,
+                              callType: item["callType"],
                               onTap: () {
                                 // Map the tapped summary card to the Lead screen tab
                                 final leadController =

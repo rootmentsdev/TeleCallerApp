@@ -702,6 +702,7 @@ class LeadRepository extends ChangeNotifier {
           category = LeadConstants.categoryLossOfSales;
         } else if (leadType == 'rentout' ||
             leadType == 'rent out' ||
+            leadType == 'return' ||
             leadType == 'rentoutfeedback') {
           category = LeadConstants.categoryRentOut;
         } else if (leadType == 'bookingconfirmation' ||

@@ -403,12 +403,40 @@ class ReportController extends ChangeNotifier {
             "reason": reason,
             "reasonFromStore": reason,
             "attendedBy":
-                "Krishna - ${leadLocation.isNotEmpty ? leadLocation : 'Zorucci Edappally'}",
+                "Not available - ${leadLocation.isNotEmpty ? leadLocation : 'Not available'}",
             "followUpDate": followUpDate?.toIso8601String(),
             "callDuration": callDuration,
             "remarks": report.note ?? "",
           };
         }).toList();
+
+    // For "All Calls" tab (index 0), also include newly created leads from local repository
+    if (_selectedCallTypeIndex == 0) {
+      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+      final localLeads = _repository.getLeadsByDate(selectedDate);
+
+      // Add newly created leads that aren't already in the API reports
+      final reportIds = filteredReports.map((r) => r["id"]).toSet();
+      for (final lead in localLeads) {
+        if (!reportIds.contains(lead.id)) {
+          filteredReports.add({
+            "id": lead.id,
+            "name": lead.name,
+            "phone": lead.phone,
+            "date": _formatDate(lead.createdAt),
+            "callDate": _formatDate(lead.createdAt),
+            "storeName": lead.location ?? lead.brand ?? "Not available",
+            "type": "general",
+            "callStatus": lead.callStatus ?? "Not called yet",
+            "leadStatus": lead.leadStatus,
+            "reason": lead.reason,
+            "followUpDate": lead.followUpDate?.toIso8601String(),
+            "callDuration": lead.callDuration,
+            "remarks": lead.reason ?? "",
+          });
+        }
+      }
+    }
 
     // Filter by store if specified
     if (storeFilter != null) {

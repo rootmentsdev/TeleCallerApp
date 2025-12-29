@@ -343,11 +343,15 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
     // Get the lead ID if available
     final leadId = widget.contact["id"] as String?;
+    bool wasNewLead = false; // Track if this was a new lead BEFORE update
+
     if (leadId != null) {
       final repository = LeadRepository();
       final lead = repository.getLeadById(leadId);
 
       if (lead != null) {
+        // Check if this was a NEW lead BEFORE the update
+        wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
         // Update lead with new information
         final updatedLead = LeadModel(
           id: lead.id,
@@ -669,25 +673,17 @@ class _DetailsScreenState extends State<DetailsScreen> {
         Navigator.of(context).pop();
 
         // Only navigate to Reports tab if this is a NEW lead (not previously called)
-        // Check if the lead was previously called
-        final repository = LeadRepository();
-        final lead = repository.getLeadById(leadId!);
-
-        if (lead != null) {
-          // Check if this was a new lead (not called before)
-          final wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
-
-          if (wasNewLead) {
-            // Only new leads move to "New Leads" report screen
-            ReportController.navigateToEquaryCalls();
-            if (mounted) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                BottomNavState.navigateToReports();
-              });
-            }
+        // wasNewLead was captured BEFORE the update, so it reflects the original state
+        if (wasNewLead) {
+          // Only new leads move to "New Leads" report screen
+          ReportController.navigateToEquaryCalls();
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              BottomNavState.navigateToReports();
+            });
           }
-          // If it was already called, just pop back - don't navigate to reports
         }
+        // If it was already called, just pop back - don't navigate to reports
       }
     }
   }
@@ -732,7 +728,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
       // Use PhoneCallService to make call and automatically track duration
       final success = await PhoneCallService.makeCall(
-        phoneNumber: cleanedNumber,
+        cleanedNumber,
         leadId: widget.contact["id"] as String?,
       );
 
@@ -854,7 +850,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       Text(
                         widget.contact["storeName"] ?? "Zorucci Edappally",
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 14,
                           fontFamily: TextConstant.dmSansRegular,
                         ),

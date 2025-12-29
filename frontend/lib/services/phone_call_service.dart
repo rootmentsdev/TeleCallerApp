@@ -78,10 +78,7 @@ class PhoneCallService {
   }
 
   /// Make a phone call and start tracking
-  static Future<bool> makeCall({
-    required String phoneNumber,
-    String? leadId,
-  }) async {
+  static Future<bool> makeCall(String phoneNumber, {String? leadId}) async {
     try {
       final result = await _methodChannel.invokeMethod<bool>('callPhone', {
         'phoneNumber': phoneNumber,

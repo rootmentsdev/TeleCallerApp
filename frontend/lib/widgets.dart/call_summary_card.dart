@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:telecaller_app/view/call_summary_details_screen.dart';
 
 class CallSummaryCard extends StatelessWidget {
   final String title;
@@ -8,6 +9,8 @@ class CallSummaryCard extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
   final bool isSelected;
+  final BuildContext? context;
+  final String? callType;
 
   const CallSummaryCard({
     super.key,
@@ -18,12 +21,34 @@ class CallSummaryCard extends StatelessWidget {
     required this.icon,
     this.onTap,
     this.isSelected = false,
+    this.context,
+    this.callType,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        // First execute the onTap callback if provided
+        onTap?.call();
+
+        // Then navigate to details screen if context and callType are provided
+        if (this.context != null && callType != null) {
+          Navigator.push(
+            this.context!,
+            MaterialPageRoute(
+              builder:
+                  (context) => CallSummaryDetailsScreen(
+                    title: title,
+                    bgColor: bgColor,
+                    iconColor: iconColor,
+                    icon: icon,
+                    callType: callType!,
+                  ),
+            ),
+          );
+        }
+      },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

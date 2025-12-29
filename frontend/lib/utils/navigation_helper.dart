@@ -4,6 +4,7 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/view/details_screen.dart';
+import 'package:telecaller_app/view/return_lead_details_screen.dart';
 import 'package:telecaller_app/view/reports_screens/just_dial_details_screen.dart';
 
 /// Helper class for navigation logic
@@ -30,6 +31,19 @@ class NavigationHelper {
   ) {
     final category = lead.category ?? "";
     final callTypeIndex = getCallTypeIndex(category);
+
+    // Special handling for Return/Rent-Out leads
+    if (category == LeadConstants.categoryRentOut ||
+        category == "Return" ||
+        category == "Rent-Out") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ReturnLeadDetailsScreen(lead: lead),
+        ),
+      );
+      return;
+    }
 
     // Special handling for Just Dial
     if (category == LeadConstants.categoryJustDial ||
