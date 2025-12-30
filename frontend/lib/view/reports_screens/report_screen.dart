@@ -230,7 +230,7 @@ class _ReportScreenState extends State<ReportScreen> {
                             ],
                           ),
                         )
-                        : reportController.selectedCallTypeIndex == 3
+                        : reportController.selectedCallTypeIndex == 4
                         ? _buildJustDialHorizontalList(
                           currentCallList,
                           reportController,
@@ -245,7 +245,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                 : reportController.selectedCallTypeIndex == 2
                                 ? "No Return calls found"
                                 : reportController.selectedCallTypeIndex == 3
-                                ? "No Booking confirmation Dial calls found"
+                                ? "No Booking confirmation calls found"
                                 : reportController.selectedCallTypeIndex == 4
                                 ? "No Just Dial calls found"
                                 : reportController.selectedCallTypeIndex == 5
@@ -284,7 +284,7 @@ class _ReportScreenState extends State<ReportScreen> {
                               case "booking":
                                 iconBgColor = const Color(0xFFD4F5DA);
                                 iconColor = const Color(0xff56BE6B);
-                                icon = Icons.flag_outlined;
+                                icon = Icons.check_circle_outlined;
                                 break;
                               case "justdial":
                                 iconBgColor = const Color(0xFFFFE8D5);

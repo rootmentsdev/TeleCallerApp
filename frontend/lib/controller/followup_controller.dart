@@ -257,8 +257,42 @@ class FollowupController extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
-      print('FollowupController: Error fetching follow-up leads: $e');
       notifyListeners();
+    }
+  }
+
+  /// Update Follow-Up lead via API
+  Future<void> updateFollowUpLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    String? remarks,
+    int? callDuration,
+    int? rating,
+  }) async {
+    try {
+      print('[FollowupController] updateFollowUpLead called');
+      print('[FollowupController] ID: $id');
+      print('[FollowupController] callStatus: $callStatus');
+      print('[FollowupController] leadStatus: $leadStatus');
+      print('[FollowupController] callDuration: $callDuration');
+      print('[FollowupController] remarks: $remarks');
+      print('[FollowupController] rating: $rating');
+
+      await _repository.updateFollowUpLeadFromApi(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        remarks: remarks,
+        callDuration: callDuration,
+        rating: rating,
+      );
+
+      print('[FollowupController] updateFollowUpLeadFromApi completed');
+      notifyListeners();
+    } catch (e) {
+      print('[FollowupController] Error in updateFollowUpLead: $e');
+      rethrow;
     }
   }
 }

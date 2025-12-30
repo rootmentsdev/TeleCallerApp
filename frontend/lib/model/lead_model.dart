@@ -13,6 +13,9 @@ class LeadModel {
   final int? callDuration; // Call duration in seconds
   final String? source; // Source of lead (Walk-in, Call, etc.)
   final String? leadType; // Type of lead
+  final bool isFollowUpCompleted; // True only after follow-up call is saved
+  final bool
+  isFollowUpOnly; // True when lead is in follow-up flow (not in reports)
 
   LeadModel({
     required this.id,
@@ -29,6 +32,8 @@ class LeadModel {
     DateTime? createdAt,
     this.source,
     this.leadType,
+    this.isFollowUpCompleted = false,
+    this.isFollowUpOnly = false,
   }) : createdAt = createdAt ?? DateTime.now();
 
   // Convert to Map for local storage (camelCase)
@@ -48,6 +53,8 @@ class LeadModel {
       'callDuration': callDuration,
       'source': source,
       'leadType': leadType,
+      'isFollowUpCompleted': isFollowUpCompleted,
+      'isFollowUpOnly': isFollowUpOnly,
     };
   }
 
@@ -92,6 +99,8 @@ class LeadModel {
               : DateTime.now(),
       source: map['source'],
       leadType: map['leadType'],
+      isFollowUpCompleted: map['isFollowUpCompleted'] ?? false,
+      isFollowUpOnly: map['isFollowUpOnly'] ?? false,
     );
   }
 
@@ -118,6 +127,8 @@ class LeadModel {
               : DateTime.now(),
       source: json['source'],
       leadType: json['lead_type'],
+      isFollowUpCompleted: json['isFollowUpCompleted'] ?? false,
+      isFollowUpOnly: json['isFollowUpOnly'] ?? false,
     );
   }
 

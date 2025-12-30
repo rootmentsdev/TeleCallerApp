@@ -111,38 +111,42 @@ class _AddLeadBottomSheetContentState
                 // Grid of Dropdowns (2x2)
                 Row(
                   children: [
-                    Flexible(
-                      flex: 1,
-                      child: _buildDropdownField(
-                        context: context,
-                        controller: controller,
-                        hint: "Brand",
-                        value: controller.selectedBrand,
-                        items: controller.brands,
-                        onChanged: (value) {
-                          controller.setSelectedBrand(value);
-                        },
+                    Expanded(
+                      child: Flexible(
+                        flex: 1,
+                        child: _buildDropdownField(
+                          context: context,
+                          controller: controller,
+                          hint: "Brand",
+                          value: controller.selectedBrand,
+                          items: controller.brands,
+                          onChanged: (value) {
+                            controller.setSelectedBrand(value);
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Flexible(
-                      flex: 1,
-                      child: _buildDropdownField(
-                        context: context,
-                        controller: controller,
-                        hint: "Location",
-                        value:
-                            controller.selectedBrand != null
-                                ? controller.selectedLocation
-                                : null,
-                        items: controller.locations,
-                        enabled: controller.selectedBrand != null,
-                        onChanged:
-                            controller.selectedBrand != null
-                                ? (value) {
-                                  controller.setSelectedLocation(value);
-                                }
-                                : null,
+                    Expanded(
+                      child: Flexible(
+                        flex: 1,
+                        child: _buildDropdownField(
+                          context: context,
+                          controller: controller,
+                          hint: "Location",
+                          value:
+                              controller.selectedBrand != null
+                                  ? controller.selectedLocation
+                                  : null,
+                          items: controller.locations,
+                          enabled: controller.selectedBrand != null,
+                          onChanged:
+                              controller.selectedBrand != null
+                                  ? (value) {
+                                    controller.setSelectedLocation(value);
+                                  }
+                                  : null,
+                        ),
                       ),
                     ),
                   ],

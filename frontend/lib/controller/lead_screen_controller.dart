@@ -240,7 +240,7 @@ class LeadScreenController extends ChangeNotifier {
             ).toString(),
         "bgColor": const Color(0xFFD4F5DA),
         "iconColor": const Color(0xff56BE6B),
-        "icon": Icons.flag_outlined,
+        "icon": Icons.check_circle_outlined,
       },
       {
         "title": "Just Dial\nEnquiry",
@@ -485,8 +485,16 @@ class LeadScreenController extends ChangeNotifier {
     DateTime? followUpDate,
     String? reasonCollectedFromStore,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
+      print('[LeadScreenController] updateLossOfSaleLead called');
+      print('[LeadScreenController] ID: $id');
+      print('[LeadScreenController] callStatus: $callStatus');
+      print('[LeadScreenController] leadStatus: $leadStatus');
+      print('[LeadScreenController] callDuration: $callDuration');
+      print('[LeadScreenController] remarks: $remarks');
+
       await _repository.updateLossOfSaleLeadFromApi(
         id: id,
         callStatus: callStatus,
@@ -494,13 +502,18 @@ class LeadScreenController extends ChangeNotifier {
         followUpDate: followUpDate,
         reasonCollectedFromStore: reasonCollectedFromStore,
         remarks: remarks,
+        callDuration: callDuration,
       );
 
+      print('[LeadScreenController] updateLossOfSaleLeadFromApi completed');
+
       _removeLeadFromActiveLists(id);
+      print('[LeadScreenController] Lead removed from active lists');
 
       notifyListeners();
+      print('[LeadScreenController] Listeners notified');
     } catch (e) {
-      print('LeadScreenController: Error updating Loss of Sale lead: $e');
+      print('[LeadScreenController] Error updating Loss of Sale lead: $e');
       rethrow;
     }
   }
@@ -514,6 +527,7 @@ class LeadScreenController extends ChangeNotifier {
     DateTime? callDate,
     int? rating,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
       await _repository.updateRentOutLeadFromApi(
@@ -524,6 +538,7 @@ class LeadScreenController extends ChangeNotifier {
         callDate: callDate,
         rating: rating,
         remarks: remarks,
+        callDuration: callDuration,
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();
@@ -541,6 +556,7 @@ class LeadScreenController extends ChangeNotifier {
     bool? followUpFlag,
     DateTime? callDate,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
       await _repository.updateBookingConfirmationLeadFromApi(
@@ -550,6 +566,7 @@ class LeadScreenController extends ChangeNotifier {
         followUpFlag: followUpFlag,
         callDate: callDate,
         remarks: remarks,
+        callDuration: callDuration,
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();

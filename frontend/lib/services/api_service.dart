@@ -464,6 +464,7 @@ class ApiService {
     String? followUpDate,
     String? reasonCollectedFromStore,
     String? remarks,
+    int? callDuration,
   }) async {
     final url = Uri.parse(ApiConfig.updateLossOfSale(id));
 
@@ -483,6 +484,9 @@ class ApiService {
         requestBody['reason_collected_from_store'] = reasonCollectedFromStore;
       }
       if (remarks != null) requestBody['remarks'] = remarks;
+      if (callDuration != null && callDuration > 0) {
+        requestBody['call_duration'] = callDuration;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 
@@ -677,6 +681,7 @@ class ApiService {
     String? functionDate,
     String? bookingNumber,
     int securityAmount = 0,
+    int? callDuration,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/leads/$id');
 
@@ -713,6 +718,9 @@ class ApiService {
       }
       if (securityAmount > 0) {
         requestBody['security_amount'] = securityAmount;
+      }
+      if (callDuration != null && callDuration > 0) {
+        requestBody['call_duration'] = callDuration;
       }
 
       final requestBodyJson = json.encode(requestBody);
@@ -784,6 +792,7 @@ class ApiService {
     DateTime? callDate,
     int? rating,
     String? remarks,
+    int? callDuration,
   }) async {
     final url = Uri.parse(ApiConfig.updateRentOut(id));
 
@@ -804,6 +813,9 @@ class ApiService {
       }
       if (rating != null) requestBody['rating'] = rating;
       if (remarks != null) requestBody['remarks'] = remarks;
+      if (callDuration != null && callDuration > 0) {
+        requestBody['call_duration'] = callDuration;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 
@@ -875,6 +887,7 @@ class ApiService {
     bool? followUpFlag,
     DateTime? callDate,
     String? remarks,
+    int? callDuration,
   }) async {
     final url = Uri.parse(ApiConfig.updateBookingConfirmation(id));
 
@@ -894,6 +907,9 @@ class ApiService {
         requestBody['call_date'] = callDate.toIso8601String();
       }
       if (remarks != null) requestBody['remarks'] = remarks;
+      if (callDuration != null && callDuration > 0) {
+        requestBody['call_duration'] = callDuration;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 
@@ -1150,5 +1166,159 @@ class ApiService {
     }
 
     return false;
+  }
+
+  /// Update Follow-Up lead
+  /// Matches backend POST /api/pages/follow-ups/{id}
+  Future<Map<String, dynamic>> updateFollowUp({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    String? remarks,
+    int? callDuration,
+    int? rating,
+  }) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/follow-ups/$id');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      // Prepare request body
+      final requestBody = <String, dynamic>{};
+      if (callStatus != null) requestBody['call_status'] = callStatus;
+      if (leadStatus != null) requestBody['lead_status'] = leadStatus;
+      if (remarks != null) requestBody['remarks'] = remarks;
+      if (callDuration != null && callDuration > 0) {
+        requestBody['call_duration'] = callDuration;
+      }
+      if (rating != null && rating > 0) {
+        requestBody['rating'] = rating;
+      }
+
+      final requestBodyJson = json.encode(requestBody);
+
+      print('ApiService: Updating Follow-Up lead');
+      print('ApiService: URL => $url');
+      print('ApiService: Request body => $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print(
+        'ApiService: Update Follow-Up response status: ${response.statusCode}',
+      );
+      print('ApiService: Update Follow-Up response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'success': true, 'data': decodedResponse};
+      } else if (response.statusCode == 400) {
+        String errorMessage = 'Validation error. Please check your input.';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Follow-Up lead not found.');
+      } else {
+        String errorMessage =
+            'Failed to update Follow-Up lead: Status ${response.statusCode}';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('ApiService: Error updating Follow-Up lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch Follow-Up leads from API
+  /// Matches backend GET /api/pages/follow-ups
+  Future<Map<String, dynamic>> getFollowUpLeads({
+    String? store,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/api/pages/follow-ups'
+      '${store != null ? '?store=$store' : ''}'
+      '${dateFrom != null ? '&dateFrom=$dateFrom' : ''}'
+      '${dateTo != null ? '&dateTo=$dateTo' : ''}'
+      '${page != null ? '&page=$page' : ''}'
+      '${limit != null ? '&limit=$limit' : ''}',
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching Follow-Up leads');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print(
+        'ApiService: Follow-Up leads response status: ${response.statusCode}',
+      );
+      print('ApiService: Follow-Up leads response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+
+        // Handle both Map and List responses
+        if (decodedResponse is Map<String, dynamic>) {
+          return decodedResponse;
+        } else if (decodedResponse is List) {
+          return {'follow_ups': decodedResponse};
+        } else {
+          throw Exception('Unexpected response format from server');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load Follow-Up leads: Status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('ApiService: Error fetching Follow-Up leads: $e');
+      rethrow;
+    }
   }
 }

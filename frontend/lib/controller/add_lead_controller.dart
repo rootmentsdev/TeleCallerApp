@@ -139,7 +139,13 @@ class AddLeadController extends ChangeNotifier {
       );
 
       // Save lead to local repository
-      await _repository.addLead(lead);
+      // If follow-up date is set, create as follow-up only lead (isolated from reports)
+      // Otherwise, add as normal lead
+      if (followUpDate != null) {
+        await _repository.createFollowUpLead(lead);
+      } else {
+        await _repository.addLead(lead);
+      }
 
       // Clear form
       clearForm();

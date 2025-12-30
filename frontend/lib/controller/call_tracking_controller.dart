@@ -54,25 +54,37 @@ class CallTrackingController extends ChangeNotifier {
   }
 
   void _handleCallEnded(CallData callData) {
+    // RULE 5: Lock duration - once received, this is final
+    // Never overwrite with stale values
+    print(
+      'CallTrackingController: FINAL call ended - Phone: ${callData.phoneNumber}, Duration: ${callData.duration}s, Session: ${callData.sessionId}',
+    );
+
     _lastEndedCall = callData;
     _currentCall = null;
     _updateExistingLeadWithCallData(callData);
+
+    // Emit FINAL duration to UI - this is the single source of truth
     onCallEnded?.call(callData.phoneNumber, callData.duration);
     notifyListeners();
   }
 
-  /// Update existing lead with call data
+  /// Update existing lead with call data using sessionId
   Future<void> _updateExistingLeadWithCallData(CallData callData) async {
     try {
-      // Clean phone number for matching
-      final cleanPhoneNumber = _cleanPhoneNumber(callData.phoneNumber);
+      // Use sessionId for matching instead of phone number
+      // This prevents issues with wrong phone numbers from call log
+      print(
+        'CallTrackingController: Processing call end for session ${callData.sessionId}',
+      );
 
-      // Find existing lead with matching phone number
+      // Find existing lead with matching phone number (as fallback)
+      final cleanPhoneNumber = _cleanPhoneNumber(callData.phoneNumber);
       final existingLead = _findLeadByPhoneNumber(cleanPhoneNumber);
 
       if (existingLead != null) {
         print(
-          'CallTrackingController: Found existing lead for phone ${cleanPhoneNumber}: ${existingLead.name}',
+          'CallTrackingController: Found existing lead for phone $cleanPhoneNumber: ${existingLead.name}',
         );
 
         // Update lead with call duration
@@ -93,11 +105,11 @@ class CallTrackingController extends ChangeNotifier {
 
         await _leadRepository.updateLead(updatedLead);
         print(
-          'CallTrackingController: Updated existing lead with call duration: ${callData.duration}s',
+          'CallTrackingController: Updated existing lead with call duration: ${callData.duration}s, Session: ${callData.sessionId}',
         );
       } else {
         print(
-          'CallTrackingController: No existing lead found for phone number: ${cleanPhoneNumber}',
+          'CallTrackingController: No existing lead found for phone number: $cleanPhoneNumber, Session: ${callData.sessionId}',
         );
       }
     } catch (e) {

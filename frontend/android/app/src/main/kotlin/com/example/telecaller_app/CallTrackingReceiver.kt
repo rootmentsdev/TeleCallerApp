@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.util.UUID
 
 class CallTrackingReceiver : BroadcastReceiver() {
 
@@ -20,13 +21,16 @@ class CallTrackingReceiver : BroadcastReceiver() {
         private const val TAG = "CallTrackingReceiver"
         private var flutterEngine: FlutterEngine? = null
 
-        private var lastPhoneNumber: String? = null
+        // Session-based tracking
+        private var currentSessionId: String? = null
+        private var dialedPhoneNumber: String? = null  // Original dialed number
         private var isOutgoing = false
         private var callStartTime: Long = 0
         private var callAnswerTime: Long = 0
         private var previousState = TelephonyManager.CALL_STATE_IDLE
         private var offhookOccurred = false
-        private var callEndProcessed = false  // Prevent duplicate onCallEnded events
+        private var callEndProcessed = false
+        private var earlyIdleIgnored = false  // Track if we ignored early IDLE
 
         fun setFlutterEngine(engine: FlutterEngine) {
             flutterEngine = engine
@@ -34,13 +38,17 @@ class CallTrackingReceiver : BroadcastReceiver() {
         }
 
         fun setOutgoingCallNumber(phoneNumber: String) {
-            Log.d(TAG, "📱 Outgoing call: '$phoneNumber'")
-            lastPhoneNumber = phoneNumber
+            // Generate unique session ID for this call
+            currentSessionId = UUID.randomUUID().toString()
+            dialedPhoneNumber = phoneNumber
             isOutgoing = true
             callAnswerTime = 0
             previousState = TelephonyManager.CALL_STATE_IDLE
             offhookOccurred = false
             callEndProcessed = false
+            earlyIdleIgnored = false
+            
+            Log.d(TAG, "📱 Outgoing call session: $currentSessionId, number: '$phoneNumber'")
         }
     }
 
@@ -50,37 +58,36 @@ class CallTrackingReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_NEW_OUTGOING_CALL -> {
                 val rawNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
-                lastPhoneNumber = if (!rawNumber.isNullOrEmpty()) cleanNumber(rawNumber) else null
-                isOutgoing = true
-                callEndProcessed = false
-                sendToFlutterMain(
-                    "onCallStateChanged",
-                    mapOf("state" to "outgoing", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
-                )
-                Log.d(TAG, "📤 Outgoing: $rawNumber -> $lastPhoneNumber")
+                setOutgoingCallNumber(if (!rawNumber.isNullOrEmpty()) cleanNumber(rawNumber) else "Unknown")
+                Log.d(TAG, "📤 Outgoing: $rawNumber -> $dialedPhoneNumber")
             }
 
             TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
                 val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
                 val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
 
-                Log.d(TAG, "State: $state, Phone: $phoneNumber, Previous: $previousState")
+                Log.d(TAG, "State: $state, Phone: $phoneNumber, Session: $currentSessionId, OffhookOccurred: $offhookOccurred")
 
                 when (state) {
                     TelephonyManager.EXTRA_STATE_RINGING -> {
-                        if (!phoneNumber.isNullOrEmpty()) {
-                            lastPhoneNumber = cleanNumber(phoneNumber)
+                        if (!phoneNumber.isNullOrEmpty() && !isOutgoing) {
+                            dialedPhoneNumber = cleanNumber(phoneNumber)
                         }
                         isOutgoing = false
                         previousState = TelephonyManager.CALL_STATE_RINGING
                         callStartTime = System.currentTimeMillis()
                         callEndProcessed = false
+                        earlyIdleIgnored = false
                         
                         sendToFlutterMain(
                             "onCallStateChanged",
-                            mapOf("state" to "ringing", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
+                            mapOf(
+                                "state" to "ringing",
+                                "phoneNumber" to (dialedPhoneNumber ?: "Unknown"),
+                                "sessionId" to (currentSessionId ?: "")
+                            )
                         )
-                        Log.d(TAG, "📞 RINGING: $lastPhoneNumber")
+                        Log.d(TAG, "📞 RINGING: $dialedPhoneNumber, Session: $currentSessionId")
                     }
 
                     TelephonyManager.EXTRA_STATE_OFFHOOK -> {
@@ -88,25 +95,50 @@ class CallTrackingReceiver : BroadcastReceiver() {
                             offhookOccurred = true
                             previousState = TelephonyManager.CALL_STATE_OFFHOOK
                             callAnswerTime = System.currentTimeMillis()
+                            earlyIdleIgnored = false  // Reset early IDLE flag when OFFHOOK occurs
                             
-                            if (!phoneNumber.isNullOrEmpty()) {
-                                lastPhoneNumber = cleanNumber(phoneNumber)
-                            }
-                            
-                            Log.d(TAG, "✅ OFFHOOK at: $callAnswerTime, Phone: $lastPhoneNumber")
+                            Log.d(TAG, "✅ OFFHOOK at: $callAnswerTime, Phone: $dialedPhoneNumber, Session: $currentSessionId")
                             
                             sendToFlutterMain(
                                 "onCallStateChanged",
-                                mapOf("state" to "answered", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
+                                mapOf(
+                                    "state" to "answered",
+                                    "phoneNumber" to (dialedPhoneNumber ?: "Unknown"),
+                                    "sessionId" to (currentSessionId ?: "")
+                                )
                             )
                         }
                     }
 
                     TelephonyManager.EXTRA_STATE_IDLE -> {
-                        // Prevent duplicate processing
-                        if (!callEndProcessed) {
+                        // CRITICAL: Ignore early IDLE before OFFHOOK (Android quirk)
+                        if (!offhookOccurred && !earlyIdleIgnored) {
+                            earlyIdleIgnored = true
+                            Log.d(TAG, "⚠️ EARLY IDLE (before OFFHOOK) - treating as cancelled call, Session: $currentSessionId")
+                            
+                            // Send cancelled call event
+                            sendToFlutterMain(
+                                "onCallEnded",
+                                mapOf(
+                                    "phoneNumber" to (dialedPhoneNumber ?: "Unknown"),
+                                    "duration" to 0,
+                                    "sessionId" to (currentSessionId ?: ""),
+                                    "cancelled" to true
+                                )
+                            )
+                            
+                            // Reset session
+                            currentSessionId = null
+                            dialedPhoneNumber = null
+                            offhookOccurred = false
                             callEndProcessed = true
-                            Log.d(TAG, "🔴 IDLE - Call ended")
+                            return
+                        }
+                        
+                        // Real call end: only process if OFFHOOK occurred
+                        if (offhookOccurred && !callEndProcessed) {
+                            callEndProcessed = true
+                            Log.d(TAG, "🔴 IDLE - Real call ended, Session: $currentSessionId")
                             processCallEnd(context)
                         }
                     }
@@ -116,13 +148,16 @@ class CallTrackingReceiver : BroadcastReceiver() {
     }
 
     private fun processCallEnd(context: Context) {
-        val phoneSnapshot = lastPhoneNumber
+        val sessionIdSnapshot = currentSessionId
+        val phoneSnapshot = dialedPhoneNumber
         val outgoingSnapshot = isOutgoing
         val offhookSnapshot = offhookOccurred
         val answerTimeSnapshot = callAnswerTime
+        val endTimeSnapshot = System.currentTimeMillis()
 
-        // Reset state immediately
-        lastPhoneNumber = null
+        // Reset state immediately to prevent duplicate processing
+        currentSessionId = null
+        dialedPhoneNumber = null
         isOutgoing = false
         callStartTime = 0
         callAnswerTime = 0
@@ -131,124 +166,126 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
         Thread {
             try {
-                // Initial wait for call log to be written
-                Thread.sleep(2000)
-
-                var number = phoneSnapshot
-                if (number == null || number == "Unknown") {
-                    number = getLatestCallNumber(context)
-                    Log.d(TAG, "📱 Got number from call log: $number")
-                }
-
                 var duration = 0
+                var durationSource = "none"  // Track duration source: "timestamp" or "calllog"
 
-                // Only fetch duration if call was answered
+                // RULE 1: Single Source of Truth - Use ONLY timestamp-based duration
+                // Only calculate duration if call was answered (OFFHOOK occurred)
                 if (offhookSnapshot && answerTimeSnapshot > 0) {
-                    // Call was answered - get duration from call log
-                    duration = getDurationFromCallLog(context, number)
-                    Log.d(TAG, "📊 First read: duration=$duration for $number (call was answered)")
-
-                    // Retry logic: if call log shows 0, retry after 2s
-                    if (duration == 0) {
-                        Log.w(TAG, "⏳ Call was answered but call log duration=0, retrying after 2s...")
-                        Thread.sleep(2000)
-                        duration = getDurationFromCallLog(context, number)
-                        Log.d(TAG, "📊 Retry read: duration=$duration for $number")
-                    }
-
-                    // If still 0, use calculated time as fallback
-                    if (duration == 0) {
-                        val calculatedDuration = ((System.currentTimeMillis() - answerTimeSnapshot) / 1000).toInt()
-                        if (calculatedDuration > 0) {
-                            duration = calculatedDuration
-                            Log.d(TAG, "⚠️ Using calculated duration: ${duration}s (call log was 0)")
-                        }
+                    // Calculate duration from timestamps (OFFHOOK → IDLE)
+                    // This is the ONLY source of truth
+                    duration = ((endTimeSnapshot - answerTimeSnapshot) / 1000).toInt()
+                    durationSource = "timestamp"  // Mark as timestamp-based
+                    
+                    Log.d(TAG, "✅ FINAL DURATION (timestamp-based): ${duration}s, Session: $sessionIdSnapshot, Phone: $phoneSnapshot")
+                    
+                    // Call log is secondary fallback only - verify but don't override
+                    Thread.sleep(1500)  // Wait for call log to be written
+                    val callLogDuration = fetchCallLogDurationWithRetry(
+                        context,
+                        phoneSnapshot,
+                        answerTimeSnapshot,
+                        endTimeSnapshot
+                    )
+                    
+                    if (callLogDuration > 0) {
+                        Log.d(TAG, "📋 Call log duration (for reference): ${callLogDuration}s (using timestamp: ${duration}s)")
                     } else {
-                        Log.d(TAG, "✅ Final: $number, duration=${duration}s (from call log)")
+                        Log.d(TAG, "📋 Call log not available (using timestamp: ${duration}s)")
                     }
                 } else {
                     // Call was not answered - duration is 0
-                    Log.d(TAG, "🔴 Call not answered: duration=0")
+                    Log.d(TAG, "🔴 Call not answered (OFFHOOK not occurred): duration=0, Session: $sessionIdSnapshot")
+                    durationSource = "none"
                 }
 
-                // Cache and send to Flutter
+                // Validate: Never emit with phone=null or Unknown
+                if (phoneSnapshot.isNullOrEmpty() || phoneSnapshot == "Unknown") {
+                    Log.w(TAG, "⚠️ SKIPPING: Invalid phone number: $phoneSnapshot, Session: $sessionIdSnapshot")
+                    return@Thread
+                }
+
+                // Cache and send to Flutter using ORIGINAL dialed number
                 CallResultCache.cacheCallResult(
                     context,
-                    number ?: "Unknown",
+                    phoneSnapshot,
                     duration,
                     if (outgoingSnapshot) "outgoing" else "incoming"
                 )
 
+                // RULE 4: Emit ONLY ONCE with final duration
+                // CRITICAL: Include durationSource flag so Flutter knows to lock only on timestamp
                 sendToFlutterMain(
                     "onCallEnded",
                     mapOf(
-                        "phoneNumber" to (number ?: "Unknown"),
-                        "duration" to duration
+                        "phoneNumber" to phoneSnapshot,
+                        "duration" to duration,
+                        "sessionId" to (sessionIdSnapshot ?: ""),
+                        "cancelled" to false,
+                        "durationSource" to durationSource  // "timestamp" or "calllog" or "none"
                     )
                 )
+                
+                Log.d(TAG, "📤 FINAL onCallEnded to Flutter: phone=$phoneSnapshot, duration=$duration, source=$durationSource, session=$sessionIdSnapshot")
             } catch (e: Exception) {
                 Log.e(TAG, "Error in processCallEnd: ${e.message}")
             }
         }.start()
     }
 
-    private fun getDurationFromCallLog(context: Context, phoneNumber: String?): Int {
-        if (!hasCallLogPermission(context)) return 0
-        if (phoneNumber == null || phoneNumber == "Unknown") return 0
+    private fun fetchCallLogDurationWithRetry(
+        context: Context,
+        phoneNumber: String?,
+        answerTime: Long,
+        endTime: Long
+    ): Int {
+        if (!hasCallLogPermission(context)) {
+            Log.w(TAG, "No call log permission")
+            return 0
+        }
 
-        return try {
-            val cursor = context.contentResolver.query(
-                CallLog.Calls.CONTENT_URI,
-                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE),
-                "${CallLog.Calls.NUMBER} = ?",
-                arrayOf(phoneNumber),
-                "${CallLog.Calls.DATE} DESC"
-            )
+        // Time window: ±5 seconds around answer time
+        val timeWindowStart = answerTime - 5000
+        val timeWindowEnd = endTime + 5000
 
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    val duration = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.DURATION))
-                    val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
-                    val ageMs = System.currentTimeMillis() - date
-                    
-                    // Only use if call is recent (within last 30 seconds)
-                    if (ageMs < 30000) {
-                        Log.d(TAG, "📞 Call log: duration=$duration, age=${ageMs}ms")
-                        duration
-                    } else {
-                        Log.w(TAG, "⚠️ Call log entry too old: ${ageMs}ms")
-                        0
+        // Retry up to 3 times with 500ms delay between retries
+        for (attempt in 1..3) {
+            try {
+                val cursor = context.contentResolver.query(
+                    CallLog.Calls.CONTENT_URI,
+                    arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.DURATION, CallLog.Calls.DATE),
+                    null,
+                    null,
+                    "${CallLog.Calls.DATE} DESC LIMIT 5"
+                )
+
+                cursor?.use {
+                    while (it.moveToNext()) {
+                        val logNumber = cleanNumber(it.getString(0))
+                        val logDuration = it.getInt(1)
+                        val logDate = it.getLong(2)
+
+                        // Match by cleaned number and time window
+                        if (logNumber == cleanNumber(phoneNumber ?: "") &&
+                            logDate in timeWindowStart..timeWindowEnd &&
+                            logDuration > 0) {
+                            Log.d(TAG, "✅ Found call log match (attempt $attempt): duration=$logDuration, number=$logNumber")
+                            return logDuration
+                        }
                     }
-                } else {
-                    Log.w(TAG, "⚠️ No call log entry found for $phoneNumber")
-                    0
                 }
-            } ?: 0
-        } catch (e: Exception) {
-            Log.e(TAG, "Call log error: ${e.message}")
-            0
-        }
-    }
-
-    private fun getLatestCallNumber(context: Context): String? {
-        if (!hasCallLogPermission(context)) return null
-
-        return try {
-            val cursor = context.contentResolver.query(
-                CallLog.Calls.CONTENT_URI,
-                arrayOf(CallLog.Calls.NUMBER),
-                null,
-                null,
-                "${CallLog.Calls.DATE} DESC"
-            )
-
-            cursor?.use {
-                if (it.moveToFirst()) cleanNumber(it.getString(0)) else null
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching call log (attempt $attempt): ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Number error: ${e.message}")
-            null
+
+            // Wait before retry
+            if (attempt < 3) {
+                Thread.sleep(500)
+            }
         }
+
+        Log.w(TAG, "⚠️ No matching call log found after 3 attempts")
+        return 0
     }
 
     private fun hasCallLogPermission(context: Context): Boolean {

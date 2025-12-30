@@ -168,7 +168,7 @@ class ReportController extends ChangeNotifier {
             ).toString(),
         "bgColor": const Color(0xFFD4F5DA),
         "iconColor": const Color(0xff56BE6B),
-        "icon": Icons.flag_outlined,
+        "icon": Icons.check_circle_outlined,
       },
       {
         "title": "Just Dial\nEnquiry",
@@ -202,17 +202,19 @@ class ReportController extends ChangeNotifier {
     final storeFilter = (store == null || store == 'All Stores') ? null : store;
 
     // Special handling for tab 6 (Follow-up Leads)
-    // Shows: Only leads with followUpDate set
+    // Shows: Only leads with followUpDate set AND isFollowUpOnly=true AND isFollowUpCompleted=false
     if (_selectedCallTypeIndex == 6) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
       // Get all leads from repository
       List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
 
-      // Filter only leads with follow-up date set
+      // Filter only leads that are in follow-up flow (not completed)
       List<dynamic> followUpLeads =
           allLeads.where((lead) {
-            return lead.followUpDate != null;
+            return lead.followUpDate != null &&
+                lead.isFollowUpOnly &&
+                !lead.isFollowUpCompleted;
           }).toList();
 
       // Filter by store if specified
@@ -249,19 +251,22 @@ class ReportController extends ChangeNotifier {
     }
 
     // Special handling for tab 5 (New Leads)
-    // Shows: Only newly added leads (not called yet)
+    // Shows: Only newly added leads (not called yet) that are NOT in follow-up flow
     if (_selectedCallTypeIndex == 5) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
       // Get all leads from repository
       List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
 
-      // Filter only newly added leads (not called yet)
+      // Filter only newly added leads (not called yet) that are NOT follow-up only
       List<dynamic> enquiryLeads =
           allLeads.where((lead) {
-            // Include only leads that have NOT been called
+            // Include only leads that:
+            // 1. Have NOT been called
+            // 2. Are NOT in follow-up flow (isFollowUpOnly = false)
             final isNotCalled = !LeadConstants.isCalledStatus(lead.callStatus);
-            return isNotCalled;
+            final isNotFollowUpOnly = !lead.isFollowUpOnly;
+            return isNotCalled && isNotFollowUpOnly;
           }).toList();
 
       // Filter by store if specified
@@ -483,12 +488,18 @@ class ReportController extends ChangeNotifier {
 
     switch (leadType.toLowerCase()) {
       case "lossofsale":
+      case "loss of sale":
         return "loss";
       case "rentoutfeedback":
-        return "hardout";
+      case "rent out":
+      case "rentout":
+      case "return":
+        return "rent-out";
       case "bookingconfirmation":
+      case "booking confirmation":
         return "booking";
       case "justdial":
+      case "just dial":
         return "justdial";
       default:
         return "general";

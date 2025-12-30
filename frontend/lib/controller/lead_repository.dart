@@ -61,7 +61,18 @@ class LeadRepository extends ChangeNotifier {
   }
 
   List<LeadModel> get followUpLeads {
-    return _leads.where((lead) => lead.needsFollowUp).toList();
+    // Return only leads that:
+    // 1. Have a follow-up date set
+    // 2. Are NOT yet completed (not moved to reports)
+    // 3. Are marked as follow-up only (isolated from normal flow)
+    return _leads
+        .where(
+          (lead) =>
+              lead.needsFollowUp &&
+              !lead.isFollowUpCompleted &&
+              lead.isFollowUpOnly,
+        )
+        .toList();
   }
 
   List<LeadModel> get todayFollowUps {
@@ -134,6 +145,37 @@ class LeadRepository extends ChangeNotifier {
     await ensureInitialized();
     _leads.add(lead);
     _lastAddedLeadId = lead.id;
+    await _saveLeads();
+    notifyListeners();
+  }
+
+  /// Create a follow-up lead when follow-up date is set
+  /// This moves the lead to Follow-Up Screen only, NOT to Reports
+  Future<void> createFollowUpLead(LeadModel lead) async {
+    await ensureInitialized();
+
+    // Create a new lead with follow-up flags set
+    final followUpLead = LeadModel(
+      id: lead.id,
+      name: lead.name,
+      phone: lead.phone,
+      brand: lead.brand,
+      location: lead.location,
+      leadStatus: lead.leadStatus,
+      callStatus: lead.callStatus,
+      followUpDate: lead.followUpDate,
+      reason: lead.reason,
+      category: lead.category,
+      callDuration: lead.callDuration,
+      createdAt: lead.createdAt,
+      source: lead.source,
+      leadType: lead.leadType,
+      isFollowUpCompleted: false, // Not yet completed
+      isFollowUpOnly: true, // Mark as follow-up only (isolated from reports)
+    );
+
+    _leads.add(followUpLead);
+    _lastAddedLeadId = followUpLead.id;
     await _saveLeads();
     notifyListeners();
   }
@@ -814,6 +856,7 @@ class LeadRepository extends ChangeNotifier {
     DateTime? followUpDate,
     String? reasonCollectedFromStore,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
       await ensureInitialized();
@@ -831,6 +874,7 @@ class LeadRepository extends ChangeNotifier {
         followUpDate: followUpDateString,
         reasonCollectedFromStore: reasonCollectedFromStore,
         remarks: remarks,
+        callDuration: callDuration,
       );
 
       final lead = getLeadById(id);
@@ -846,7 +890,7 @@ class LeadRepository extends ChangeNotifier {
           followUpDate: followUpDate ?? lead.followUpDate,
           reason: reasonCollectedFromStore ?? lead.reason,
           category: lead.category,
-          callDuration: lead.callDuration,
+          callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
@@ -865,6 +909,7 @@ class LeadRepository extends ChangeNotifier {
     DateTime? callDate,
     int? rating,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
       await ensureInitialized();
@@ -877,6 +922,7 @@ class LeadRepository extends ChangeNotifier {
         callDate: callDate,
         rating: rating,
         remarks: remarks,
+        callDuration: callDuration,
       );
 
       final lead = getLeadById(id);
@@ -895,7 +941,7 @@ class LeadRepository extends ChangeNotifier {
                   : (followUpFlag == false ? null : lead.followUpDate),
           reason: remarks ?? lead.reason,
           category: lead.category,
-          callDuration: lead.callDuration,
+          callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
@@ -913,6 +959,7 @@ class LeadRepository extends ChangeNotifier {
     bool? followUpFlag,
     DateTime? callDate,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
       await ensureInitialized();
@@ -924,6 +971,7 @@ class LeadRepository extends ChangeNotifier {
         followUpFlag: followUpFlag,
         callDate: callDate,
         remarks: remarks,
+        callDuration: callDuration,
       );
 
       final lead = getLeadById(id);
@@ -942,7 +990,7 @@ class LeadRepository extends ChangeNotifier {
                   : (followUpFlag == false ? null : lead.followUpDate),
           reason: remarks ?? lead.reason,
           category: lead.category,
-          callDuration: lead.callDuration,
+          callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
@@ -1034,6 +1082,96 @@ class LeadRepository extends ChangeNotifier {
       await _saveLeads();
       notifyListeners();
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Remove follow-up lead from local storage
+  void removeFollowUpLead(String id) {
+    _leads.removeWhere((lead) => lead.id == id);
+    notifyListeners();
+  }
+
+  /// Update Follow-Up lead via API
+  Future<void> updateFollowUpLeadFromApi({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    String? remarks,
+    int? callDuration,
+    int? rating,
+  }) async {
+    try {
+      print('[LeadRepository] updateFollowUpLeadFromApi called');
+      print('[LeadRepository] ID: $id');
+      print('[LeadRepository] callStatus: $callStatus');
+      print('[LeadRepository] leadStatus: $leadStatus');
+      print('[LeadRepository] callDuration: $callDuration');
+      print('[LeadRepository] remarks: $remarks');
+      print('[LeadRepository] rating: $rating');
+
+      await ensureInitialized();
+
+      print('[LeadRepository] Calling API updateFollowUp...');
+      await _apiService.updateFollowUp(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        remarks: remarks,
+        callDuration: callDuration,
+        rating: rating,
+      );
+
+      print('[LeadRepository] API updateFollowUp completed successfully');
+
+      // Get the current lead
+      final lead = getLeadById(id);
+      print(
+        '[LeadRepository] Retrieved lead from local storage: ${lead?.name}',
+      );
+      if (lead != null) {
+        // Create updated lead with follow-up completed flag set
+        // This moves it from Follow-Up Screen to Reports Screen
+        final updatedLead = LeadModel(
+          id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          brand: lead.brand,
+          location: lead.location,
+          leadStatus: leadStatus ?? lead.leadStatus,
+          callStatus: callStatus ?? lead.callStatus,
+          followUpDate: lead.followUpDate,
+          reason: remarks ?? lead.reason,
+          category: lead.category,
+          callDuration: callDuration ?? lead.callDuration,
+          createdAt: lead.createdAt,
+          source: lead.source,
+          leadType: lead.leadType,
+          isFollowUpCompleted: true, // Mark as completed
+          isFollowUpOnly: false, // Remove from follow-up only (now in reports)
+        );
+
+        print('[LeadRepository] Updated lead object created');
+        print(
+          '[LeadRepository] Updated callDuration: ${updatedLead.callDuration}',
+        );
+        print('[LeadRepository] Updated callStatus: ${updatedLead.callStatus}');
+        print('[LeadRepository] Updated leadStatus: ${updatedLead.leadStatus}');
+
+        // Update the lead in local storage
+        final index = _leads.indexWhere((l) => l.id == id);
+        print('[LeadRepository] Lead index in list: $index');
+        if (index != -1) {
+          _leads[index] = updatedLead;
+          await _saveLeads();
+          print('[LeadRepository] Lead updated in local storage and saved');
+        }
+      }
+
+      notifyListeners();
+      print('[LeadRepository] Listeners notified');
+    } catch (e) {
+      print('[LeadRepository] Error in updateFollowUpLeadFromApi: $e');
       rethrow;
     }
   }

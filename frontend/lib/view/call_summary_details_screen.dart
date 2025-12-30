@@ -6,6 +6,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/utils/navigation_helper.dart';
+import 'package:telecaller_app/utils/format_helper.dart';
 
 class CallSummaryDetailsScreen extends StatelessWidget {
   final String title;
@@ -225,6 +226,19 @@ class CallSummaryDetailsScreen extends StatelessWidget {
                                                 TextConstant.dmSansRegular,
                                           ),
                                         ),
+                                        if (lead.callDuration != null &&
+                                            lead.callDuration! > 0) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "Duration: ${FormatHelper.formatCallDurationWithUnits(lead.callDuration)}",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.green[700],
+                                              fontFamily:
+                                                  TextConstant.dmSansMedium,
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),

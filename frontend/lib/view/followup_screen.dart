@@ -4,7 +4,7 @@ import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
+import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 
 class FollowupScreen extends StatefulWidget {
@@ -268,15 +268,48 @@ class _FollowupScreenState extends State<FollowupScreen> {
   Widget _buildCallItem(Map<String, dynamic> call, BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Open report details screen (read-only view) when follow-up lead is clicked
+        // Open details screen (same as lead screen) when follow-up lead is clicked
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => ReportDetailsScreen(
-                  contact: call,
-                  callTypeIndex: 6, // Follow-up tab
-                ),
+            builder: (context) {
+              // Get the lead from the current leads list
+              final controller = Provider.of<FollowupController>(
+                context,
+                listen: false,
+              );
+              final currentLeads = controller.getCurrentLeads();
+              final leadIndex = currentLeads.indexWhere(
+                (l) => l.name == call["name"] && l.phone == call["phone"],
+              );
+
+              if (leadIndex != -1) {
+                final lead = currentLeads[leadIndex];
+                // Convert LeadModel to Map for DetailsScreen
+                final contactMap = {
+                  "id": lead.id,
+                  "name": lead.name,
+                  "phone": lead.phone,
+                  "brand": lead.brand,
+                  "location": lead.location,
+                  "leadStatus": lead.leadStatus,
+                  "callStatus": lead.callStatus,
+                  "followUpDate": lead.followUpDate,
+                  "reason": lead.reason,
+                  "category": lead.category,
+                  "createdAt": lead.createdAt,
+                  "callDuration": lead.callDuration,
+                  "source": lead.source,
+                  "leadType": lead.leadType,
+                };
+
+                // Use standard DetailsScreen (callTypeIndex 0 = All Calls)
+                return DetailsScreen(contact: contactMap, callTypeIndex: 0);
+              }
+              return const Scaffold(
+                body: Center(child: Text('Lead not found')),
+              );
+            },
           ),
         );
       },
