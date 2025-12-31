@@ -9,11 +9,11 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/widgets/call_duration_display.dart';
 
 class DetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -42,13 +42,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
   // Dirty flag to track unsaved changes
   bool _isDirty = false;
-
-  // Call tracking variables
-  bool _isCallActive = false;
-  int _callDurationSeconds = 0;
-  bool _hasCalled = false; // Track if call was initiated from lead screen
-  bool _isWaitingForDuration =
-      false; // Track if waiting for call log to write duration
 
   final List<Map<String, dynamic>> callSummary = [
     {
@@ -141,314 +134,27 @@ class _DetailsScreenState extends State<DetailsScreen> {
   void initState() {
     super.initState();
 
+    // Reset call tracking service state when entering a new lead
+    // This ensures the singleton doesn't carry over state from previous lead
+    CallTrackingService().forceResetState();
+
     // Add listeners to track changes for dirty flag
     remarksController.addListener(_markDirty);
     customReasonController.addListener(_markDirty);
-
-    // Initialize call duration from existing contact if available
-    final existingDuration = widget.contact["callDuration"] as int?;
-    if (existingDuration != null && existingDuration > 0) {
-      _callDurationSeconds = existingDuration;
-      print(
-        '[DetailsScreen] Existing duration loaded: $_callDurationSeconds seconds',
-      );
-    }
-
-    // Initialize PhoneCallService to listen for automatic call duration
-    PhoneCallService.initialize(
-      onCallStarted: (phoneNumber) {
-        // Call initiated - set state
-        print('[DetailsScreen] onCallStarted: phone=$phoneNumber');
-        if (mounted) {
-          setState(() {
-            _isCallActive = true; // Show call is active but not answered yet
-            _callDurationSeconds = 0; // Reset duration
-          });
-          print(
-            '[DetailsScreen] State updated: _isCallActive=true, _callDurationSeconds=0',
-          );
-        }
-      },
-      onCallAnswered: (phoneNumber) {
-        // Call answered - update UI
-        print('[DetailsScreen] onCallAnswered: phone=$phoneNumber');
-        if (mounted) {
-          setState(() {
-            _isCallActive = true;
-          });
-          print('[DetailsScreen] Call answered, _isCallActive=true');
-        }
-      },
-      onCallEnded: (phoneNumber, duration) {
-        print('[DetailsScreen] onCallEnded callback triggered');
-        print(
-          '[DetailsScreen] Phone: $phoneNumber, Duration: $duration seconds',
-        );
-        if (mounted) {
-          // RULE 5: Lock duration - once a valid duration is received, lock it
-          // Never overwrite with stale or zero values
-          if (duration != null && duration > 0) {
-            print('[DetailsScreen] FINAL duration received: $duration > 0');
-
-            // RULE 5: Only update if this is a new duration or first time
-            // Don't overwrite with stale values from previous calls
-            if (_callDurationSeconds == 0 || _callDurationSeconds != duration) {
-              setState(() {
-                _callDurationSeconds = duration; // Lock this duration
-                _isCallActive = false;
-                _isWaitingForDuration = false;
-                _hasCalled = true; // Enable form fields after call
-                // Auto-set status to Connected if call had duration
-                if (selectedCallStatus == null) {
-                  selectedCallStatus = "Connected";
-                }
-              });
-              print(
-                '[DetailsScreen] LOCKED duration: _callDurationSeconds=$duration, _hasCalled=true',
-              );
-            } else {
-              print(
-                '[DetailsScreen] Duration already locked: $_callDurationSeconds (ignoring duplicate)',
-              );
-            }
-          } else {
-            print('[DetailsScreen] Invalid duration: $duration (skipping)');
-            // Call ended but was not answered (missed/rejected) or duration is null
-            // Don't reset _callDurationSeconds - preserve locked value
-            setState(() {
-              _isCallActive = false;
-              _isWaitingForDuration = false;
-            });
-          }
-        } else {
-          print('[DetailsScreen] Widget not mounted, skipping state update');
-        }
-      },
-    );
-
-    // Force reset CallTrackingService state when opening a new lead
-    // This ensures the singleton service doesn't carry over state from previous lead
-    final callTrackingService = CallTrackingService();
-    callTrackingService.forceResetState();
-    print('[DetailsScreen] CallTrackingService state reset for new lead');
-
-    // Set up call tracking listener
-    _setupCallTrackingListener();
-  }
-
-  /// Set up call tracking listener for automatic call duration detection
-  void _setupCallTrackingListener() {
-    final callTrackingController = Provider.of<CallTrackingController>(
-      context,
-      listen: false,
-    );
-
-    // Set up callback for call state changes
-    callTrackingController.setOnCallStateChangedCallback((callData) {
-      final contactPhone = widget.contact["phone"] as String? ?? "";
-      print(
-        'DetailsScreen: Call state changed - phone: ${callData.phoneNumber}, state: ${callData.callState}, duration: ${callData.duration}, source: ${callData.durationSource}',
-      );
-
-      // Check if this call matches our contact
-      if (_isPhoneNumberMatch(callData.phoneNumber, contactPhone)) {
-        print('DetailsScreen: Phone number matches - processing call state');
-        if (mounted) {
-          setState(() {
-            switch (callData.callState) {
-              case CallState.ringing:
-                print('DetailsScreen: Call ringing');
-                _isCallActive = true;
-                _callDurationSeconds = 0;
-                break;
-              case CallState.answered:
-                print('DetailsScreen: Call answered');
-                _isCallActive = true;
-                break;
-              case CallState.ended:
-                print(
-                  'DetailsScreen: Call ended - duration: ${callData.duration}, source: ${callData.durationSource}',
-                );
-
-                _isCallActive = false;
-
-                // 🔴 CALL-LOG is PREVIEW ONLY
-                // Show temporarily but don't lock form fields
-                if (callData.durationSource == 'calllog') {
-                  print(
-                    'DetailsScreen: 👁️ Call-log duration (preview only): ${callData.duration}s',
-                  );
-                  _callDurationSeconds = callData.duration; // temp display
-                  setState(() {}); // Update UI temporarily
-                  return;
-                }
-
-                // ✅ ONLY timestamp can finalize
-                if (callData.durationSource == 'timestamp') {
-                  print(
-                    'DetailsScreen: ✅ TIMESTAMP duration (FINALIZING): ${callData.duration}s',
-                  );
-                  _callDurationSeconds = callData.duration;
-                  _hasCalled = true; // LOCK HERE ONLY - enable form fields
-                  _isCallActive = false;
-                  _isWaitingForDuration = false;
-
-                  // Auto-set call status based on duration
-                  if (selectedCallStatus == null) {
-                    selectedCallStatus =
-                        callData.duration > 0
-                            ? LeadConstants.callStatusConnected
-                            : LeadConstants.callStatusNotConnected;
-                  }
-
-                  // 🔴 MANDATORY: Finalize call state
-                  setState(() {});
-                  return;
-                }
-
-                // If duration is 0, poll for the actual duration from cache
-                if (callData.duration == 0) {
-                  print(
-                    'DetailsScreen: Duration is 0, starting to poll for cached duration',
-                  );
-                  _isWaitingForDuration = true;
-                  _pollForDuration(callData.phoneNumber);
-                } else {
-                  print(
-                    'DetailsScreen: Duration is ${callData.duration}, not polling',
-                  );
-                  // Auto-set call status based on duration
-                  if (selectedCallStatus == null) {
-                    selectedCallStatus =
-                        callData.duration > 0
-                            ? LeadConstants.callStatusConnected
-                            : LeadConstants.callStatusNotConnected;
-                  }
-                }
-                break;
-            }
-          });
-        }
-      } else {
-        print(
-          'DetailsScreen: Phone number does not match - ignoring call state',
-        );
-      }
-    });
-  }
-
-  /// Poll for duration from cache if initial duration was 0
-  Future<void> _pollForDuration(String phoneNumber) async {
-    final contactPhone = widget.contact["phone"] as String? ?? "";
-
-    // Poll up to 5 times, waiting 1 second between each attempt
-    for (int i = 0; i < 5; i++) {
-      await Future.delayed(const Duration(seconds: 1));
-
-      if (!mounted) return;
-
-      try {
-        final callTrackingService = CallTrackingService();
-        final cachedResult = await callTrackingService.checkForCachedCallResult(
-          contactPhone,
-        );
-
-        if (cachedResult != null && cachedResult.duration > 0) {
-          print(
-            'DetailsScreen: ✅ Polled duration found: ${cachedResult.duration}s',
-          );
-
-          if (mounted) {
-            setState(() {
-              _callDurationSeconds = cachedResult.duration;
-              _isWaitingForDuration = false;
-              _isCallActive = false;
-              _hasCalled = true; // Enable form fields after duration found
-
-              // Auto-set call status based on duration
-              if (selectedCallStatus == null) {
-                selectedCallStatus =
-                    cachedResult.duration > 0
-                        ? LeadConstants.callStatusConnected
-                        : LeadConstants.callStatusNotConnected;
-              }
-            });
-          }
-          return; // Duration found, stop polling
-        }
-      } catch (e) {
-        print('DetailsScreen: Error polling for duration: $e');
-      }
-    }
-
-    print('DetailsScreen: ⚠️ Duration not found after polling');
-
-    if (mounted) {
-      setState(() {
-        _isWaitingForDuration = false;
-        _isCallActive = false;
-      });
-    }
-  }
-
-  /// Check if phone numbers match (handles different formats)
-  bool _isPhoneNumberMatch(String phone1, String phone2) {
-    // Clean both numbers
-    String clean1 = phone1.replaceAll(RegExp(r'[^\d]'), '');
-    String clean2 = phone2.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Handle country codes
-    if (clean1.startsWith('91') && clean1.length == 12) {
-      clean1 = clean1.substring(2);
-    }
-    if (clean2.startsWith('91') && clean2.length == 12) {
-      clean2 = clean2.substring(2);
-    }
-
-    // Handle leading zeros
-    if (clean1.startsWith('0') && clean1.length == 11) {
-      clean1 = clean1.substring(1);
-    }
-    if (clean2.startsWith('0') && clean2.length == 11) {
-      clean2 = clean2.substring(1);
-    }
-
-    return clean1 == clean2 ||
-        clean1.contains(clean2) ||
-        clean2.contains(clean1);
   }
 
   Future<void> _saveCallUpdate() async {
     print('[DetailsScreen] _saveCallUpdate called');
-    print('[DetailsScreen] _callDurationSeconds: $_callDurationSeconds');
-    print('[DetailsScreen] selectedCallStatus: $selectedCallStatus');
-    print('[DetailsScreen] _hasCalled: $_hasCalled');
-
-    // If call was made and has duration, auto-set status to Connected
-    if (_callDurationSeconds > 0 && selectedCallStatus == null) {
-      selectedCallStatus = "Connected";
-      print(
-        '[DetailsScreen] Auto-set selectedCallStatus to Connected (duration > 0)',
-      );
-    }
 
     // If no call status is set, set default
     if (selectedCallStatus == null || selectedCallStatus!.isEmpty) {
-      if (_isCallActive || _callDurationSeconds > 0) {
-        selectedCallStatus = "Connected";
-        print(
-          '[DetailsScreen] Set selectedCallStatus to Connected (call active or duration > 0)',
-        );
-      } else {
-        selectedCallStatus = "Not called yet";
-        print(
-          '[DetailsScreen] Set selectedCallStatus to Not called yet (no call)',
-        );
-      }
+      selectedCallStatus = "Not called yet";
+      print(
+        '[DetailsScreen] Set selectedCallStatus to Not called yet (no call)',
+      );
     }
 
     print('[DetailsScreen] Final selectedCallStatus: $selectedCallStatus');
-    print('[DetailsScreen] Final _callDurationSeconds: $_callDurationSeconds');
 
     // Get the lead ID if available
     final leadId = widget.contact["id"] as String?;
@@ -484,7 +190,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   : selectedReason,
           category: lead.category,
           createdAt: lead.createdAt,
-          callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
+          callDuration: null, // Duration will be captured from StreamBuilder
           source: lead.source,
           leadType: lead.leadType,
           // Preserve follow-up state flags
@@ -492,9 +198,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
           isFollowUpOnly: lead.isFollowUpOnly,
         );
 
-        print(
-          '[DetailsScreen] Updated lead callDuration: ${updatedLead.callDuration}',
-        );
         print(
           '[DetailsScreen] Updated lead callStatus: ${updatedLead.callStatus}',
         );
@@ -523,14 +226,55 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     : selectedReason,
             category: lead.category,
             createdAt: lead.createdAt,
-            callDuration:
-                _callDurationSeconds > 0 ? _callDurationSeconds : null,
+            callDuration: null, // Duration will be captured from StreamBuilder
             source: lead.source,
             leadType: lead.leadType,
             isFollowUpCompleted: false,
             isFollowUpOnly: true, // Mark as follow-up only
           );
           await repository.updateLead(followUpLead);
+
+          // 🔴 STEP 1: MOVE LEAD FROM LEADS TO FOLLOWUPS VIA API
+          // Call the moveLeadToFollowUp API first to move lead to FollowUps collection
+          try {
+            final apiService = ApiService();
+            print('[DetailsScreen] Moving lead to FollowUps via API');
+            print('[DetailsScreen] Lead ID: $leadId');
+            print('[DetailsScreen] Follow-up Date: $followUpDate');
+            print('[DetailsScreen] Call Status: $selectedCallStatus');
+            print('[DetailsScreen] Lead Status: $selectedLeadStatus');
+
+            await apiService.moveLeadToFollowUp(
+              id: leadId,
+              followUpDate: followUpDate!,
+              callStatus: selectedCallStatus,
+              leadStatus: selectedLeadStatus,
+              remarks:
+                  remarksController.text.trim().isEmpty
+                      ? null
+                      : remarksController.text.trim(),
+            );
+
+            print(
+              '[DetailsScreen] Lead moved to FollowUps successfully via API',
+            );
+          } catch (e) {
+            print(
+              '[DetailsScreen] Error moving lead to follow-ups via API: $e',
+            );
+            // Don't block navigation if API fails
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Failed to move lead to follow-ups on server: ${e.toString().replaceFirst('Exception: ', '')}',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          }
         }
 
         // Refresh controllers to update UI
@@ -567,9 +311,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
             );
 
             print('[DetailsScreen] Calling updateLossOfSaleLead API');
-            print(
-              '[DetailsScreen] callDuration to post: $_callDurationSeconds',
-            );
             print('[DetailsScreen] callStatus to post: $selectedCallStatus');
             print('[DetailsScreen] leadStatus to post: $selectedLeadStatus');
 
@@ -584,7 +325,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       ? null
                       : remarksController.text.trim(),
               callDuration:
-                  _callDurationSeconds > 0 ? _callDurationSeconds : null,
+                  null, // Duration will be captured from StreamBuilder
             );
 
             print('[DetailsScreen] updateLossOfSaleLead API call completed');
@@ -633,7 +374,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
             // Determine call date - use current time if call was made
             DateTime? callDate;
-            if (_callDurationSeconds > 0 || _isCallActive) {
+            if (selectedCallStatus == "Connected") {
               callDate = DateTime.now();
             }
 
@@ -649,7 +390,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       ? null
                       : remarksController.text.trim(),
               callDuration:
-                  _callDurationSeconds > 0 ? _callDurationSeconds : null,
+                  null, // Duration will be captured from StreamBuilder
             );
 
             // Refresh again after API update to ensure UI is updated
@@ -694,7 +435,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
             // Determine call date - use current time if call was made
             DateTime? callDate;
-            if (_callDurationSeconds > 0 || _isCallActive) {
+            if (selectedCallStatus == "Connected") {
               callDate = DateTime.now();
             }
 
@@ -709,7 +450,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       ? null
                       : remarksController.text.trim(),
               callDuration:
-                  _callDurationSeconds > 0 ? _callDurationSeconds : null,
+                  null, // Duration will be captured from StreamBuilder
             );
 
             // Refresh again after API update to ensure UI is updated
@@ -770,7 +511,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
               functionDate:
                   markAsFollowUp ? followUpDate?.toIso8601String() : null,
               callDuration:
-                  _callDurationSeconds > 0 ? _callDurationSeconds : null,
+                  null, // Duration will be captured from StreamBuilder
             );
 
             print('DetailsScreen: General lead updated successfully via API');
@@ -833,32 +574,23 @@ class _DetailsScreenState extends State<DetailsScreen> {
     // Reset dirty flag after successful save
     _isDirty = false;
 
-    // Navigate based on follow-up status
+    // Navigate based on call status
     if (mounted) {
-      // If follow-up date is set, navigate to follow-up screen
-      if (markAsFollowUp && followUpDate != null) {
-        Navigator.of(context).pop();
-        // Navigate to follow-up screen (index 4 in bottom nav)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          BottomNavState.navigateToFollowUp();
-        });
-      } else {
-        // Pop back to BottomNav (not all the way to LoginScreen)
-        Navigator.of(context).pop();
+      // Pop back to BottomNav (not all the way to LoginScreen)
+      Navigator.of(context).pop();
 
-        // Only navigate to Reports tab if this is a NEW lead (not previously called)
-        // wasNewLead was captured BEFORE the update, so it reflects the original state
-        if (wasNewLead) {
-          // Only new leads move to "New Leads" report screen
-          ReportController.navigateToEquaryCalls();
-          if (mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              BottomNavState.navigateToReports();
-            });
-          }
+      // Only navigate to Reports tab if this is a NEW lead (not previously called)
+      // wasNewLead was captured BEFORE the update, so it reflects the original state
+      if (wasNewLead) {
+        // Only new leads move to "New Leads" report screen
+        ReportController.navigateToEquaryCalls();
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            BottomNavState.navigateToReports();
+          });
         }
-        // If it was already called, just pop back - don't navigate to reports
       }
+      // If it was already called, just pop back - don't navigate to reports
     }
   }
 
@@ -893,15 +625,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
     }
 
     try {
-      // 🔴 RESET STATE on Call Now clicked
-      // This prevents previous duration from appearing
-      setState(() {
-        _hasCalled = false;
-        _callDurationSeconds = 0;
-        _isCallActive = true;
-        _isWaitingForDuration = false;
-      });
-
       // Start call tracking for outgoing call
       final callTrackingController = Provider.of<CallTrackingController>(
         context,
@@ -915,12 +638,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
         leadId: widget.contact["id"] as String?,
       );
 
-      if (success && mounted) {
-        setState(() {
-          _isCallActive = true;
-          _callDurationSeconds = 0;
-        });
-      } else if (mounted) {
+      if (!success) {
         // Fallback to url_launcher
         final Uri phoneUri = Uri(scheme: 'tel', path: cleanedNumber);
         try {
@@ -929,13 +647,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
             mode: LaunchMode.externalApplication,
           );
 
-          if (launched && mounted) {
-            setState(() {
-              _isCallActive = true;
-              _callDurationSeconds = 0;
-              _hasCalled = true;
-            });
-          } else if (mounted) {
+          if (!launched && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
@@ -1092,28 +804,15 @@ class _DetailsScreenState extends State<DetailsScreen> {
                             ),
                           ),
                           ElevatedButton.icon(
-                            onPressed:
-                                _isCallActive
-                                    ? null
-                                    : () async {
-                                      await _makePhoneCall(
-                                        widget.contact["phone"] ?? "",
-                                      );
-                                    },
-                            icon: Icon(
-                              _isCallActive
-                                  ? Icons.phone_disabled
-                                  : Icons.phone,
-                              size: 18,
-                            ),
-                            label: Text(
-                              _isCallActive ? "Calling..." : "Call Now",
-                            ),
+                            onPressed: () async {
+                              await _makePhoneCall(
+                                widget.contact["phone"] ?? "",
+                              );
+                            },
+                            icon: const Icon(Icons.phone, size: 18),
+                            label: const Text("Call Now"),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  _isCallActive
-                                      ? Colors.grey[400]
-                                      : ColorConstant.primaryColor,
+                              backgroundColor: ColorConstant.primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -1134,108 +833,27 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Call Duration Display Section
-                      if (_isWaitingForDuration || _callDurationSeconds > 0)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color:
-                                _isWaitingForDuration
-                                    ? Colors.blue[50]
-                                    : Colors.green[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color:
-                                  _isWaitingForDuration
-                                      ? Colors.blue[300]!
-                                      : Colors.green[300]!,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color:
-                                      _isWaitingForDuration
-                                          ? Colors.blue[100]
-                                          : Colors.green[100],
-                                  shape: BoxShape.circle,
-                                ),
-                                child:
-                                    _isWaitingForDuration
-                                        ? SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Colors.blue[700]!,
-                                                ),
-                                          ),
-                                        )
-                                        : Icon(
-                                          Icons.timer,
-                                          size: 24,
-                                          color: Colors.green[700],
-                                        ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _isWaitingForDuration
-                                          ? "Reading Call Duration..."
-                                          : "Call Duration",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            _isWaitingForDuration
-                                                ? Colors.blue[600]
-                                                : Colors.green[600],
-                                        fontFamily: TextConstant.dmSansRegular,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _isWaitingForDuration
-                                          ? "Writing to call log..."
-                                          : FormatHelper.formatCallDurationWithUnits(
-                                            _callDurationSeconds,
-                                          ),
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            _isWaitingForDuration
-                                                ? Colors.blue[700]
-                                                : Colors.green[700],
-                                        fontFamily: TextConstant.dmSansMedium,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // Call Duration Display Section - StreamBuilder based
+                      CallDurationDisplay(
+                        callTrackingService: CallTrackingService(),
+                        contactPhone: widget.contact["phone"] ?? "",
+                      ),
 
-                      if (_isWaitingForDuration || _callDurationSeconds > 0)
-                        const SizedBox(height: 24),
+                      // Final Duration Display - StreamBuilder based
+                      CallEndedDurationDisplay(
+                        callTrackingService: CallTrackingService(),
+                        contactPhone: widget.contact["phone"] ?? "",
+                      ),
+
+                      const SizedBox(height: 24),
 
                       // Call Status Dropdown
                       _buildDropdown(
-                        label:
-                            _callDurationSeconds > 0
-                                ? "Call Status (Auto: Connected)"
-                                : "Call Status",
+                        label: "Call Status",
                         value: selectedCallStatus,
                         items: callStatusOptions,
-                        enabled: _hasCalled,
+                        enabled:
+                            false, // Disabled until call is made (StreamBuilder will enable)
                         onChanged: (value) {
                           setState(() {
                             selectedCallStatus = value;
@@ -1252,7 +870,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           value: selectedReason,
                           items: reasonOptions,
                           hint: "Add reason",
-                          enabled: _hasCalled,
+                          enabled: false, // Disabled until call is made
                           onChanged: (value) {
                             setState(() {
                               selectedReason = value;
@@ -1268,7 +886,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           const SizedBox(height: 16),
                           TextField(
                             controller: customReasonController,
-                            enabled: _hasCalled,
+                            enabled: false, // Disabled until call is made
                             decoration: InputDecoration(
                               hintText: "Enter custom reason",
                               hintStyle: TextStyle(
@@ -1312,7 +930,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           value: selectedLeadStatus,
                           items: leadStatusOptions,
                           hint: "No Status",
-                          enabled: _hasCalled,
+                          enabled: false, // Disabled until call is made
                           onChanged: (value) {
                             setState(() {
                               selectedLeadStatus = value;
@@ -1332,21 +950,17 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         children: [
                           Checkbox(
                             value: markAsFollowUp,
-                            onChanged:
-                                _hasCalled
-                                    ? (value) {
-                                      setState(() {
-                                        markAsFollowUp = value ?? false;
-                                        _isDirty = true;
-                                        if (markAsFollowUp &&
-                                            followUpDate == null) {
-                                          followUpDate = DateTime.now().add(
-                                            const Duration(days: 7),
-                                          );
-                                        }
-                                      });
-                                    }
-                                    : null,
+                            onChanged: (value) {
+                              setState(() {
+                                markAsFollowUp = value ?? false;
+                                _isDirty = true;
+                                if (markAsFollowUp && followUpDate == null) {
+                                  followUpDate = DateTime.now().add(
+                                    const Duration(days: 7),
+                                  );
+                                }
+                              });
+                            },
                             activeColor: ColorConstant.primaryColor,
                           ),
                           Text(
@@ -1360,26 +974,20 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           if (markAsFollowUp) ...[
                             const Spacer(),
                             GestureDetector(
-                              onTap:
-                                  _hasCalled
-                                      ? () async {
-                                        DateTime? pickedDate =
-                                            await showDatePicker(
-                                              context: context,
-                                              initialDate:
-                                                  followUpDate ??
-                                                  DateTime.now(),
-                                              firstDate: DateTime.now(),
-                                              lastDate: DateTime(2101),
-                                            );
-                                        if (pickedDate != null) {
-                                          setState(() {
-                                            followUpDate = pickedDate;
-                                            _isDirty = true;
-                                          });
-                                        }
-                                      }
-                                      : null,
+                              onTap: () async {
+                                DateTime? pickedDate = await showDatePicker(
+                                  context: context,
+                                  initialDate: followUpDate ?? DateTime.now(),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime(2101),
+                                );
+                                if (pickedDate != null) {
+                                  setState(() {
+                                    followUpDate = pickedDate;
+                                    _isDirty = true;
+                                  });
+                                }
+                              },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -1420,7 +1028,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: remarksController,
-                        enabled: _hasCalled,
+                        enabled: false, // Disabled until call is made
                         maxLines: 2,
                         decoration: InputDecoration(
                           hintText: "Enter your remarks",
@@ -1479,14 +1087,17 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed:
-                                  _hasCalled
+                                  selectedCallStatus != null &&
+                                          selectedCallStatus != "Not called yet"
                                       ? () async {
                                         await _saveCallUpdate();
                                       }
                                       : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
-                                    _hasCalled
+                                    (selectedCallStatus != null &&
+                                            selectedCallStatus !=
+                                                "Not called yet")
                                         ? ColorConstant.primaryColor
                                         : Colors.grey[400],
                                 padding: const EdgeInsets.symmetric(
@@ -1782,21 +1393,15 @@ class _DetailsScreenState extends State<DetailsScreen> {
         Row(
           children: List.generate(5, (index) {
             return GestureDetector(
-              onTap:
-                  _hasCalled
-                      ? () {
-                        setState(() {
-                          rating = index + 1;
-                          _isDirty = true;
-                        });
-                      }
-                      : null,
+              onTap: () {
+                setState(() {
+                  rating = index + 1;
+                  _isDirty = true;
+                });
+              },
               child: Icon(
                 index < rating ? Icons.star : Icons.star_border,
-                color:
-                    index < rating
-                        ? (_hasCalled ? Colors.amber : Colors.grey[300])
-                        : Colors.grey[400],
+                color: index < rating ? Colors.amber : Colors.grey[400],
                 size: 32,
               ),
             );

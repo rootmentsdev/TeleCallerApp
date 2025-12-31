@@ -6,7 +6,7 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
-import 'package:telecaller_app/controller/call_tracking_controller.dart';
+// import 'package:telecaller_app/controller/call_tracking_controller.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/view/login_screen.dart';
 import 'package:telecaller_app/services/auth_service.dart';
@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LeadScreenController()),
         ChangeNotifierProvider(create: (_) => FollowupController()),
         ChangeNotifierProvider(create: (_) => ReportController()),
-        ChangeNotifierProvider(create: (_) => CallTrackingController()),
+        // ChangeNotifierProvider(create: (_) => CallTrackingController()),
         ChangeNotifierProvider(create: (_) => LeadRepository()),
       ],
       child: MaterialApp(

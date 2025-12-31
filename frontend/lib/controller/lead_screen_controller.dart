@@ -242,16 +242,6 @@ class LeadScreenController extends ChangeNotifier {
         "iconColor": const Color(0xff56BE6B),
         "icon": Icons.check_circle_outlined,
       },
-      {
-        "title": "Just Dial\nEnquiry",
-        "count":
-            getUncalledLeadsCount(
-              category: LeadConstants.categoryJustDial,
-            ).toString(),
-        "bgColor": const Color(0xFFFFE8D5),
-        "iconColor": const Color(0xFFF37927),
-        "icon": Icons.headset_mic_outlined,
-      },
     ];
   }
 
@@ -328,8 +318,6 @@ class LeadScreenController extends ChangeNotifier {
         return "Return";
       case 3:
         return "Booking Confirmation";
-      case 4:
-        return "Just Dial Enquiries";
       default:
         return "All Calls";
     }
@@ -363,8 +351,6 @@ class LeadScreenController extends ChangeNotifier {
         return LeadConstants.categoryRentOut;
       case 3:
         return LeadConstants.categoryBookingConfirmation;
-      case 4:
-        return LeadConstants.categoryJustDial;
       default:
         return null;
     }

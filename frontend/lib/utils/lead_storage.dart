@@ -27,6 +27,8 @@ class LeadStorage {
     return _leads.where((lead) => lead.isUpcoming).toList();
   }
 
+  
+
   // Get overdue follow-ups
   List<LeadModel> get overdueFollowUps {
     return _leads.where((lead) => lead.isOverdue).toList();

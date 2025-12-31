@@ -241,7 +241,7 @@ class FollowupController extends ChangeNotifier {
     _repository.addListener(notifyListeners);
   }
 
-  /// Fetch all leads from API to populate follow-up data
+  /// Fetch all follow-up leads from API
   /// This should be called when the follow-up screen is first loaded
   Future<void> fetchFollowUpLeads() async {
     try {
@@ -249,8 +249,8 @@ class FollowupController extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      // Fetch all leads from API (this will populate follow-up leads in repository)
-      await _repository.fetchAllLeadsFromApi();
+      // Fetch follow-up leads from API
+      await _repository.fetchFollowUpLeadsFromApi();
 
       _isLoading = false;
       notifyListeners();

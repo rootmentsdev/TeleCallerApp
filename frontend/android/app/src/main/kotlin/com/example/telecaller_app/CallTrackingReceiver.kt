@@ -139,6 +139,18 @@ class CallTrackingReceiver : BroadcastReceiver() {
                         if (offhookOccurred && !callEndProcessed) {
                             callEndProcessed = true
                             Log.d(TAG, "🔴 IDLE - Real call ended, Session: $currentSessionId")
+                            
+                            // Send IDLE state change to Flutter so it can calculate duration from timestamps
+                            sendToFlutterMain(
+                                "onCallStateChanged",
+                                mapOf(
+                                    "state" to "idle",
+                                    "phoneNumber" to (dialedPhoneNumber ?: "Unknown"),
+                                    "sessionId" to (currentSessionId ?: "")
+                                )
+                            )
+                            
+                            // Then process the call end
                             processCallEnd(context)
                         }
                     }
@@ -163,6 +175,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
         callAnswerTime = 0
         previousState = TelephonyManager.CALL_STATE_IDLE
         offhookOccurred = false
+        callEndProcessed = false  // Reset for next call
 
         Thread {
             try {

@@ -975,12 +975,13 @@ class ApiService {
 
   /// Get reports (edited leads) from API
   Future<Map<String, dynamic>> getReports({
+    String? store,
     String? leadType,
     String? editedBy,
     String? dateFrom,
     String? dateTo,
     int? page,
-    int? limit,
+    int? limit, DateTime? date,
   }) async {
     final url = Uri.parse(
       ApiConfig.getReports(
@@ -1168,6 +1169,99 @@ class ApiService {
     return false;
   }
 
+  /// Move lead from Leads to FollowUps collection
+  /// Matches backend POST https://telecallerappbackend.onrender.com/api/pages/leads/{id}
+  Future<Map<String, dynamic>> moveLeadToFollowUp({
+    required String id,
+    required DateTime followUpDate,
+    String? callStatus,
+    String? leadStatus,
+    String? remarks,
+  }) async {
+    final url = Uri.parse(
+      'https://telecallerappbackend.onrender.com/api/pages/leads/$id',
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      // Prepare request body
+      final requestBody = <String, dynamic>{
+        'follow_up_date': followUpDate.toIso8601String(),
+        'call_status': callStatus ?? 'Not Called',
+        'lead_status': leadStatus ?? 'No Status',
+      };
+
+      if (remarks != null && remarks.isNotEmpty) {
+        requestBody['remarks'] = remarks;
+      }
+
+      final requestBodyJson = json.encode(requestBody);
+
+      print('ApiService: Moving lead to FollowUps');
+      print('ApiService: URL => $url');
+      print('ApiService: Request body => $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print(
+        'ApiService: Move to FollowUps response status: ${response.statusCode}',
+      );
+      print('ApiService: Move to FollowUps response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'success': true, 'data': decodedResponse};
+      } else if (response.statusCode == 400) {
+        String errorMessage = 'Validation error. Please check your input.';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        String errorMessage =
+            'Failed to move lead to follow-ups: Status ${response.statusCode}';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('ApiService: Error moving lead to follow-ups: $e');
+      rethrow;
+    }
+  }
+
   /// Update Follow-Up lead
   /// Matches backend POST /api/pages/follow-ups/{id}
   Future<Map<String, dynamic>> updateFollowUp({
@@ -1318,6 +1412,68 @@ class ApiService {
       }
     } catch (e) {
       print('ApiService: Error fetching Follow-Up leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch Reports from API
+  /// Matches backend GET /api/reports
+  Future<Map<String, dynamic>> getReportsForFollowUp({
+    String? store,
+    String? leadType,
+    DateTime? date,
+    int? page,
+    int? limit,
+  }) async {
+    final dateStr =
+        date != null
+            ? '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}'
+            : null;
+
+    final url = Uri.parse(
+      'https://telecallerappbackend.onrender.com/api/reports'
+      '${store != null ? '?store=$store' : ''}'
+      '${leadType != null ? '${store != null ? '&' : '?'}leadType=$leadType' : ''}'
+      '${dateStr != null ? '${store != null || leadType != null ? '&' : '?'}date=$dateStr' : ''}'
+      '${page != null ? '${store != null || leadType != null || dateStr != null ? '&' : '?'}page=$page' : ''}'
+      '${limit != null ? '${store != null || leadType != null || dateStr != null || page != null ? '&' : '?'}limit=$limit' : ''}',
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching reports for follow-up');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print('ApiService: Reports response status: ${response.statusCode}');
+      print('ApiService: Reports response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+
+        // Handle both Map and List responses
+        if (decodedResponse is Map<String, dynamic>) {
+          return decodedResponse;
+        } else if (decodedResponse is List) {
+          return {'reports': decodedResponse};
+        } else {
+          throw Exception('Unexpected response format from server');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load reports: Status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('ApiService: Error fetching reports: $e');
       rethrow;
     }
   }

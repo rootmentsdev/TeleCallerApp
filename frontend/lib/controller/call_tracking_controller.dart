@@ -41,15 +41,34 @@ class CallTrackingController extends ChangeNotifier {
   }
 
   void _subscribeToCallEvents() {
-    _callDataSubscription = _callTrackingService.onCallData.listen((callData) {
-      _currentCall = callData;
-      onCallStateChanged?.call(callData);
-      notifyListeners();
-    }, onError: (_) {});
+    print('🔍 [CallTrackingController] Subscribing to call events');
+
+    _callDataSubscription = _callTrackingService.onCallData.listen(
+      (callData) {
+        print(
+          '🔍 [CallTrackingController] onCallData event received - Phone: ${callData.phoneNumber}, State: ${callData.callState}, Duration: ${callData.duration}s',
+        );
+        _currentCall = callData;
+        onCallStateChanged?.call(callData);
+        notifyListeners();
+      },
+      onError: (error) {
+        print('🔍 [CallTrackingController] Error in onCallData stream: $error');
+      },
+    );
 
     _callEndedSubscription = _callTrackingService.onCallEnded.listen(
-      _handleCallEnded,
-      onError: (_) {},
+      (callData) {
+        print(
+          '🔍 [CallTrackingController] onCallEnded event received - Phone: ${callData.phoneNumber}, Duration: ${callData.duration}s, Source: ${callData.durationSource}',
+        );
+        _handleCallEnded(callData);
+      },
+      onError: (error) {
+        print(
+          '🔍 [CallTrackingController] Error in onCallEnded stream: $error',
+        );
+      },
     );
   }
 
@@ -57,15 +76,23 @@ class CallTrackingController extends ChangeNotifier {
     // RULE 5: Lock duration - once received, this is final
     // Never overwrite with stale values
     print(
-      'CallTrackingController: FINAL call ended - Phone: ${callData.phoneNumber}, Duration: ${callData.duration}s, Session: ${callData.sessionId}',
+      '🔍 [CallTrackingController] FINAL call ended - Phone: ${callData.phoneNumber}, Duration: ${callData.duration}s, Session: ${callData.sessionId}, Source: ${callData.durationSource}',
     );
 
     _lastEndedCall = callData;
     _currentCall = null;
+
+    print(
+      '🔍 [CallTrackingController] Calling onCallEnded callback with duration: ${callData.duration}s',
+    );
+
     _updateExistingLeadWithCallData(callData);
 
     // Emit FINAL duration to UI - this is the single source of truth
     onCallEnded?.call(callData.phoneNumber, callData.duration);
+    print(
+      '🔍 [CallTrackingController] onCallEnded callback executed, notifying listeners',
+    );
     notifyListeners();
   }
 
@@ -75,7 +102,7 @@ class CallTrackingController extends ChangeNotifier {
       // Use sessionId for matching instead of phone number
       // This prevents issues with wrong phone numbers from call log
       print(
-        'CallTrackingController: Processing call end for session ${callData.sessionId}',
+        '🔍 [CallTrackingController] Processing call end for session ${callData.sessionId}, phone: ${callData.phoneNumber}, duration: ${callData.duration}s',
       );
 
       // Find existing lead with matching phone number (as fallback)
@@ -84,7 +111,7 @@ class CallTrackingController extends ChangeNotifier {
 
       if (existingLead != null) {
         print(
-          'CallTrackingController: Found existing lead for phone $cleanPhoneNumber: ${existingLead.name}',
+          '🔍 [CallTrackingController] Found existing lead for phone $cleanPhoneNumber: ${existingLead.name}',
         );
 
         // Update lead with call duration
@@ -105,16 +132,16 @@ class CallTrackingController extends ChangeNotifier {
 
         await _leadRepository.updateLead(updatedLead);
         print(
-          'CallTrackingController: Updated existing lead with call duration: ${callData.duration}s, Session: ${callData.sessionId}',
+          '🔍 [CallTrackingController] ✅ Updated existing lead with call duration: ${callData.duration}s, Session: ${callData.sessionId}',
         );
       } else {
         print(
-          'CallTrackingController: No existing lead found for phone number: $cleanPhoneNumber, Session: ${callData.sessionId}',
+          '🔍 [CallTrackingController] ⚠️ No existing lead found for phone number: $cleanPhoneNumber, Session: ${callData.sessionId}',
         );
       }
     } catch (e) {
       print(
-        'CallTrackingController: Error updating existing lead with call data: $e',
+        '🔍 [CallTrackingController] ❌ Error updating existing lead with call data: $e',
       );
     }
   }
@@ -159,7 +186,7 @@ class CallTrackingController extends ChangeNotifier {
   /// Start tracking outgoing call
   void startOutgoingCall(String phoneNumber) {
     print(
-      'CallTrackingController: Starting outgoing call tracking for: $phoneNumber',
+      '🔍 [CallTrackingController] Starting outgoing call tracking for: $phoneNumber',
     );
     _callTrackingService.startOutgoingCallTracking(phoneNumber);
   }

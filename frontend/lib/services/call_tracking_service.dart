@@ -167,10 +167,12 @@ class CallTrackingService extends ChangeNotifier {
             final cancelled = call.arguments['cancelled'] as bool? ?? false;
             final durationSource = call.arguments['durationSource'] as String?;
 
-            // 🔒 HARD BLOCK: zero duration BEFORE OFFHOOK
-            // This prevents UI corruption at entry point
-            if (duration == null || duration == 0) {
-              print('⛔ BLOCKED onCallEnded(duration=0) at channel entry point');
+            // 🔒 HARD BLOCK: Only block if duration is null (completely invalid)
+            // Allow all other cases including duration==0 so we can compute from timestamps
+            if (duration == null) {
+              print(
+                '⛔ BLOCKED onCallEnded(duration==null) at channel entry point',
+              );
               return null;
             }
 
@@ -201,11 +203,15 @@ class CallTrackingService extends ChangeNotifier {
     String? phoneNumber,
     String? state,
     String? sessionId,
-  ) {
-    if (phoneNumber == null || state == null) return;
+  ) async {
+    if (state == null) return;
+    // Allow null phone numbers; prefer most recently seen phone for finalization
+    if (phoneNumber != null && phoneNumber.isNotEmpty) {
+      _currentCallNumber = phoneNumber;
+    }
 
     print(
-      'CallTrackingService: Phone state changed - Number: $phoneNumber, State: $state, Session: $sessionId',
+      'CallTrackingService: Phone state changed - Number: ${phoneNumber ?? _currentCallNumber ?? 'Unknown'}, State: $state, Session: $sessionId',
     );
 
     switch (state.toLowerCase()) {
@@ -217,8 +223,121 @@ class CallTrackingService extends ChangeNotifier {
         _handleCallStarted(phoneNumber, sessionId);
         break;
       case 'idle':
-        // DO NOTHING
-        // Final END handled ONLY via onCallEnded(timestamp)
+        // Some devices/platforms don't emit a timestamp-based onCallEnded event.
+        // When we see IDLE after an OFFHOOK (i.e., call was active), wait briefly
+        // to allow the system to write call log entries, then check cached results
+        // (with retries) and fall back to timestamp calculation if needed.
+        print(
+          'CallTrackingService: IDLE state received - _offhookOccurred=$_offhookOccurred, _callState=$_callState, _callEndProcessed=$_callEndProcessed',
+        );
+
+        // Always try to finalize if we had an OFFHOOK and haven't finalized yet
+        if (_offhookOccurred && !_callEndProcessed) {
+          // Small delay so native call log/cached result has time to be written
+          const waitMs = 600;
+          print(
+            'CallTrackingService: IDLE detected - waiting ${waitMs}ms before checking call log/cached result',
+          );
+          await Future.delayed(Duration(milliseconds: waitMs));
+
+          final endTime = DateTime.now();
+          final startTime = _callAnswerTime ?? _callStartTime ?? endTime;
+
+          final phoneToUse = phoneNumber ?? _currentCallNumber ?? 'Unknown';
+
+          try {
+            // Try cached lookup for original phone and normalized variants
+            final cached = await _findCachedCallResultForVariants(phoneToUse);
+            if (cached != null && cached.duration > 0) {
+              // Use cached call result as final
+              print(
+                'CallTrackingService: ✅ Using cached call result as FINAL for $phoneToUse (resolved phone=${cached.phoneNumber}): duration=${cached.duration}s',
+              );
+
+              _callEndProcessed = true;
+              _callState = CallStateMachine.ended;
+
+              _callEndedController.add(cached);
+              _callDataController.add(cached);
+
+              _resetCallState();
+              notifyListeners();
+              break; // exit case
+            } else {
+              print(
+                'CallTrackingService: No cached result found for $phoneToUse (after trying variants)',
+              );
+            }
+          } catch (e) {
+            print(
+              'CallTrackingService: Error while checking cached call result: $e',
+            );
+          }
+
+          int calculatedDuration = 0;
+          if (_callAnswerTime != null) {
+            calculatedDuration = endTime.difference(_callAnswerTime!).inSeconds;
+            print(
+              'CallTrackingService: 📊 Calculated duration from OFFHOOK→IDLE: ${calculatedDuration}s',
+            );
+          } else if (_callStartTime != null) {
+            calculatedDuration = endTime.difference(_callStartTime!).inSeconds;
+            print(
+              'CallTrackingService: 📊 Calculated duration from DIALING→IDLE: ${calculatedDuration}s',
+            );
+          }
+
+          if (calculatedDuration > 0) {
+            // Emit a FINAL timestamp-based end when we have reliable timestamps
+            print(
+              'CallTrackingService: Detected IDLE after OFFHOOK - emitting FINAL END (timestamp) using last known phone: $phoneToUse',
+            );
+
+            final callData = CallData(
+              phoneNumber: phoneToUse,
+              duration: calculatedDuration,
+              startTime: startTime,
+              endTime: endTime,
+              callType: _currentCallType ?? CallType.incoming,
+              callState: CallState.ended,
+              sessionId: '',
+              durationSource: 'timestamp',
+            );
+
+            _callEndProcessed = true;
+            _callState = CallStateMachine.ended;
+
+            _callEndedController.add(callData);
+            _callDataController.add(callData);
+
+            print(
+              'CallTrackingService: ✅ FINAL call ended event emitted (source=timestamp, fallback-from-idle): $callData',
+            );
+
+            _resetCallState();
+            notifyListeners();
+          } else {
+            // Fallback to provisional zero-duration so UI can poll cache
+            print(
+              'CallTrackingService: Detected IDLE after OFFHOOK but duration==0 - emitting provisional END (duration=0) to prompt UI polling',
+            );
+
+            final callData = CallData(
+              phoneNumber: phoneToUse,
+              duration: 0,
+              startTime: startTime,
+              endTime: endTime,
+              callType: _currentCallType ?? CallType.incoming,
+              callState: CallState.ended,
+              sessionId: '',
+              durationSource: 'none',
+            );
+
+            _callDataController.add(callData);
+            // Do not reset internal state here - wait for authoritative onCallEnded
+            notifyListeners();
+          }
+        }
         break;
     }
   }
@@ -236,7 +355,7 @@ class CallTrackingService extends ChangeNotifier {
     );
 
     // ✅ ONLY TIMESTAMP END is FINAL AUTHORITY
-    // Accept timestamp-based END even if phone is null
+    // Accept timestamp-based END even if phone is null or duration is 0
     if (durationSource == "timestamp") {
       print(
         'CallTrackingService: ✅ TIMESTAMP-based END - FINAL (phone may be null)',
@@ -250,17 +369,36 @@ class CallTrackingService extends ChangeNotifier {
 
       // RULE: Duration = IDLE_time − OFFHOOK_time (timestamp only)
       final endTime = DateTime.now();
-      // For incoming calls: use _callAnswerTime (OFFHOOK time)
-      // For outgoing calls: use _callStartTime (DIALING time)
-      // This ensures startTime is always the actual call start time
       final startTime =
           _callAnswerTime ??
           _callStartTime ??
           endTime.subtract(Duration(seconds: duration ?? 0));
 
+      // Calculate duration from timestamps
+      int calculatedDuration = 0;
+      if (_callAnswerTime != null) {
+        // Call was answered - calculate from OFFHOOK to IDLE
+        calculatedDuration = endTime.difference(_callAnswerTime!).inSeconds;
+        print(
+          'CallTrackingService: 📊 Duration calculated from OFFHOOK→IDLE: ${calculatedDuration}s',
+        );
+      } else if (_callStartTime != null) {
+        // Call was not answered - calculate from DIALING to IDLE
+        calculatedDuration = endTime.difference(_callStartTime!).inSeconds;
+        print(
+          'CallTrackingService: 📊 Duration calculated from DIALING→IDLE: ${calculatedDuration}s',
+        );
+      } else {
+        // Fallback to provided duration
+        calculatedDuration = duration ?? 0;
+        print(
+          'CallTrackingService: 📊 Using provided duration: ${calculatedDuration}s',
+        );
+      }
+
       final callData = CallData(
         phoneNumber: phoneNumber ?? _currentCallNumber ?? 'Unknown',
-        duration: duration ?? 0,
+        duration: calculatedDuration,
         startTime: startTime,
         endTime: endTime,
         callType: _currentCallType ?? CallType.incoming,
@@ -279,6 +417,50 @@ class CallTrackingService extends ChangeNotifier {
       );
 
       // Reset state after emitting final event
+      _resetCallState();
+      notifyListeners();
+      return;
+    }
+
+    // ⛔ Skip if duration is 0 and source is not timestamp
+    // This prevents early/incomplete events from being processed
+    if (duration == null || duration == 0) {
+      print(
+        'CallTrackingService: ⛔ SKIPPING - Invalid duration (duration=$duration, source=$durationSource)',
+      );
+      return;
+    }
+
+    // ✅ Accept call-log based durations as final when available and OFFHOOK was observed
+    // This covers devices where timestamp-based END is not provided but call log duration is available.
+    if (duration > 0 && _offhookOccurred) {
+      final callData = CallData(
+        phoneNumber: phoneNumber ?? _currentCallNumber ?? 'Unknown',
+        duration: duration,
+        startTime:
+            _callAnswerTime ??
+            _callStartTime ??
+            DateTime.now().subtract(Duration(seconds: duration)),
+        endTime: DateTime.now(),
+        callType: _currentCallType ?? CallType.incoming,
+        callState: CallState.ended,
+        sessionId: sessionId ?? '',
+        cancelled: cancelled ?? false,
+        durationSource: durationSource ?? 'calllog',
+      );
+
+      // Mark call as ended to prevent duplicate processing
+      _callEndProcessed = true;
+      _callState = CallStateMachine.ended;
+
+      _callEndedController.add(callData);
+      _callDataController.add(callData);
+
+      print(
+        'CallTrackingService: ✅ call-log-based END accepted and emitted (source=${durationSource ?? 'calllog'}): $callData',
+      );
+
+      // Reset state and notify listeners
       _resetCallState();
       notifyListeners();
       return;
@@ -345,13 +527,10 @@ class CallTrackingService extends ChangeNotifier {
   }
 
   /// Handle call started (answered) - OFFHOOK event
-  void _handleCallStarted(String? phoneNumber, String? sessionId) {
-    // STEP 4: Block OFFHOOK after END (critical)
-    if (_callEndProcessed) {
-      print('⛔ OFFHOOK after END ignored - Session: $sessionId');
-      return;
-    }
-
+  Future<void> _handleCallStarted(
+    String? phoneNumber,
+    String? sessionId,
+  ) async {
     // RULE: OFFHOOK sets callStartTime (once only)
     // Ignore duplicate OFFHOOK events
     if (_offhookOccurred) {
@@ -359,6 +538,15 @@ class CallTrackingService extends ChangeNotifier {
         'CallTrackingService: ⚠️ OFFHOOK - Duplicate OFFHOOK event (ignoring), Session: $sessionId',
       );
       return;
+    }
+
+    // STEP 4: Guard second call - if previous call ended, reset flags for new call
+    if (_callEndProcessed && _callState == CallStateMachine.ended) {
+      print(
+        'CallTrackingService: 🔄 New OFFHOOK after previous call ended - resetting state for new call, Session: $sessionId',
+      );
+      _callEndProcessed = false;
+      _callState = CallStateMachine.idle;
     }
 
     print(
@@ -403,6 +591,50 @@ class CallTrackingService extends ChangeNotifier {
     return [];
   }
 
+  /// Try fetching cached call result using normalized phone variants.
+  /// Returns the first non-null cached CallData (duration>0) or null.
+  Future<CallData?> _findCachedCallResultForVariants(String phone) async {
+    try {
+      final tried = <String>{};
+
+      String normalize(String s) => s.replaceAll(RegExp(r'\D'), '');
+
+      final orig = phone;
+      final digits = normalize(phone);
+      final last10 =
+          digits.length > 10 ? digits.substring(digits.length - 10) : digits;
+
+      final candidates =
+          [orig, digits, last10].where((p) => p.isNotEmpty).toList();
+
+      for (final candidate in candidates) {
+        if (tried.contains(candidate)) continue;
+        tried.add(candidate);
+        try {
+          print(
+            'CallTrackingService: Trying cached lookup for phone variant: $candidate',
+          );
+          final res = await checkForCachedCallResult(candidate);
+          if (res != null && res.duration > 0) {
+            print(
+              'CallTrackingService: Cached lookup succeeded for variant $candidate -> duration=${res.duration}s',
+            );
+            return res;
+          }
+        } catch (e) {
+          print(
+            'CallTrackingService: Error fetching cached result for $candidate: $e',
+          );
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('CallTrackingService: _findCachedCallResultForVariants error: $e');
+      return null;
+    }
+  }
+
   /// Manually start call tracking (for outgoing calls)
   void startOutgoingCallTracking(String phoneNumber) {
     // STEP 5: Guard second call - prevent starting if previous call not cleaned
@@ -444,42 +676,76 @@ class CallTrackingService extends ChangeNotifier {
   }
 
   /// Retrieve cached call result from Android SharedPreferences
+  /// Will retry up to 3 times (500ms delay) to account for native write delays.
   Future<CallData?> checkForCachedCallResult(String phoneNumber) async {
     try {
+      // Ensure phone permission is granted (READ_CALL_LOG required on Android)
+      if (!await Permission.phone.isGranted) {
+        print(
+          'CallTrackingService: Permission PHONE (needed for call log) not granted',
+        );
+        return null;
+      }
+
       const platform = MethodChannel('com.telecaller.app/call_tracking');
 
-      final result = await platform.invokeMethod<Map<dynamic, dynamic>>(
-        'getCachedCallResult',
-        {'phoneNumber': phoneNumber},
-      );
+      const int maxAttempts = 3;
+      const int delayMs = 500;
 
-      if (result != null) {
-        final phone = result['phoneNumber'] as String? ?? 'Unknown';
-        final duration = result['duration'] as int? ?? 0;
-        final timestamp = result['timestamp'] as int? ?? 0;
-        final callType = result['callType'] as String? ?? 'incoming';
+      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          print(
+            'CallTrackingService: Attempt $attempt to get cached call result for: $phoneNumber',
+          );
 
-        print(
-          'CallTrackingService: Retrieved cached call result: phone=$phone, duration=$duration',
-        );
+          final result = await platform.invokeMethod<Map<dynamic, dynamic>>(
+            'getCachedCallResult',
+            {'phoneNumber': phoneNumber},
+          );
 
-        final callData = CallData(
-          phoneNumber: phone,
-          duration: duration,
-          startTime: DateTime.fromMillisecondsSinceEpoch(timestamp),
-          endTime: DateTime.now(),
-          callType:
-              callType == 'outgoing' ? CallType.outgoing : CallType.incoming,
-          callState: CallState.ended,
-          sessionId: '', // No session ID for cached result
-          durationSource: "none",
-        );
+          if (result != null) {
+            final phone = result['phoneNumber'] as String? ?? 'Unknown';
+            final duration = result['duration'] as int? ?? 0;
+            final timestamp = result['timestamp'] as int? ?? 0;
+            final callType = result['callType'] as String? ?? 'incoming';
 
-        return callData;
+            print(
+              'CallTrackingService: Retrieved cached call result: phone=$phone, duration=$duration (attempt $attempt)',
+            );
+
+            if (duration > 0) {
+              final callData = CallData(
+                phoneNumber: phone,
+                duration: duration,
+                startTime: DateTime.fromMillisecondsSinceEpoch(timestamp),
+                endTime: DateTime.now(),
+                callType:
+                    callType == 'outgoing'
+                        ? CallType.outgoing
+                        : CallType.incoming,
+                callState: CallState.ended,
+                sessionId: '', // No session ID for cached result
+                durationSource: "calllog",
+              );
+
+              return callData;
+            }
+          }
+
+          if (attempt < maxAttempts) {
+            await Future.delayed(Duration(milliseconds: delayMs));
+          }
+        } catch (e) {
+          print(
+            'CallTrackingService: Error on attempt $attempt fetching cached result: $e',
+          );
+          if (attempt < maxAttempts)
+            await Future.delayed(Duration(milliseconds: delayMs));
+        }
       }
 
       print(
-        'CallTrackingService: No cached call result found for: $phoneNumber',
+        'CallTrackingService: No cached call result found after retries for: $phoneNumber',
       );
       return null;
     } catch (e) {

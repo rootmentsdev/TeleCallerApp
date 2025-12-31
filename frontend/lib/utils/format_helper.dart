@@ -24,16 +24,20 @@ class FormatHelper {
   /// Returns "Xm Ys" format (e.g., "2m 30s", "45s")
   static String formatCallDurationWithUnits(int? seconds) {
     if (seconds == null || seconds <= 0) {
+      print('🔍 [FormatHelper] formatCallDurationWithUnits: null or 0 seconds');
       return "0s";
     }
 
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
 
-    if (minutes > 0) {
-      return "${minutes}m ${remainingSeconds}s";
-    } else {
-      return "${remainingSeconds}s";
-    }
+    final formatted =
+        minutes > 0
+            ? "${minutes}m ${remainingSeconds}s"
+            : "${remainingSeconds}s";
+    print(
+      '🔍 [FormatHelper] formatCallDurationWithUnits: $seconds seconds → $formatted',
+    );
+    return formatted;
   }
 }

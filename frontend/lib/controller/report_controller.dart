@@ -171,16 +171,6 @@ class ReportController extends ChangeNotifier {
         "icon": Icons.check_circle_outlined,
       },
       {
-        "title": "Just Dial\nEnquiry",
-        "count":
-            getCalledLeadsCount(
-              category: LeadConstants.categoryJustDial,
-            ).toString(),
-        "bgColor": const Color(0xFFFFE8D5),
-        "iconColor": const Color(0xFFF37927),
-        "icon": Icons.headset_mic_outlined,
-      },
-      {
         "title": "Follow Up\nCalls",
         "count":
             getCalledLeadsCount(
@@ -474,7 +464,7 @@ class ReportController extends ChangeNotifier {
 
         case 4:
           filteredReports =
-              filteredReports.where((r) => r["type"] == "justdial").toList();
+              filteredReports.where((r) => r["type"] == "followup").toList();
           break;
       }
     }
@@ -517,11 +507,9 @@ class ReportController extends ChangeNotifier {
       case 3:
         return "Booking Confirmation calls";
       case 4:
-        return "Just Dial Enquiries";
+        return "Follow Up Calls";
       case 5:
         return "New Leads";
-      case 6:
-        return "Follow Up Calls";
       default:
         return "All calls";
     }

@@ -128,13 +128,6 @@ class HomeController extends ChangeNotifier {
         "iconColor": const Color(0xff56BE6B),
         "icon": Icons.flag_outlined,
       },
-      {
-        "title": "Just Dial\nEnquiry",
-        "count": count(LeadConstants.categoryJustDial).toString(),
-        "bgColor": const Color(0xFFFFE8D5),
-        "iconColor": const Color(0xFFF37927),
-        "icon": Icons.headset_mic_outlined,
-      },
     ];
   }
 

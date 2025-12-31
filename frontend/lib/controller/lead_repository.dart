@@ -798,6 +798,72 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
+  /// Parse API report data to LeadModel
+  /// Reports come from backend after follow-up completion
+  LeadModel? _parseApiReportToLeadModel(dynamic reportData) {
+    try {
+      if (reportData is! Map<String, dynamic>) {
+        return null;
+      }
+
+      final id =
+          reportData['_id']?.toString() ??
+          reportData['id']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+
+      final name =
+          reportData['lead_name']?.toString() ??
+          reportData['name']?.toString() ??
+          '';
+
+      final phone =
+          reportData['phone_number']?.toString() ??
+          reportData['phone']?.toString() ??
+          '';
+
+      if (name.isEmpty || phone.isEmpty) {
+        return null;
+      }
+
+      var location =
+          reportData['store']?.toString() ?? reportData['location']?.toString();
+
+      // Normalize store name if needed
+      if (location != null && !location.contains(' - ')) {
+        location = StoreLocations.normalizeStoreName(location);
+      } else if (location != null && location.contains(' - ')) {
+        final parts = location.split(' - ');
+        if (parts.length == 2) {
+          final normalizedLocation = StoreLocations.normalizeStoreName(
+            parts[1],
+          );
+          location = '${parts[0]} - $normalizedLocation';
+        }
+      }
+
+      return LeadModel(
+        id: id,
+        name: name,
+        phone: phone,
+        brand: reportData['brand']?.toString(),
+        location: location,
+        leadStatus: reportData['lead_status']?.toString(),
+        callStatus: reportData['call_status']?.toString(),
+        followUpDate: _parseDate(reportData['follow_up_date']),
+        reason: reportData['reason']?.toString(),
+        category: reportData['category']?.toString(),
+        callDuration: reportData['call_duration'] as int?,
+        createdAt: _parseDate(reportData['created_at']) ?? DateTime.now(),
+        source: reportData['source']?.toString(),
+        leadType: reportData['lead_type']?.toString(),
+        isFollowUpCompleted: reportData['category']?.toString() == 'followup',
+        isFollowUpOnly: false,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Fetch Rent-Out leads from API and sync with repository
   Future<void> fetchRentOutLeadsFromApi({String? store}) async {
     try {
@@ -1071,6 +1137,179 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
+  /// Fetch Follow-Up leads from API
+  /// Matches backend GET /api/pages/follow-ups
+  Future<void> fetchFollowUpLeadsFromApi({
+    String? store,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
+    int? limit,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      print('[LeadRepository] Fetching follow-up leads from API');
+      print(
+        '[LeadRepository] store: $store, dateFrom: $dateFrom, dateTo: $dateTo',
+      );
+
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+
+      final response = await _apiService.getFollowUpLeads(
+        store: storeFilter,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        page: page,
+        limit: limit,
+      );
+
+      print('[LeadRepository] Follow-up leads API response received');
+      print('[LeadRepository] Response: $response');
+
+      // Parse response - handle different response formats
+      List<dynamic> followUpLeadsData = [];
+
+      if (response.containsKey('follow_ups')) {
+        followUpLeadsData = response['follow_ups'] as List<dynamic>? ?? [];
+      } else if (response.containsKey('data')) {
+        final data = response['data'];
+        if (data is List) {
+          followUpLeadsData = data;
+        } else if (data is Map && data.containsKey('follow_ups')) {
+          final followUps = data['follow_ups'];
+          if (followUps is List) {
+            followUpLeadsData = followUps;
+          }
+        }
+      } else if (response is List) {
+        followUpLeadsData = response as List<dynamic>;
+      }
+
+      print(
+        '[LeadRepository] Parsed ${followUpLeadsData.length} follow-up leads',
+      );
+
+      // Update or add follow-up leads to repository
+      for (var leadData in followUpLeadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            // Mark as follow-up lead
+            final followUpLead = LeadModel(
+              id: lead.id,
+              name: lead.name,
+              phone: lead.phone,
+              brand: lead.brand,
+              location: lead.location,
+              leadStatus: lead.leadStatus,
+              callStatus: lead.callStatus,
+              followUpDate: lead.followUpDate,
+              reason: lead.reason,
+              category: lead.category,
+              callDuration: lead.callDuration,
+              createdAt: lead.createdAt,
+              source: lead.source,
+              leadType: lead.leadType,
+              isFollowUpCompleted: false,
+              isFollowUpOnly: true, // Mark as follow-up only
+            );
+
+            final existingIndex = _leads.indexWhere(
+              (l) => l.id == followUpLead.id,
+            );
+            if (existingIndex != -1) {
+              _leads[existingIndex] = followUpLead;
+              print(
+                '[LeadRepository] Updated follow-up lead: ${followUpLead.name}',
+              );
+            } else {
+              _leads.add(followUpLead);
+              print(
+                '[LeadRepository] Added new follow-up lead: ${followUpLead.name}',
+              );
+            }
+          }
+        } catch (e) {
+          print('[LeadRepository] Error parsing follow-up lead: $e');
+          // Continue processing other leads
+        }
+      }
+
+      await _saveLeads();
+      notifyListeners();
+      print('[LeadRepository] Follow-up leads fetched and saved successfully');
+    } catch (e) {
+      print('[LeadRepository] Error fetching follow-up leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch Reports from API and sync with repository
+  Future<void> fetchReportsFromApi({
+    String? store,
+    String? leadType,
+    DateTime? date,
+    int? page,
+    int? limit,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      print('[LeadRepository] Fetching reports from API');
+      print('[LeadRepository] leadType: $leadType, store: $store, date: $date');
+
+      final response = await _apiService.getReports(
+        store: store,
+        leadType: leadType,
+        date: date,
+        page: page,
+        limit: limit,
+      );
+
+      print('[LeadRepository] Reports API response received');
+
+      // Parse response - handle different response formats
+      List<dynamic> reportsData = [];
+
+      if (response.containsKey('reports')) {
+        reportsData = response['reports'] as List<dynamic>? ?? [];
+      } else if (response.containsKey('data')) {
+        final data = response['data'];
+        if (data is List) {
+          reportsData = data;
+        }
+      }
+
+      print('[LeadRepository] Parsed ${reportsData.length} reports');
+
+      // Add reports to repository as LeadModel objects
+      for (var reportData in reportsData) {
+        try {
+          final report = _parseApiReportToLeadModel(reportData);
+          if (report != null) {
+            final existingIndex = _leads.indexWhere((l) => l.id == report.id);
+            if (existingIndex != -1) {
+              _leads[existingIndex] = report;
+            } else {
+              _leads.add(report);
+            }
+          }
+        } catch (e) {
+          print('[LeadRepository] Error parsing report: $e');
+        }
+      }
+
+      await _saveLeads();
+      notifyListeners();
+      print('[LeadRepository] Reports fetched and saved successfully');
+    } catch (e) {
+      print('[LeadRepository] Error fetching reports: $e');
+      rethrow;
+    }
+  }
+
   /// Move a lead to report screen (remove from active leads)
   Future<void> moveToReport(String id) async {
     try {
@@ -1124,47 +1363,60 @@ class LeadRepository extends ChangeNotifier {
 
       print('[LeadRepository] API updateFollowUp completed successfully');
 
-      // Get the current lead
+      // Get the current lead before removing it
       final lead = getLeadById(id);
       print(
         '[LeadRepository] Retrieved lead from local storage: ${lead?.name}',
       );
+
       if (lead != null) {
-        // Create updated lead with follow-up completed flag set
-        // This moves it from Follow-Up Screen to Reports Screen
-        final updatedLead = LeadModel(
-          id: lead.id,
-          name: lead.name,
-          phone: lead.phone,
-          brand: lead.brand,
-          location: lead.location,
-          leadStatus: leadStatus ?? lead.leadStatus,
-          callStatus: callStatus ?? lead.callStatus,
-          followUpDate: lead.followUpDate,
-          reason: remarks ?? lead.reason,
-          category: lead.category,
-          callDuration: callDuration ?? lead.callDuration,
-          createdAt: lead.createdAt,
-          source: lead.source,
-          leadType: lead.leadType,
-          isFollowUpCompleted: true, // Mark as completed
-          isFollowUpOnly: false, // Remove from follow-up only (now in reports)
-        );
+        // STEP 1: Remove lead from local list (it's now in Reports on backend)
+        print('[LeadRepository] Removing lead from local list...');
+        _leads.removeWhere((l) => l.id == id);
+        await _saveLeads();
+        print('[LeadRepository] Lead removed from local list');
 
-        print('[LeadRepository] Updated lead object created');
-        print(
-          '[LeadRepository] Updated callDuration: ${updatedLead.callDuration}',
-        );
-        print('[LeadRepository] Updated callStatus: ${updatedLead.callStatus}');
-        print('[LeadRepository] Updated leadStatus: ${updatedLead.leadStatus}');
+        // STEP 2: Fetch Reports from backend to sync with backend state
+        print('[LeadRepository] Fetching reports from backend...');
+        try {
+          final response = await _apiService.getReportsForFollowUp(
+            leadType: lead.leadType,
+          );
 
-        // Update the lead in local storage
-        final index = _leads.indexWhere((l) => l.id == id);
-        print('[LeadRepository] Lead index in list: $index');
-        if (index != -1) {
-          _leads[index] = updatedLead;
+          // Parse response and add reports to local list
+          List<dynamic> reportsData = [];
+          if (response.containsKey('reports')) {
+            reportsData = response['reports'] as List<dynamic>? ?? [];
+          } else if (response.containsKey('data')) {
+            final data = response['data'];
+            if (data is List) {
+              reportsData = data;
+            }
+          }
+
+          for (var reportData in reportsData) {
+            try {
+              final report = _parseApiReportToLeadModel(reportData);
+              if (report != null) {
+                final existingIndex = _leads.indexWhere(
+                  (l) => l.id == report.id,
+                );
+                if (existingIndex != -1) {
+                  _leads[existingIndex] = report;
+                } else {
+                  _leads.add(report);
+                }
+              }
+            } catch (e) {
+              print('[LeadRepository] Error parsing report: $e');
+            }
+          }
+
           await _saveLeads();
-          print('[LeadRepository] Lead updated in local storage and saved');
+          print('[LeadRepository] Reports fetched successfully');
+        } catch (e) {
+          print('[LeadRepository] Error fetching reports after follow-up: $e');
+          // Don't block - continue even if report fetch fails
         }
       }
 

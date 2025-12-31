@@ -6,7 +6,6 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
-import 'package:telecaller_app/view/reports_screens/just_dial_details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -89,9 +88,7 @@ class _ReportScreenState extends State<ReportScreen> {
           "Loss of Sale",
           "Return Calls",
           "booking calls",
-          "Just Dial",
           "New Leads",
-          "Follow-up",
         ];
 
         return Scaffold(
@@ -230,11 +227,6 @@ class _ReportScreenState extends State<ReportScreen> {
                             ],
                           ),
                         )
-                        : reportController.selectedCallTypeIndex == 4
-                        ? _buildJustDialHorizontalList(
-                          currentCallList,
-                          reportController,
-                        )
                         : currentCallList.isEmpty
                         ? Center(
                           child: Text(
@@ -247,11 +239,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                 : reportController.selectedCallTypeIndex == 3
                                 ? "No Booking confirmation calls found"
                                 : reportController.selectedCallTypeIndex == 4
-                                ? "No Just Dial calls found"
-                                : reportController.selectedCallTypeIndex == 5
                                 ? "No new leads found"
-                                : reportController.selectedCallTypeIndex == 6
-                                ? "No follow-up leads found"
                                 : "No calls found",
                             style: TextStyle(
                               fontFamily: TextConstant.dmSansRegular,
@@ -285,11 +273,6 @@ class _ReportScreenState extends State<ReportScreen> {
                                 iconBgColor = const Color(0xFFD4F5DA);
                                 iconColor = const Color(0xff56BE6B);
                                 icon = Icons.check_circle_outlined;
-                                break;
-                              case "justdial":
-                                iconBgColor = const Color(0xFFFFE8D5);
-                                iconColor = const Color(0xFFF37927);
-                                icon = Icons.headset_mic_outlined;
                                 break;
                               default: // All Calls
                                 iconBgColor = const Color(0xFFE8E3FF);
@@ -394,149 +377,6 @@ class _ReportScreenState extends State<ReportScreen> {
                         ),
               ),
             ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildJustDialHorizontalList(
-    List<Map<String, dynamic>> callList,
-    ReportController reportController,
-  ) {
-    if (callList.isEmpty) {
-      return Center(
-        child: Text(
-          "No Just Dial calls found",
-          style: TextStyle(
-            fontFamily: TextConstant.dmSansRegular,
-            fontSize: 14,
-            color: ColorConstant.grey,
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: callList.length,
-      itemBuilder: (context, index) {
-        final contact = callList[index];
-        return Container(
-          width: 280,
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => JustDialDetailsScreen(contact: contact),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        height: 48,
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE8D5),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.headset_mic_outlined,
-                          color: Color(0xFFF37927),
-                          size: 24,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Colors.grey[400],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    contact["name"] ?? "",
-                    style: const TextStyle(
-                      fontFamily: TextConstant.dmSansMedium,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    contact["phone"] ?? "",
-                    style: TextStyle(
-                      fontFamily: TextConstant.dmSansRegular,
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 14,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        contact["date"] ?? "",
-                        style: TextStyle(
-                          fontFamily: TextConstant.dmSansRegular,
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (contact["storeName"] != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.store, size: 14, color: Colors.grey[500]),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            contact["storeName"] ?? "",
-                            style: TextStyle(
-                              fontFamily: TextConstant.dmSansRegular,
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
           ),
         );
       },

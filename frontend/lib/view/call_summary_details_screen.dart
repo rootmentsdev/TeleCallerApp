@@ -13,7 +13,7 @@ class CallSummaryDetailsScreen extends StatelessWidget {
   final Color bgColor;
   final Color iconColor;
   final IconData icon;
-  final String callType; // 'all', 'loss', 'return', 'booking', 'justdial'
+  final String callType; // 'all', 'loss', 'return', 'booking'
 
   const CallSummaryDetailsScreen({
     super.key,
@@ -59,9 +59,6 @@ class CallSummaryDetailsScreen extends StatelessWidget {
                       category.toLowerCase().contains('return');
                 case 'booking':
                   return category.toLowerCase().contains('booking');
-                case 'justdial':
-                  return category.toLowerCase().contains('justdial') ||
-                      category.toLowerCase().contains('just dial');
                 default:
                   return false;
               }
