@@ -242,20 +242,11 @@ class LeadScreenController extends ChangeNotifier {
         "iconColor": const Color(0xff56BE6B),
         "icon": Icons.flag_outlined,
       },
-      {
-        "title": "Just Dial\nEnquiry",
-        "count":
-            getUncalledLeadsCount(
-              category: LeadConstants.categoryJustDial,
-            ).toString(),
-        "bgColor": const Color(0xFFFFE8D5),
-        "iconColor": const Color(0xFFF37927),
-        "icon": Icons.headset_mic_outlined,
-      },
     ];
   }
 
   // Get filtered leads based on selected call type
+  // Backend-driven: No local filtering - backend returns only uncalled leads from /api/pages/leads
   List<LeadDisplayModel> getFilteredLeads() {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
     final headerController = _headerController;
@@ -289,15 +280,9 @@ class LeadScreenController extends ChangeNotifier {
               .toList();
     }
 
-    if (_selectedCallTypeIndex != 0) {
-      filteredLeads =
-          filteredLeads
-              .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-              .toList();
-    }
-
-    filteredLeads =
-        filteredLeads.where((lead) => lead.followUpDate == null).toList();
+    // NOTE: Backend already returns only uncalled leads from /api/pages/leads
+    // No need to filter by callStatus here - trust backend
+    // No need to filter by followUpDate - backend handles collection separation
 
     if (_showOnlyNewLead &&
         _focusedNewLeadId != null &&
@@ -328,8 +313,6 @@ class LeadScreenController extends ChangeNotifier {
         return "Return";
       case 3:
         return "Booking Confirmation";
-      case 4:
-        return "Just Dial Enquiries";
       default:
         return "All Calls";
     }
@@ -363,8 +346,6 @@ class LeadScreenController extends ChangeNotifier {
         return LeadConstants.categoryRentOut;
       case 3:
         return LeadConstants.categoryBookingConfirmation;
-      case 4:
-        return LeadConstants.categoryJustDial;
       default:
         return null;
     }
@@ -512,6 +493,7 @@ class LeadScreenController extends ChangeNotifier {
     String? leadStatus,
     bool? followUpFlag,
     DateTime? callDate,
+    DateTime? followUpDate,
     int? rating,
     String? remarks,
   }) async {
@@ -522,6 +504,7 @@ class LeadScreenController extends ChangeNotifier {
         leadStatus: leadStatus,
         followUpFlag: followUpFlag,
         callDate: callDate,
+        followUpDate: followUpDate,
         rating: rating,
         remarks: remarks,
       );
@@ -540,6 +523,7 @@ class LeadScreenController extends ChangeNotifier {
     String? leadStatus,
     bool? followUpFlag,
     DateTime? callDate,
+    DateTime? followUpDate,
     String? remarks,
   }) async {
     try {
@@ -549,6 +533,7 @@ class LeadScreenController extends ChangeNotifier {
         leadStatus: leadStatus,
         followUpFlag: followUpFlag,
         callDate: callDate,
+        followUpDate: followUpDate,
         remarks: remarks,
       );
       _removeLeadFromActiveLists(id);

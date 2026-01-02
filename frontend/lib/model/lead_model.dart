@@ -121,16 +121,19 @@ class LeadModel {
     );
   }
 
-  // Check if lead needs follow-up
+  // Check if lead needs follow-up (has followUpDate set)
+  // Used to determine if lead should use follow-up API endpoint
   bool get needsFollowUp => followUpDate != null;
 
-  // Check if follow-up is overdue
+  // UI-level sorting helpers for Follow-Up screen tabs (Today/Upcoming/Overdue)
+  // These are used ONLY for display sorting, not for data filtering
+  // Backend already manages which leads are in FollowUps collection
+
   bool get isOverdue {
     if (followUpDate == null) return false;
     return followUpDate!.isBefore(DateTime.now());
   }
 
-  // Check if follow-up is today
   bool get isToday {
     if (followUpDate == null) return false;
     final now = DateTime.now();
@@ -139,7 +142,6 @@ class LeadModel {
         followUpDate!.day == now.day;
   }
 
-  // Check if follow-up is upcoming
   bool get isUpcoming {
     if (followUpDate == null) return false;
     return followUpDate!.isAfter(DateTime.now()) && !isToday;

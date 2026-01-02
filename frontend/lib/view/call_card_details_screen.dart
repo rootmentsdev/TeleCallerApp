@@ -135,7 +135,7 @@ class CallCardDetailsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               // List Header
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 26),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -256,11 +256,6 @@ class CallCardDetailsScreen extends StatelessWidget {
                                           fontFamily:
                                               TextConstant.dmSansRegular,
                                         ),
-
-
-
-
-
                                       ),
                                     ],
                                   ),

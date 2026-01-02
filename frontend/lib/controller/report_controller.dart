@@ -171,16 +171,6 @@ class ReportController extends ChangeNotifier {
         "icon": Icons.flag_outlined,
       },
       {
-        "title": "Just Dial\nEnquiry",
-        "count":
-            getCalledLeadsCount(
-              category: LeadConstants.categoryJustDial,
-            ).toString(),
-        "bgColor": const Color(0xFFFFE8D5),
-        "iconColor": const Color(0xFFF37927),
-        "icon": Icons.headset_mic_outlined,
-      },
-      {
         "title": "Follow Up\nCalls",
         "count":
             getCalledLeadsCount(
@@ -194,7 +184,8 @@ class ReportController extends ChangeNotifier {
   }
 
   // Get filtered leads based on selected call type
-  // Uses API reports for tabs 0-4, local repository for tabs 5-6 (follow-up leads)
+  // Backend-driven: Uses API reports for tabs 0-4, local repository for tabs 5-6
+  // No local filtering - backend returns filtered data
   List<Map<String, dynamic>> getFilteredLeads() {
     final store = _headerController?.selectedStore;
 
@@ -298,117 +289,136 @@ class ReportController extends ChangeNotifier {
     }
 
     // For tabs 0-4, use API reports
-    // Convert reports to contact format
+    // Backend already filters by leadType based on tab selection
+    // Filter to only show leads that have been called (called status)
     List<Map<String, dynamic>> filteredReports =
-        _reports.map((report) {
-          // Get lead data from leadSnapshot (current state of the lead)
-          final leadData = report.leadData ?? {};
+        _reports
+            .where((report) {
+              // Get lead data from leadSnapshot (current state of the lead)
+              final leadData = report.leadData ?? {};
 
-          // Extract lead information from leadSnapshot
-          final leadName =
-              leadData['lead_name']?.toString() ??
-              leadData['name']?.toString() ??
-              leadData['customerName']?.toString() ??
-              '';
-          final leadPhone =
-              leadData['phone_number']?.toString() ??
-              leadData['phone']?.toString() ??
-              '';
+              // Extract call status
+              final callStatus =
+                  leadData['call_status']?.toString() ??
+                  leadData['callStatus']?.toString() ??
+                  '';
 
-          // Normalize store name (Calicut -> Kozhikode, etc.)
-          var leadLocation =
-              leadData['store']?.toString() ??
-              leadData['location']?.toString() ??
-              '';
+              // Only include leads that have been called
+              return LeadConstants.isCalledStatus(callStatus);
+            })
+            .map((report) {
+              // Get lead data from leadSnapshot (current state of the lead)
+              final leadData = report.leadData ?? {};
 
-          // Apply store name normalization
-          if (leadLocation.isNotEmpty && !leadLocation.contains(' - ')) {
-            leadLocation = StoreLocations.normalizeStoreName(leadLocation);
-          } else if (leadLocation.isNotEmpty && leadLocation.contains(' - ')) {
-            final parts = leadLocation.split(' - ');
-            if (parts.length == 2) {
-              final normalizedLocation = StoreLocations.normalizeStoreName(
-                parts[1],
-              );
-              leadLocation = '${parts[0]} - $normalizedLocation';
-            }
-          }
+              // Extract lead information from leadSnapshot
+              final leadName =
+                  leadData['lead_name']?.toString() ??
+                  leadData['name']?.toString() ??
+                  leadData['customerName']?.toString() ??
+                  '';
+              final leadPhone =
+                  leadData['phone_number']?.toString() ??
+                  leadData['phone']?.toString() ??
+                  '';
 
-          final callStatus =
-              leadData['call_status']?.toString() ??
-              leadData['callStatus']?.toString() ??
-              '';
-          final leadStatus =
-              leadData['lead_status']?.toString() ??
-              leadData['leadStatus']?.toString();
-          final reason =
-              leadData['reason']?.toString() ??
-              leadData['reason_collected_from_store']?.toString();
-          final callDuration =
-              leadData['callDuration'] as int? ??
-              leadData['call_duration'] as int?;
+              // Normalize store name (Calicut -> Kozhikode, etc.)
+              var leadLocation =
+                  leadData['store']?.toString() ??
+                  leadData['location']?.toString() ??
+                  '';
 
-          // Parse dates
-          DateTime? parseDate(dynamic dateValue) {
-            if (dateValue == null) return null;
-            try {
-              return DateTime.parse(dateValue.toString());
-            } catch (e) {
-              return null;
-            }
-          }
+              // Apply store name normalization
+              if (leadLocation.isNotEmpty && !leadLocation.contains(' - ')) {
+                leadLocation = StoreLocations.normalizeStoreName(leadLocation);
+              } else if (leadLocation.isNotEmpty &&
+                  leadLocation.contains(' - ')) {
+                final parts = leadLocation.split(' - ');
+                if (parts.length == 2) {
+                  final normalizedLocation = StoreLocations.normalizeStoreName(
+                    parts[1],
+                  );
+                  leadLocation = '${parts[0]} - $normalizedLocation';
+                }
+              }
 
-          final createdAt =
-              parseDate(leadData['created_at']) ??
-              parseDate(leadData['createdAt']) ??
-              report.editedAt ??
-              report.createdAt;
-          final followUpDate =
-              parseDate(leadData['follow_up_date']) ??
-              parseDate(leadData['followUpDate']);
-          final enquiryDate =
-              parseDate(leadData['enquiry_date']) ??
-              parseDate(leadData['enquiryDate']);
-          final functionDate =
-              parseDate(leadData['function_date']) ??
-              parseDate(leadData['functionDate']);
-          final visitDate =
-              parseDate(leadData['visit_date']) ??
-              parseDate(leadData['visitDate']);
+              final callStatus =
+                  leadData['call_status']?.toString() ??
+                  leadData['callStatus']?.toString() ??
+                  '';
+              final leadStatus =
+                  leadData['lead_status']?.toString() ??
+                  leadData['leadStatus']?.toString();
+              final reason =
+                  leadData['reason']?.toString() ??
+                  leadData['reason_collected_from_store']?.toString();
+              final callDuration =
+                  leadData['callDuration'] as int? ??
+                  leadData['call_duration'] as int?;
 
-          return {
-            "id": report.originalId,
-            "name": leadName,
-            "phone": leadPhone,
-            "date": _formatDate(createdAt),
-            "callDate":
-                report.editedAt != null
-                    ? _formatDate(report.editedAt!)
-                    : _formatDate(createdAt),
-            "enquiryDate":
-                enquiryDate != null
-                    ? _formatDate(enquiryDate)
-                    : "Not available",
-            "visitDate":
-                visitDate != null ? _formatDate(visitDate) : "Not available",
-            "functionDate":
-                functionDate != null
-                    ? _formatDate(functionDate)
-                    : "Not available",
-            "storeName":
-                leadLocation.isNotEmpty ? leadLocation : "Not available",
-            "type": _getTypeFromLeadType(report.leadType),
-            "callStatus": callStatus.isNotEmpty ? callStatus : "Connected",
-            "leadStatus": leadStatus,
-            "reason": reason,
-            "reasonFromStore": reason,
-            "attendedBy":
-                "Not available - ${leadLocation.isNotEmpty ? leadLocation : 'Not available'}",
-            "followUpDate": followUpDate?.toIso8601String(),
-            "callDuration": callDuration,
-            "remarks": report.note ?? "",
-          };
-        }).toList();
+              // Parse dates
+              DateTime? parseDate(dynamic dateValue) {
+                if (dateValue == null) return null;
+                try {
+                  return DateTime.parse(dateValue.toString());
+                } catch (e) {
+                  return null;
+                }
+              }
+
+              final createdAt =
+                  parseDate(leadData['created_at']) ??
+                  parseDate(leadData['createdAt']) ??
+                  report.editedAt ??
+                  report.createdAt;
+              final followUpDate =
+                  parseDate(leadData['follow_up_date']) ??
+                  parseDate(leadData['followUpDate']);
+              final enquiryDate =
+                  parseDate(leadData['enquiry_date']) ??
+                  parseDate(leadData['enquiryDate']);
+              final functionDate =
+                  parseDate(leadData['function_date']) ??
+                  parseDate(leadData['functionDate']);
+              final visitDate =
+                  parseDate(leadData['visit_date']) ??
+                  parseDate(leadData['visitDate']);
+
+              return {
+                "id": report.originalId,
+                "name": leadName,
+                "phone": leadPhone,
+                "date": _formatDate(createdAt),
+                "callDate":
+                    report.editedAt != null
+                        ? _formatDate(report.editedAt!)
+                        : _formatDate(createdAt),
+                "enquiryDate":
+                    enquiryDate != null
+                        ? _formatDate(enquiryDate)
+                        : "Not available",
+                "visitDate":
+                    visitDate != null
+                        ? _formatDate(visitDate)
+                        : "Not available",
+                "functionDate":
+                    functionDate != null
+                        ? _formatDate(functionDate)
+                        : "Not available",
+                "storeName":
+                    leadLocation.isNotEmpty ? leadLocation : "Not available",
+                "type": _getTypeFromLeadType(report.leadType),
+                "callStatus": callStatus.isNotEmpty ? callStatus : "Connected",
+                "leadStatus": leadStatus,
+                "reason": reason,
+                "reasonFromStore": reason,
+                "attendedBy":
+                    "Not available - ${leadLocation.isNotEmpty ? leadLocation : 'Not available'}",
+                "followUpDate": followUpDate?.toIso8601String(),
+                "callDuration": callDuration,
+                "remarks": report.note ?? "",
+              };
+            })
+            .toList();
 
     // For "All Calls" tab (index 0), also include newly created leads from local repository
     if (_selectedCallTypeIndex == 0) {
@@ -449,30 +459,10 @@ class ReportController extends ChangeNotifier {
           }).toList();
     }
 
-    // Filter by lead type based on selected tab (only for tabs 0-4)
-    if (_selectedCallTypeIndex != 0 && _selectedCallTypeIndex != 5) {
-      switch (_selectedCallTypeIndex) {
-        case 1:
-          filteredReports =
-              filteredReports.where((r) => r["type"] == "loss").toList();
-          break;
-
-        case 2:
-          filteredReports =
-              filteredReports.where((r) => r["type"] == "rent-out").toList();
-          break;
-
-        case 3:
-          filteredReports =
-              filteredReports.where((r) => r["type"] == "booking").toList();
-          break;
-
-        case 4:
-          filteredReports =
-              filteredReports.where((r) => r["type"] == "justdial").toList();
-          break;
-      }
-    }
+    // NOTE: Backend already filters by leadType based on selected tab
+    // No need to filter locally - trust backend
+    // Tabs 0-4 are handled by API with leadType parameter
+    // Tabs 5-6 are handled by local repository filtering above
 
     return filteredReports;
   }
@@ -506,11 +496,9 @@ class ReportController extends ChangeNotifier {
       case 3:
         return "Booking Confirmation calls";
       case 4:
-        return "Just Dial Enquiries";
+        return "Follow Up Calls";
       case 5:
         return "New Leads";
-      case 6:
-        return "Follow Up Calls";
       default:
         return "All calls";
     }
@@ -597,7 +585,6 @@ class ReportController extends ChangeNotifier {
       case 0:
         leadType = null; // ALL CALLS
         break;
-
       case 1:
         leadType = "lossOfSale";
         break;
@@ -611,11 +598,7 @@ class ReportController extends ChangeNotifier {
         break;
 
       case 4:
-        leadType = "justDial";
-        break;
-
-      case 5:
-        // Equary Calls → No leadType filter
+        // Follow Up Calls → No leadType filter
         leadType = null;
         break;
     }

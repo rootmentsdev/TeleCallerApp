@@ -4,7 +4,7 @@ import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
+import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 
 class FollowupScreen extends StatefulWidget {
@@ -268,14 +268,14 @@ class _FollowupScreenState extends State<FollowupScreen> {
   Widget _buildCallItem(Map<String, dynamic> call, BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Open report details screen (read-only view) when follow-up lead is clicked
+        // Open details screen (editable view) when follow-up lead is clicked
         Navigator.push(
           context,
           MaterialPageRoute(
             builder:
-                (context) => ReportDetailsScreen(
+                (context) => DetailsScreen(
                   contact: call,
-                  callTypeIndex: 6, // Follow-up tab
+                  callTypeIndex: 0, // All Calls tab
                 ),
           ),
         );
@@ -290,7 +290,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 4,
               offset: const Offset(0, 2),
@@ -386,7 +386,7 @@ class DottedLinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint =
         Paint()
-          ..color = ColorConstant.primaryColor.withOpacity(0.2)
+          ..color = ColorConstant.primaryColor.withValues(alpha: 0.2)
           ..strokeWidth = 1;
 
     const dashWidth = 5.0;

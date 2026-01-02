@@ -7,6 +7,8 @@ class ApiConfig {
   static const String authEndpoint = "$baseUrl/api/auth";
   static const String pagesEndpoint = "$baseUrl/api/pages";
   static const String reportsEndpoint = "$baseUrl/api/reports";
+  // Follow-ups endpoint (fetch follow-up leads)
+  static const String followUpsEndpoint = "$baseUrl/api/pages/follow-ups";
 
   // Lead types
   static const String lossOfSale = "lossOfSale";
@@ -282,6 +284,32 @@ class ApiConfig {
 
     if (store != null && store.isNotEmpty) {
       queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+
+    return url;
+  }
+
+  /// Follow-ups endpoint helper
+  static String getFollowUps({String? store, int? page, int? limit}) {
+    String url = followUpsEndpoint;
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    } else {
+      queryParams.add("limit=1000");
     }
 
     if (queryParams.isNotEmpty) {

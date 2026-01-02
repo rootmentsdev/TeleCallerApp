@@ -39,6 +39,7 @@ class LeadRepository extends ChangeNotifier {
   }
 
   final List<LeadModel> _leads = [];
+  final List<LeadModel> _followUpLeads = []; // Leads from /api/pages/follow-ups
   static const String _storageKey = 'saved_leads';
   bool _isInitialized = false;
   final ApiService _apiService = ApiService();
@@ -60,21 +61,15 @@ class LeadRepository extends ChangeNotifier {
     return List.unmodifiable(_leads);
   }
 
+  // Backend-driven: Returns follow-up leads fetched from /api/pages/follow-ups
+  // Only includes leads that backend returned from the follow-ups collection
+  // When a lead is completed, backend removes it from this collection
   List<LeadModel> get followUpLeads {
-    return _leads.where((lead) => lead.needsFollowUp).toList();
+    return _followUpLeads;
   }
 
-  List<LeadModel> get todayFollowUps {
-    return _leads.where((lead) => lead.isToday).toList();
-  }
-
-  List<LeadModel> get upcomingFollowUps {
-    return _leads.where((lead) => lead.isUpcoming).toList();
-  }
-
-  List<LeadModel> get overdueFollowUps {
-    return _leads.where((lead) => lead.isOverdue).toList();
-  }
+  // Note: Follow-up leads are fetched from backend via fetchFollowUpLeadsFromApi()
+  // Frontend should not filter locally - backend manages FollowUps collection
 
   // ========== Initialization ==========
 
@@ -157,15 +152,11 @@ class LeadRepository extends ChangeNotifier {
     await ensureInitialized();
     final index = _leads.indexWhere((lead) => lead.id == updatedLead.id);
     if (index != -1) {
-      final oldLead = _leads[index];
       _leads[index] = updatedLead;
 
-      final wasUncalled = LeadConstants.isUncalledStatus(oldLead.callStatus);
-      final isNowCalled = LeadConstants.isCalledStatus(updatedLead.callStatus);
-
-      if (wasUncalled && isNowCalled && updatedLead.followUpDate == null) {
-        _leads.removeAt(index);
-      }
+      // Note: Backend handles collection transitions (Leads → FollowUps → Reports)
+      // Frontend should not remove leads locally
+      // Screens will refresh and fetch from correct backend endpoints
 
       await _saveLeads();
       notifyListeners();
@@ -356,31 +347,8 @@ class LeadRepository extends ChangeNotifier {
 
   int get totalLeadsCount => _leads.length;
 
-  int getFollowUpLeadsCount({String? store, DateTime? date}) {
-    List<LeadModel> filtered =
-        _leads.where((lead) => lead.needsFollowUp).toList();
-
-    if (date != null) {
-      filtered =
-          filtered.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-
-    if (store != null && store != 'All Stores') {
-      // Extract location from "Brand - Location" format, or use as-is if already a location
-      final location =
-          store.contains(' - ')
-              ? StoreLocations.resolveSelection(store).location
-              : store;
-      filtered = filtered.where((lead) => lead.location == location).toList();
-    }
-
-    return filtered.length;
-  }
+  // Note: Follow-up count is managed by backend
+  // Frontend should fetch from backend via fetchFollowUpLeadsFromApi()
 
   // ========== API Integration ==========
 
@@ -417,10 +385,9 @@ class LeadRepository extends ChangeNotifier {
       );
       final leadsData = _parseResponseToLeadsList(response);
 
+      // Remove existing booking confirmation leads before adding fresh ones from API
       _leads.removeWhere(
-        (lead) =>
-            lead.category == LeadConstants.categoryBookingConfirmation &&
-            !lead.needsFollowUp,
+        (lead) => lead.category == LeadConstants.categoryBookingConfirmation,
       );
 
       for (var leadData in leadsData) {
@@ -495,10 +462,9 @@ class LeadRepository extends ChangeNotifier {
       );
       final leadsData = _parseResponseToLeadsList(response);
 
+      // Remove existing loss of sale leads before adding fresh ones from API
       _leads.removeWhere(
-        (lead) =>
-            lead.category == LeadConstants.categoryLossOfSales &&
-            !lead.needsFollowUp,
+        (lead) => lead.category == LeadConstants.categoryLossOfSales,
       );
 
       for (var leadData in leadsData) {
@@ -597,7 +563,10 @@ class LeadRepository extends ChangeNotifier {
 
   /// Parse API lead data to LeadModel
   /// Handles different possible API response formats
-  LeadModel? _parseApiLeadToLeadModel(dynamic leadData) {
+  LeadModel? _parseApiLeadToLeadModel(
+    dynamic leadData, {
+    bool useFunctionDateAsFollowUp = false,
+  }) {
     try {
       if (leadData is! Map<String, dynamic>) {
         return null;
@@ -665,6 +634,19 @@ class LeadRepository extends ChangeNotifier {
           _parseDate(leadData['follow_up_date']) ??
           _parseDate(leadData['followUp']) ??
           _parseDate(leadData['follow_up']);
+
+      // If this is being parsed specifically for Follow-ups endpoint, allow using function_date as a fallback
+      if (followUpDate == null && useFunctionDateAsFollowUp) {
+        followUpDate =
+            _parseDate(leadData['function_date']) ??
+            _parseDate(leadData['functionDate']) ??
+            _parseDate(leadData['functionDate']);
+        if (followUpDate != null) {
+          print(
+            'LeadRepository: Using function_date as followUpDate for lead id=$id -> $followUpDate',
+          );
+        }
+      }
 
       DateTime createdAt = DateTime.now();
       // Backend uses enquiry_date as the main date field
@@ -768,10 +750,9 @@ class LeadRepository extends ChangeNotifier {
       );
       final leadsData = _parseResponseToLeadsList(response);
 
+      // Remove existing rent-out leads before adding fresh ones from API
       _leads.removeWhere(
-        (lead) =>
-            lead.category == LeadConstants.categoryRentOut &&
-            !lead.needsFollowUp,
+        (lead) => lead.category == LeadConstants.categoryRentOut,
       );
 
       for (var leadData in leadsData) {
@@ -863,6 +844,7 @@ class LeadRepository extends ChangeNotifier {
     String? leadStatus,
     bool? followUpFlag,
     DateTime? callDate,
+    DateTime? followUpDate,
     int? rating,
     String? remarks,
   }) async {
@@ -874,7 +856,7 @@ class LeadRepository extends ChangeNotifier {
         callStatus: callStatus,
         leadStatus: leadStatus,
         followUpFlag: followUpFlag,
-        callDate: callDate,
+        callDate: followUpDate ?? callDate,
         rating: rating,
         remarks: remarks,
       );
@@ -891,7 +873,7 @@ class LeadRepository extends ChangeNotifier {
           callStatus: callStatus ?? lead.callStatus,
           followUpDate:
               followUpFlag == true
-                  ? callDate
+                  ? (followUpDate ?? callDate)
                   : (followUpFlag == false ? null : lead.followUpDate),
           reason: remarks ?? lead.reason,
           category: lead.category,
@@ -912,6 +894,7 @@ class LeadRepository extends ChangeNotifier {
     String? leadStatus,
     bool? followUpFlag,
     DateTime? callDate,
+    DateTime? followUpDate,
     String? remarks,
   }) async {
     try {
@@ -922,7 +905,7 @@ class LeadRepository extends ChangeNotifier {
         callStatus: callStatus,
         leadStatus: leadStatus,
         followUpFlag: followUpFlag,
-        callDate: callDate,
+        callDate: followUpDate ?? callDate,
         remarks: remarks,
       );
 
@@ -938,7 +921,7 @@ class LeadRepository extends ChangeNotifier {
           callStatus: callStatus ?? lead.callStatus,
           followUpDate:
               followUpFlag == true
-                  ? callDate
+                  ? (followUpDate ?? callDate)
                   : (followUpFlag == false ? null : lead.followUpDate),
           reason: remarks ?? lead.reason,
           category: lead.category,
@@ -988,16 +971,9 @@ class LeadRepository extends ChangeNotifier {
       final leadsData = _parseResponseToLeadsList(response);
 
       if (page == null || page == 1) {
-        final preservedLeads =
-            _leads
-                .where(
-                  (lead) =>
-                      LeadConstants.isCalledStatus(lead.callStatus) ||
-                      lead.needsFollowUp,
-                )
-                .toList();
+        // Backend-driven: Clear local cache and replace with fresh data from API
+        // Don't preserve leads locally - backend manages all collections
         _leads.clear();
-        _leads.addAll(preservedLeads);
       }
 
       for (var leadData in leadsData) {
@@ -1053,6 +1029,141 @@ class LeadRepository extends ChangeNotifier {
       }
       return await _apiService.getCallSummary(store: store, date: dateStr);
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ========== Follow-Up Lead Methods ==========
+
+  /// Fetch follow-up leads from backend and sync with local storage
+  /// Gets leads from /api/pages/follow-ups collection
+  Future<void> fetchFollowUpLeadsFromApi({String? store}) async {
+    try {
+      await ensureInitialized();
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getFollowUpLeads(
+        store: storeFilter,
+        limit: 1000,
+      );
+      final leadsData = _parseResponseToLeadsList(response);
+
+      // Clear previous follow-up leads and fetch fresh from backend
+      // This ensures leads completed and moved to Reports are removed
+      _followUpLeads.clear();
+
+      print(
+        'LeadRepository: Fetched ${leadsData.length} raw follow-up entries from API',
+      );
+
+      // Add follow-up leads from backend
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(
+            leadData,
+            useFunctionDateAsFollowUp: true,
+          );
+          if (lead != null) {
+            _followUpLeads.add(lead);
+            print(
+              'LeadRepository: Added follow-up lead -> id=${lead.id}, phone=${lead.phone}, followUpDate=${lead.followUpDate}, callStatus=${lead.callStatus}',
+            );
+          } else {
+            print('LeadRepository: Skipped invalid follow-up entry: $leadData');
+          }
+        } catch (e) {
+          print('LeadRepository: Error parsing follow-up lead entry: $e');
+          // Continue processing other leads
+        }
+      }
+
+      print(
+        'LeadRepository: Total follow-up leads after sync: ${_followUpLeads.length}',
+      );
+      notifyListeners();
+    } catch (e) {
+      print('LeadRepository: Error fetching follow-up leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch a single follow-up lead by ID from API
+  /// Returns the follow-up lead details in listing format
+  Future<LeadModel?> getFollowUpLeadFromApi(String id) async {
+    try {
+      await ensureInitialized();
+      final response = await _apiService.getFollowUp(id);
+
+      // Parse the response - backend returns the follow-up lead data
+      final leadData = response['data'] ?? response;
+
+      if (leadData is Map<String, dynamic>) {
+        return _parseApiLeadToLeadModel(leadData);
+      }
+
+      return null;
+    } catch (e) {
+      print('LeadRepository: Error fetching follow-up lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Update a follow-up lead via API
+  /// Updates call status, remarks, call date, and follow-up date for a follow-up lead
+  Future<void> updateFollowUpLeadFromApi({
+    required String id,
+    required String callStatus,
+    String? remarks,
+    DateTime? callDate,
+    DateTime? followUpDate,
+    bool clearFollowUpDate = false,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      await _apiService.postFollowUp(
+        id: id,
+        callStatus: callStatus,
+        remarks: remarks,
+        callDate: callDate,
+        followUpDate: followUpDate,
+        clearFollowUpDate: clearFollowUpDate,
+      );
+
+      // Update local lead if it exists
+      final lead = getLeadById(id);
+      if (lead != null) {
+        final updatedLead = LeadModel(
+          id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          brand: lead.brand,
+          location: lead.location,
+          leadStatus: lead.leadStatus,
+          callStatus: callStatus,
+          followUpDate: clearFollowUpDate ? null : (followUpDate ?? lead.followUpDate),
+          reason: lead.reason,
+          category: lead.category,
+          callDuration: lead.callDuration,
+          createdAt: lead.createdAt,
+        );
+        await updateLead(updatedLead);
+
+        // Refresh follow-up leads from server to reflect any server-side movements
+        try {
+          print(
+            'LeadRepository: Refreshing follow-up leads after update for id=$id',
+          );
+          await fetchFollowUpLeadsFromApi();
+        } catch (e) {
+          // Log and continue - don't fail the update flow if refresh fails
+          print(
+            'LeadRepository: Warning - could not refresh follow-up leads after update: $e',
+          );
+        }
+      }
+    } catch (e) {
+      print('LeadRepository: Error updating follow-up lead: $e');
       rethrow;
     }
   }

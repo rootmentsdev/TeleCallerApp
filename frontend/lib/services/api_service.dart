@@ -674,6 +674,7 @@ class ApiService {
     required String leadStatus,
     String? remarks,
     bool followUpFlag = false,
+    String? followUpDate,
     String? functionDate,
     String? bookingNumber,
     int securityAmount = 0,
@@ -704,6 +705,10 @@ class ApiService {
       }
       if (followUpFlag) {
         requestBody['follow_up_flag'] = followUpFlag;
+        // When follow_up_flag is true, send follow_up_date (required by backend)
+        if (followUpDate != null && followUpDate.isNotEmpty) {
+          requestBody['follow_up_date'] = followUpDate;
+        }
       }
       if (functionDate != null && functionDate.isNotEmpty) {
         requestBody['function_date'] = functionDate;
@@ -798,7 +803,13 @@ class ApiService {
       final requestBody = <String, dynamic>{};
       if (callStatus != null) requestBody['call_status'] = callStatus;
       if (leadStatus != null) requestBody['lead_status'] = leadStatus;
-      if (followUpFlag != null) requestBody['follow_up_flag'] = followUpFlag;
+      if (followUpFlag != null) {
+        requestBody['follow_up_flag'] = followUpFlag;
+        // When follow_up_flag is true, send follow_up_date (required by backend)
+        if (followUpFlag && callDate != null) {
+          requestBody['follow_up_date'] = callDate.toIso8601String();
+        }
+      }
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();
       }
@@ -889,7 +900,13 @@ class ApiService {
       final requestBody = <String, dynamic>{};
       if (callStatus != null) requestBody['call_status'] = callStatus;
       if (leadStatus != null) requestBody['lead_status'] = leadStatus;
-      if (followUpFlag != null) requestBody['follow_up_flag'] = followUpFlag;
+      if (followUpFlag != null) {
+        requestBody['follow_up_flag'] = followUpFlag;
+        // When follow_up_flag is true, send follow_up_date (required by backend)
+        if (followUpFlag && callDate != null) {
+          requestBody['follow_up_date'] = callDate.toIso8601String();
+        }
+      }
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();
       }
@@ -1091,6 +1108,313 @@ class ApiService {
       }
     } catch (e) {
       print('ApiService: Error fetching call summary: $e');
+      rethrow;
+    }
+  }
+
+  /// Get a single follow-up lead by ID
+  /// Matches backend GET /api/pages/follow-ups/:id (plural "follow-ups")
+  Future<Map<String, dynamic>> getFollowUp(String id) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/follow-ups/$id');
+    print('ApiService: GET Follow-up URL => $url');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching follow-up lead by ID: $id');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print('ApiService: Follow-up response status: ${response.statusCode}');
+      print('ApiService: Follow-up response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'data': decodedResponse};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else if (response.statusCode == 403) {
+        throw Exception(
+          'Access denied: User doesn\'t have permission to access this follow-up lead.',
+        );
+      } else if (response.statusCode == 404) {
+        throw Exception('Follow-up lead not found.');
+      } else {
+        throw Exception(
+          'Failed to load follow-up lead: Status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('ApiService: Error fetching follow-up lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Create or update a follow-up lead
+  /// Matches backend POST /api/pages/follow-up/:id
+  /// Updates a follow-up lead with new call status, remarks, and call date
+  /// Endpoint: POST /api/pages/follow-ups/:id (plural "follow-ups")
+  /// Updates a follow-up lead with call status, remarks, call date, and follow-up date
+  Future<Map<String, dynamic>> postFollowUp({
+    required String id,
+    required String callStatus,
+    String? remarks,
+    DateTime? callDate,
+    DateTime? followUpDate,
+    bool clearFollowUpDate = false,
+  }) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/follow-ups/$id');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      // Prepare request body with required and optional fields
+      final requestBody = <String, dynamic>{'call_status': callStatus};
+
+      // Add optional fields if provided
+      if (remarks != null && remarks.isNotEmpty) {
+        requestBody['remarks'] = remarks;
+      }
+      if (callDate != null) {
+        requestBody['call_date'] = callDate.toIso8601String();
+      }
+
+      // Support clearing follow_up_date explicitly by sending null
+      if (clearFollowUpDate) {
+        requestBody['follow_up_date'] = null;
+      } else if (followUpDate != null) {
+        requestBody['follow_up_date'] = followUpDate.toIso8601String();
+      }
+
+      final requestBodyJson = json.encode(requestBody);
+
+      print('ApiService: Updating follow-up lead');
+      print('ApiService: POST URL: $url');
+      print('ApiService: POST BODY SENT: $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print(
+        'ApiService: Follow-up update response status: ${response.statusCode}',
+      );
+      print('ApiService: Follow-up update response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'success': true, 'data': decodedResponse};
+      } else if (response.statusCode == 400) {
+        String errorMessage = 'Validation error. Please check your input.';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else if (response.statusCode == 403) {
+        throw Exception(
+          'Access denied: User doesn\'t have permission to update this follow-up lead.',
+        );
+      } else if (response.statusCode == 404) {
+        throw Exception('Follow-up lead not found.');
+      } else {
+        String errorMessage =
+            'Failed to update follow-up lead: Status ${response.statusCode}';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('ApiService: Error updating follow-up lead: $e');
+      rethrow;
+    }
+  }
+
+  /// Move a lead to FollowUps collection by setting follow_up_date
+  /// Matches backend POST https://telecallerappbackend.onrender.com/api/pages/leads/:id
+  /// Works for all lead types (general, loss of sale, booking confirmation, rent-out)
+  Future<Map<String, dynamic>> moveLeadToFollowUp({
+    required String id,
+    required DateTime followUpDate,
+    String? callStatus,
+    String? leadStatus,
+    String? remarks,
+  }) async {
+    final url = Uri.parse(
+      'https://telecallerappbackend.onrender.com/api/pages/leads/$id',
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      // Prepare request body with follow_up_date to trigger move to FollowUps
+      final requestBody = <String, dynamic>{
+        'follow_up_date': followUpDate.toIso8601String(),
+      };
+
+      // Add optional fields if provided
+      if (callStatus != null && callStatus.isNotEmpty) {
+        requestBody['call_status'] = callStatus;
+      }
+      if (leadStatus != null && leadStatus.isNotEmpty) {
+        requestBody['lead_status'] = leadStatus;
+      }
+      if (remarks != null && remarks.isNotEmpty) {
+        requestBody['remarks'] = remarks;
+      }
+
+      final requestBodyJson = json.encode(requestBody);
+
+      print('ApiService: Moving lead to follow-up');
+      print('ApiService: POST URL: $url');
+      print('ApiService: POST BODY SENT: $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print(
+        'ApiService: Move to follow-up response status: ${response.statusCode}',
+      );
+      print('ApiService: Move to follow-up response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'success': true, 'data': decodedResponse};
+      } else if (response.statusCode == 400) {
+        String errorMessage = 'Validation error. Please check your input.';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        String errorMessage =
+            'Failed to move lead to follow-up: Status ${response.statusCode}';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      print('ApiService: Error moving lead to follow-up: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all follow-up leads from backend
+  /// Matches backend GET /api/pages/follow-ups
+  Future<Map<String, dynamic>> getFollowUpLeads({
+    String? store,
+    int? limit,
+  }) async {
+    final url = Uri.parse(ApiConfig.getFollowUps(store: store, limit: limit));
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching follow-up leads');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print(
+        'ApiService: Follow-up leads response status: ${response.statusCode}',
+      );
+      print('ApiService: Follow-up leads response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+
+        // Normalize response to { "data": [...] }
+        if (decoded is Map<String, dynamic>) {
+          if (decoded.containsKey('leads')) {
+            return {'data': decoded['leads']};
+          }
+          if (decoded.containsKey('data')) {
+            return {'data': decoded['data']};
+          }
+          return decoded;
+        } else if (decoded is List) {
+          return {'data': decoded};
+        } else {
+          throw Exception('Unexpected response format for follow-up leads');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load follow-up leads: Status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('ApiService: Error fetching follow-up leads: $e');
       rethrow;
     }
   }

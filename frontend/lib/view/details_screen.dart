@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
+import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
@@ -14,6 +15,7 @@ import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/widgets.dart/call_duration_display.dart';
 
 class DetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -343,15 +345,12 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
     // Get the lead ID if available
     final leadId = widget.contact["id"] as String?;
-    bool wasNewLead = false; // Track if this was a new lead BEFORE update
 
     if (leadId != null) {
       final repository = LeadRepository();
       final lead = repository.getLeadById(leadId);
 
       if (lead != null) {
-        // Check if this was a NEW lead BEFORE the update
-        wasNewLead = !LeadConstants.isCalledStatus(lead.callStatus);
         // Update lead with new information
         final updatedLead = LeadModel(
           id: lead.id,
@@ -376,30 +375,116 @@ class _DetailsScreenState extends State<DetailsScreen> {
         // Update locally first
         await repository.updateLead(updatedLead);
 
-        // Refresh controllers to update UI
-        // This ensures leads are moved from "leads" to "reports" if call status changed
-        try {
-          final leadController = Provider.of<LeadScreenController>(
-            context,
-            listen: false,
-          );
-          // Refresh to remove lead from leads list if it's now "called"
-          leadController.refresh();
-        } catch (e) {
-          // LeadScreenController might not be available, that's okay
-          print('Could not refresh LeadScreenController: $e');
-        }
+        // If this is a follow-up lead (has followUpDate), update via follow-up endpoint
+        if (lead.needsFollowUp &&
+            !LeadConstants.isUncalledStatus(lead.callStatus)) {
+          try {
+            print('DetailsScreen: Updating follow-up lead via API');
+            print('DetailsScreen: Follow-up Lead ID: $leadId');
 
-        try {
-          final reportController = Provider.of<ReportController>(
-            context,
-            listen: false,
-          );
-          // Refresh to show updated lead in reports if it's now "called"
-          reportController.refresh();
-        } catch (e) {
-          // ReportController might not be available, that's okay
-          print('Could not refresh ReportController: $e');
+            // Determine new follow-up date / clear flag
+            DateTime? newFollowUpDate;
+            bool clearFollowUpDate = false;
+
+            // If user explicitly marked as follow-up, use the UI-provided followUpDate
+            if (markAsFollowUp) {
+              newFollowUpDate = followUpDate;
+            } else {
+              // For follow-up leads, completing the call (Connected/Confirmed)
+              // should clear the follow_up_date so backend can move it to Reports
+              final completedStatuses = ['Connected', 'Confirmed'];
+              if (selectedCallStatus != null && completedStatuses.contains(selectedCallStatus)) {
+                clearFollowUpDate = true;
+                newFollowUpDate = null;
+              } else {
+                // Otherwise keep existing followUpDate
+                newFollowUpDate = lead.followUpDate;
+              }
+            }
+
+            await repository.updateFollowUpLeadFromApi(
+              id: leadId,
+              callStatus: selectedCallStatus ?? 'Connected',
+              remarks: remarksController.text.trim().isEmpty ? null : remarksController.text.trim(),
+              callDate: DateTime.now(),
+              followUpDate: newFollowUpDate,
+              clearFollowUpDate: clearFollowUpDate,
+            );
+
+            print('DetailsScreen: Follow-up lead updated successfully via API');
+
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Follow-up lead updated successfully'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } catch (e) {
+            // Show error message but don't block navigation
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Failed to update follow-up on server: ${e.toString().replaceFirst('Exception: ', '')}',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+            print('DetailsScreen: Error updating follow-up lead via API: $e');
+          }
+
+          // Pop back and refresh Follow-Up screen immediately
+          if (mounted) {
+            // Obtain controllers before popping to avoid using unmounted context
+            FollowupController? followupController;
+            ReportController? reportController;
+            try {
+              followupController = Provider.of<FollowupController>(
+                context,
+                listen: false,
+              );
+            } catch (e) {
+              print('DetailsScreen: Could not obtain FollowupController before pop: $e');
+            }
+            try {
+              reportController = Provider.of<ReportController>(
+                context,
+                listen: false,
+              );
+            } catch (e) {
+              print('DetailsScreen: Could not obtain ReportController before pop: $e');
+            }
+
+            Navigator.of(context).pop();
+
+            // Refresh FollowupController to remove the lead from Follow-Up screen
+            // (backend moved it to Reports collection)
+            if (followupController != null) {
+              try {
+                await followupController.fetchFollowUpLeads();
+                print('DetailsScreen: Follow-Up screen refreshed');
+              } catch (e) {
+                print('DetailsScreen: Error refreshing Follow-Up screen: $e');
+              }
+            }
+
+            // Also refresh Reports screen to show the new report
+            if (reportController != null) {
+              try {
+                await reportController.fetchReportsWithCurrentFilters();
+                print('DetailsScreen: Reports screen refreshed');
+              } catch (e) {
+                print('DetailsScreen: Error refreshing Reports screen: $e');
+              }
+            }
+          }
+          return;
         }
 
         // If it's a Loss of Sale lead, also update via API
@@ -422,9 +507,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       ? null
                       : remarksController.text.trim(),
             );
-
-            // Refresh again after API update to ensure UI is updated
-            leadController.refresh();
 
             // Show success message
             if (mounted) {
@@ -475,15 +557,13 @@ class _DetailsScreenState extends State<DetailsScreen> {
               leadStatus: selectedLeadStatus,
               followUpFlag: markAsFollowUp,
               callDate: callDate,
+              followUpDate: markAsFollowUp ? followUpDate : null,
               rating: rating > 0 ? rating : null,
               remarks:
                   remarksController.text.trim().isEmpty
                       ? null
                       : remarksController.text.trim(),
             );
-
-            // Refresh again after API update to ensure UI is updated
-            leadController.refresh();
 
             // Show success message
             if (mounted) {
@@ -534,14 +614,12 @@ class _DetailsScreenState extends State<DetailsScreen> {
               leadStatus: selectedLeadStatus,
               followUpFlag: markAsFollowUp,
               callDate: callDate,
+              followUpDate: markAsFollowUp ? followUpDate : null,
               remarks:
                   remarksController.text.trim().isEmpty
                       ? null
                       : remarksController.text.trim(),
             );
-
-            // Refresh again after API update to ensure UI is updated
-            leadController.refresh();
 
             // Show success message
             if (mounted) {
@@ -581,45 +659,41 @@ class _DetailsScreenState extends State<DetailsScreen> {
             print('DetailsScreen: Updating general lead via API');
             print('DetailsScreen: Lead ID: $leadId');
 
-            await apiService.updateLead(
-              id: leadId,
-              leadName: lead.name,
-              phoneNumber: lead.phone,
-              store: store,
-              source: lead.source ?? 'Walk-in',
-              leadType: lead.leadType ?? 'General',
-              callStatus: selectedCallStatus ?? 'Not Called',
-              leadStatus: selectedLeadStatus ?? 'No Status',
-              remarks:
-                  remarksController.text.trim().isEmpty
-                      ? null
-                      : remarksController.text.trim(),
-              followUpFlag: markAsFollowUp,
-              functionDate:
-                  markAsFollowUp ? followUpDate?.toIso8601String() : null,
-            );
-
-            print('DetailsScreen: General lead updated successfully via API');
-
-            // Refresh controllers to update UI
-            try {
-              final leadController = Provider.of<LeadScreenController>(
-                context,
-                listen: false,
+            // If marking as follow-up, call moveLeadToFollowUp to move to FollowUps collection
+            if (markAsFollowUp && followUpDate != null) {
+              print('DetailsScreen: Moving lead to follow-up collection');
+              await apiService.moveLeadToFollowUp(
+                id: leadId,
+                followUpDate: followUpDate!,
+                callStatus: selectedCallStatus ?? 'Not Called',
+                leadStatus: selectedLeadStatus ?? 'No Status',
+                remarks:
+                    remarksController.text.trim().isEmpty
+                        ? null
+                        : remarksController.text.trim(),
               );
-              leadController.refresh();
-            } catch (e) {
-              print('Could not refresh LeadScreenController: $e');
-            }
-
-            try {
-              final reportController = Provider.of<ReportController>(
-                context,
-                listen: false,
+              print('DetailsScreen: Lead moved to follow-up successfully');
+            } else {
+              // Regular update (may go directly to Reports if not follow-up)
+              await apiService.updateLead(
+                id: leadId,
+                leadName: lead.name,
+                phoneNumber: lead.phone,
+                store: store,
+                source: lead.source ?? 'Walk-in',
+                leadType: lead.leadType ?? 'General',
+                callStatus: selectedCallStatus ?? 'Not Called',
+                leadStatus: selectedLeadStatus ?? 'No Status',
+                remarks:
+                    remarksController.text.trim().isEmpty
+                        ? null
+                        : remarksController.text.trim(),
+                followUpFlag: markAsFollowUp,
+                followUpDate:
+                    markAsFollowUp ? followUpDate?.toIso8601String() : null,
+                functionDate: null,
               );
-              reportController.refresh();
-            } catch (e) {
-              print('Could not refresh ReportController: $e');
+              print('DetailsScreen: General lead updated successfully via API');
             }
 
             // Show success message
@@ -648,42 +722,70 @@ class _DetailsScreenState extends State<DetailsScreen> {
             print('DetailsScreen: Error updating general lead via API: $e');
           }
         }
-
-        // Note: We don't remove leads from repository after calling
-        // The lead screen filters by call status (isUncalledStatus) so called leads
-        // won't appear there, but they'll still be available for reports screen
-        // This ensures leads persist in reports even after screen changes
       }
     }
 
     // Reset dirty flag after successful save
     _isDirty = false;
 
-    // Navigate based on follow-up status
+    // Backend-driven flow: Simple navigation
+    // Just pop back - screens will refresh and fetch from correct backend endpoints
+    // Backend handles all collection transitions (Leads → FollowUps → Reports)
     if (mounted) {
-      // If follow-up date is set, navigate to follow-up screen
-      if (markAsFollowUp && followUpDate != null) {
-        Navigator.of(context).pop();
-        // Navigate to follow-up screen (index 4 in bottom nav)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          BottomNavState.navigateToFollowUp();
-        });
-      } else {
-        // Pop back to BottomNav (not all the way to LoginScreen)
-        Navigator.of(context).pop();
+      // Obtain controllers before popping to avoid using unmounted context
+      LeadScreenController? leadController;
+      FollowupController? followupController;
+      ReportController? reportController;
+      try {
+        leadController = Provider.of<LeadScreenController>(
+          context,
+          listen: false,
+        );
+      } catch (e) {
+        print('DetailsScreen: Could not obtain LeadScreenController before pop: $e');
+      }
+      try {
+        followupController = Provider.of<FollowupController>(
+          context,
+          listen: false,
+        );
+      } catch (e) {
+        print('DetailsScreen: Could not obtain FollowupController before pop: $e');
+      }
+      try {
+        reportController = Provider.of<ReportController>(
+          context,
+          listen: false,
+        );
+      } catch (e) {
+        print('DetailsScreen: Could not obtain ReportController before pop: $e');
+      }
 
-        // Only navigate to Reports tab if this is a NEW lead (not previously called)
-        // wasNewLead was captured BEFORE the update, so it reflects the original state
-        if (wasNewLead) {
-          // Only new leads move to "New Leads" report screen
-          ReportController.navigateToEquaryCalls();
-          if (mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              BottomNavState.navigateToReports();
-            });
-          }
+      Navigator.of(context).pop();
+
+      // Refresh all screens to fetch fresh data from backend
+      if (leadController != null) {
+        try {
+          await leadController.fetchAllLeadsFromApi();
+        } catch (e) {
+          print('Could not refresh LeadScreenController: $e');
         }
-        // If it was already called, just pop back - don't navigate to reports
+      }
+
+      if (followupController != null) {
+        try {
+          await followupController.fetchFollowUpLeads();
+        } catch (e) {
+          print('Could not refresh FollowupController: $e');
+        }
+      }
+
+      if (reportController != null) {
+        try {
+          await reportController.fetchReportsWithCurrentFilters();
+        } catch (e) {
+          print('Could not refresh ReportController: $e');
+        }
       }
     }
   }
@@ -952,95 +1054,25 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Call Duration Display Section
-                      if (_isWaitingForDuration || _callDurationSeconds > 0)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color:
-                                _isWaitingForDuration
-                                    ? Colors.blue[50]
-                                    : Colors.green[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color:
-                                  _isWaitingForDuration
-                                      ? Colors.blue[300]!
-                                      : Colors.green[300]!,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color:
-                                      _isWaitingForDuration
-                                          ? Colors.blue[100]
-                                          : Colors.green[100],
-                                  shape: BoxShape.circle,
-                                ),
-                                child:
-                                    _isWaitingForDuration
-                                        ? SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Colors.blue[700]!,
-                                                ),
-                                          ),
-                                        )
-                                        : Icon(
-                                          Icons.timer,
-                                          size: 24,
-                                          color: Colors.green[700],
-                                        ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _isWaitingForDuration
-                                          ? "Reading Call Duration..."
-                                          : "Call Duration",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            _isWaitingForDuration
-                                                ? Colors.blue[600]
-                                                : Colors.green[600],
-                                        fontFamily: TextConstant.dmSansRegular,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _isWaitingForDuration
-                                          ? "Writing to call log..."
-                                          : FormatHelper.formatCallDurationWithUnits(
-                                            _callDurationSeconds,
-                                          ),
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            _isWaitingForDuration
-                                                ? Colors.blue[700]
-                                                : Colors.green[700],
-                                        fontFamily: TextConstant.dmSansMedium,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // Real-time Call Duration Display (StreamBuilder)
+                      CallDurationDisplay(
+                        phoneNumber: widget.contact["phone"] ?? "",
+                        callTrackingService: CallTrackingService(),
+                      ),
+
+                      // Call Ended Duration Display (StreamBuilder with 500ms delay)
+                      CallEndedDurationDisplay(
+                        phoneNumber: widget.contact["phone"] ?? "",
+                        callTrackingService: CallTrackingService(),
+                        onDurationReceived: () {
+                          // Update UI when duration is received
+                          if (mounted) {
+                            setState(() {
+                              // Trigger UI refresh
+                            });
+                          }
+                        },
+                      ),
 
                       if (_isWaitingForDuration || _callDurationSeconds > 0)
                         const SizedBox(height: 24),

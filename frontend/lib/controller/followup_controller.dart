@@ -14,6 +14,16 @@ class FollowupController extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  FollowupController() {
+    // Listen to repository changes and forward notifications so UI updates
+    _repository.addListener(_onRepositoryChanged);
+  }
+
+  void _onRepositoryChanged() {
+    // Forward repository changes to listeners of this controller
+    notifyListeners();
+  }
+
   // Initialize with header controller
   void init(HeaderController headerController) {
     if (_headerController != headerController) {
@@ -30,6 +40,7 @@ class FollowupController extends ChangeNotifier {
   @override
   void dispose() {
     _headerController?.removeListener(_onHeaderChanged);
+    _repository.removeListener(_onRepositoryChanged);
     super.dispose();
   }
 
@@ -57,32 +68,46 @@ class FollowupController extends ChangeNotifier {
   }
 
   // Get follow-up leads based on selected tab and date filter
+  // Backend-driven: No local filtering - backend returns only follow-up leads from /api/pages/follow-ups
   List<LeadModel> getCurrentLeads() {
     final selectedDate = _headerController?.selectedDate ?? DateTime.now();
 
-    // Get all leads with follow-up dates
+    // Get all leads from backend (already filtered to follow-up leads)
     final allFollowUpLeads = _repository.followUpLeads;
 
     List<LeadModel> currentLeads = [];
 
+    print(
+      'FollowupController: getCurrentLeads called (tab=$_selectedTabIndex) - total follow-up leads available=${allFollowUpLeads.length}',
+    );
     // Filter by follow-up date relative to selected date
+    // This is UI-level filtering for tab display, not data filtering
     switch (_selectedTabIndex) {
       case 0:
         // Today: follow-up date equals selected date
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
+              final followUpLocal = lead.followUpDate!.toLocal();
               final followUpDate = DateTime(
-                lead.followUpDate!.year,
-                lead.followUpDate!.month,
-                lead.followUpDate!.day,
+                followUpLocal.year,
+                followUpLocal.month,
+                followUpLocal.day,
               );
-              final today = DateTime(
-                selectedDate.year,
-                selectedDate.month,
-                selectedDate.day,
+              final todayLocal = DateTime(
+                selectedDate.toLocal().year,
+                selectedDate.toLocal().month,
+                selectedDate.toLocal().day,
               );
-              return followUpDate.isAtSameMomentAs(today);
+              final isToday = followUpDate.isAtSameMomentAs(todayLocal);
+              if (!isToday) {
+                // Debug: log classification for investigation
+                // ignore: avoid_print
+                print(
+                  'FollowupController: Lead ${lead.id} followUpDate=${lead.followUpDate} (local=$followUpLocal) isToday=$isToday todayLocal=$todayLocal',
+                );
+              }
+              return isToday;
             }).toList();
         break;
       case 1:
@@ -90,17 +115,26 @@ class FollowupController extends ChangeNotifier {
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
+              final followUpLocal = lead.followUpDate!.toLocal();
               final followUpDate = DateTime(
-                lead.followUpDate!.year,
-                lead.followUpDate!.month,
-                lead.followUpDate!.day,
+                followUpLocal.year,
+                followUpLocal.month,
+                followUpLocal.day,
               );
-              final today = DateTime(
-                selectedDate.year,
-                selectedDate.month,
-                selectedDate.day,
+              final todayLocal = DateTime(
+                selectedDate.toLocal().year,
+                selectedDate.toLocal().month,
+                selectedDate.toLocal().day,
               );
-              return followUpDate.isAfter(today);
+              final isUpcoming = followUpDate.isAfter(todayLocal);
+              if (!isUpcoming) {
+                // Debug: log classification for investigation
+                // ignore: avoid_print
+                print(
+                  'FollowupController: Lead ${lead.id} followUpDate=${lead.followUpDate} (local=$followUpLocal) isUpcoming=$isUpcoming todayLocal=$todayLocal',
+                );
+              }
+              return isUpcoming;
             }).toList();
         break;
       case 2:
@@ -108,22 +142,52 @@ class FollowupController extends ChangeNotifier {
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
+              final followUpLocal = lead.followUpDate!.toLocal();
               final followUpDate = DateTime(
-                lead.followUpDate!.year,
-                lead.followUpDate!.month,
-                lead.followUpDate!.day,
+                followUpLocal.year,
+                followUpLocal.month,
+                followUpLocal.day,
               );
-              final today = DateTime(
-                selectedDate.year,
-                selectedDate.month,
-                selectedDate.day,
+              final todayLocal = DateTime(
+                selectedDate.toLocal().year,
+                selectedDate.toLocal().month,
+                selectedDate.toLocal().day,
               );
-              return followUpDate.isBefore(today);
+              final isOverdue = followUpDate.isBefore(todayLocal);
+              if (!isOverdue) {
+                // Debug: log classification for investigation
+                // ignore: avoid_print
+                print(
+                  'FollowupController: Lead ${lead.id} followUpDate=${lead.followUpDate} (local=$followUpLocal) isOverdue=$isOverdue todayLocal=$todayLocal',
+                );
+              }
+              return isOverdue;
             }).toList();
         break;
       default:
-        currentLeads = allFollowUpLeads;
+        // Default: show only leads that actually have a followUpDate
+        currentLeads =
+            allFollowUpLeads
+                .where((lead) => lead.followUpDate != null)
+                .toList();
     }
+
+    // Sort by followUpDate ascending (earliest first), compare local dates
+    currentLeads.sort(
+      (a, b) => a.followUpDate!.toLocal().compareTo(b.followUpDate!.toLocal()),
+    );
+
+    // Debug: show first and last followUpDate after sorting if any
+    if (currentLeads.isNotEmpty) {
+      // ignore: avoid_print
+      print(
+        'FollowupController: Sorted lead range for tab=$_selectedTabIndex => first=${currentLeads.first.followUpDate}, last=${currentLeads.last.followUpDate}',
+      );
+    }
+
+    print(
+      'FollowupController: Returning ${currentLeads.length} leads for tab=$_selectedTabIndex after sorting',
+    );
 
     // Filter by category if selected
     if (_selectedCategory != null && _selectedCategory != "All") {
@@ -241,16 +305,24 @@ class FollowupController extends ChangeNotifier {
     _repository.addListener(notifyListeners);
   }
 
-  /// Fetch all leads from API to populate follow-up data
+  /// Fetch follow-up leads from backend to populate follow-up data
   /// This should be called when the follow-up screen is first loaded
+  /// Fetches from /api/pages/follow-ups collection
   Future<void> fetchFollowUpLeads() async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      // Fetch all leads from API (this will populate follow-up leads in repository)
-      await _repository.fetchAllLeadsFromApi();
+      print(
+        'FollowupController: Fetching follow-up leads (store=${_selectedStore ?? 'All'})',
+      );
+      // Fetch follow-up leads from backend (/api/pages/follow-ups)
+      await _repository.fetchFollowUpLeadsFromApi(store: _selectedStore);
+
+      print(
+        'FollowupController: Fetch completed - total follow-up leads in repository: ${_repository.followUpLeads.length}',
+      );
 
       _isLoading = false;
       notifyListeners();
