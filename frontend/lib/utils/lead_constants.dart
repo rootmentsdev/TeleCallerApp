@@ -2,7 +2,7 @@
 class LeadConstants {
   // Lead Categories
   static const String categoryLossOfSales = "Loss of Sales";
-  static const String categoryRentOut = "Rent out";
+  static const String categoryRentOut = "Return";
   static const String categoryBookingConfirmation = "Booking confirmation";
   static const String categoryJustDial = "Just Dial";
   static const String categoryFollowUp = "Follow Up";

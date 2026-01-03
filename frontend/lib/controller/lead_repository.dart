@@ -793,7 +793,8 @@ class LeadRepository extends ChangeNotifier {
           category = LeadConstants.categoryLossOfSales;
         } else if (leadType == 'rentout' ||
             leadType == 'rent out' ||
-            leadType == 'rentoutfeedback') {
+            leadType == 'rentoutfeedback' ||
+            leadType == 'return') {
           category = LeadConstants.categoryRentOut;
         } else if (leadType == 'bookingconfirmation' ||
             leadType == 'booking confirmation') {
@@ -847,16 +848,16 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
-  /// Fetch Rent-Out leads from API and sync with repository
-  /// This will replace existing rent-out leads with fresh data from API
-  Future<void> fetchRentOutLeadsFromApi({String? store}) async {
+  /// Fetch Return leads from API and sync with repository
+  /// This will replace existing return leads with fresh data from API
+  Future<void> fetchReturnLeadsFromApi({String? store}) async {
     try {
       await ensureInitialized();
 
       // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
-      final response = await _apiService.getRentOutLeads(store: storeFilter);
+      final response = await _apiService.getReturnLeads(store: storeFilter);
 
       // Parse response - handle different response formats
       List<dynamic> leadsData = [];
@@ -891,8 +892,8 @@ class LeadRepository extends ChangeNotifier {
         }
       }
 
-      // Remove existing rent-out leads (to avoid duplicates)
-      // BUT: Preserve rent-out leads that have follow-up dates set
+      // Remove existing return leads (to avoid duplicates)
+      // BUT: Preserve return leads that have follow-up dates set
       _leads.removeWhere(
         (lead) =>
             lead.category == LeadConstants.categoryRentOut &&
@@ -905,8 +906,8 @@ class LeadRepository extends ChangeNotifier {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
-            // Ensure category is Rent-Out
-            final rentOutLead = LeadModel(
+            // Ensure category is Return
+            final returnLead = LeadModel(
               id: lead.id,
               name: lead.name,
               phone: lead.phone,
@@ -920,23 +921,23 @@ class LeadRepository extends ChangeNotifier {
               callDuration: lead.callDuration,
               createdAt: lead.createdAt,
             );
-            _leads.add(rentOutLead);
+            _leads.add(returnLead);
           } else {
             failedCount++;
           }
         } catch (e) {
           failedCount++;
-          print('LeadRepository: Error parsing Rent-Out lead: $e');
+          print('LeadRepository: Error parsing Return lead: $e');
         }
       }
 
       if (failedCount > 0) {
-        print('LeadRepository: Failed to parse $failedCount Rent-Out leads');
+        print('LeadRepository: Failed to parse $failedCount Return leads');
       }
 
       await _saveLeads();
     } catch (e) {
-      print('LeadRepository: Error fetching Rent-Out leads: $e');
+      print('LeadRepository: Error fetching Return leads: $e');
       rethrow;
     }
   }
@@ -993,8 +994,8 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
-  /// Update Rent-Out lead via API
-  Future<void> updateRentOutLeadFromApi({
+  /// Update Return lead via API
+  Future<void> updateReturnLeadFromApi({
     required String id,
     String? callStatus,
     String? leadStatus,
@@ -1002,11 +1003,14 @@ class LeadRepository extends ChangeNotifier {
     DateTime? callDate,
     int? rating,
     String? remarks,
+    int? callDuration,
+    DateTime? followUpDate,
+    bool? clearFollowUpDate,
   }) async {
     try {
       await ensureInitialized();
 
-      await _apiService.updateRentOutLead(
+      await _apiService.updateReturnLead(
         id: id,
         callStatus: callStatus,
         leadStatus: leadStatus,
@@ -1014,6 +1018,9 @@ class LeadRepository extends ChangeNotifier {
         callDate: callDate,
         rating: rating,
         remarks: remarks,
+        callDuration: callDuration,
+        followUpDate: followUpDate,
+        clearFollowUpDate: clearFollowUpDate,
       );
 
       // Update local lead if it exists
@@ -1029,17 +1036,19 @@ class LeadRepository extends ChangeNotifier {
           callStatus: callStatus ?? lead.callStatus,
           followUpDate:
               followUpFlag == true
-                  ? callDate
-                  : (followUpFlag == false ? null : lead.followUpDate),
+                  ? (followUpDate ?? callDate)
+                  : (followUpFlag == false || clearFollowUpDate == true
+                      ? null
+                      : lead.followUpDate),
           reason: remarks ?? lead.reason,
           category: lead.category,
-          callDuration: lead.callDuration,
+          callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
       }
     } catch (e) {
-      print('LeadRepository: Error updating Rent-Out lead: $e');
+      print('LeadRepository: Error updating Return lead: $e');
       rethrow;
     }
   }

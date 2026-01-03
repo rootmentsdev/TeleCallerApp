@@ -68,11 +68,11 @@ class LeadScreenController extends ChangeNotifier {
         );
       });
 
-      // Fetch Rent Out leads with store filter
-      // GET /api/pages/leads?leadType=rentOutFeedback&store=Suitor Guy - Edappally
-      fetchRentOutLeadsFromApi(store: storeParam).catchError((e) {
+      // Fetch Return leads with store filter
+      // GET /api/pages/leads?leadType=return&store=Suitor Guy - Edappally
+      fetchReturnLeadsFromApi(store: storeParam).catchError((e) {
         print(
-          'LeadScreenController: Error fetching Rent-Out leads on header change: $e',
+          'LeadScreenController: Error fetching Return leads on header change: $e',
         );
       });
 
@@ -85,19 +85,25 @@ class LeadScreenController extends ChangeNotifier {
       });
     } else {
       // If "All Stores" is selected, fetch without store filter but with date filter
+      print(
+        'LeadScreenController: Fetching leads for "All Stores" with date: ${_formatDateForApi(selectedDate)}',
+      );
       fetchAllLeadsFromApi(date: selectedDate).catchError((e) {
         print(
           'LeadScreenController: Error fetching all leads (no store filter): $e',
         );
       });
+      // Note: Category-specific API calls don't support date filters,
+      // so they will fetch leads from all dates. The date filtering
+      // is handled locally in getUncalledLeadsCount() and getFilteredLeads()
       fetchLossOfSaleLeadsFromApi().catchError((e) {
         print(
           'LeadScreenController: Error fetching Loss of Sale leads (no store filter): $e',
         );
       });
-      fetchRentOutLeadsFromApi().catchError((e) {
+      fetchReturnLeadsFromApi().catchError((e) {
         print(
-          'LeadScreenController: Error fetching Rent-Out leads (no store filter): $e',
+          'LeadScreenController: Error fetching Return leads (no store filter): $e',
         );
       });
       fetchBookingConfirmationLeadsFromApi().catchError((e) {
@@ -194,13 +200,25 @@ class LeadScreenController extends ChangeNotifier {
     int getUncalledLeadsCount({String? category}) {
       final date = _headerController?.selectedDate ?? DateTime.now();
 
-      // STEP 1: get leads by category with date filter
-      List<LeadModel> leads =
-          category != null
-              ? _repository.getLeadsByCategory(category, date: date)
-              : _repository.getLeadsByDate(date);
+      // STEP 1: Get ALL leads first (don't filter by category/date yet)
+      // This ensures we have the full dataset before filtering
+      List<LeadModel> allLeads = _repository.allLeads;
 
-      // STEP 2: filter by store using shared helper from repository
+      // STEP 2: Filter by date FIRST (critical for "All Stores" with date filter)
+      List<LeadModel> leads =
+          allLeads.where((lead) {
+            final leadDate = lead.createdAt;
+            return leadDate.year == date.year &&
+                leadDate.month == date.month &&
+                leadDate.day == date.day;
+          }).toList();
+
+      // STEP 3: Filter by category if specified
+      if (category != null) {
+        leads = leads.where((lead) => lead.category == category).toList();
+      }
+
+      // STEP 4: Filter by store using shared helper from repository
       final storeFilter = _headerController?.selectedStore;
       if (storeFilter != null && storeFilter != "All Stores") {
         leads =
@@ -209,10 +227,7 @@ class LeadScreenController extends ChangeNotifier {
                 .toList();
       }
 
-      // STEP 3: DO NOT FILTER BY DATE
-      // (This is the reason counts were 0 before)
-
-      // STEP 4: count only uncalled
+      // STEP 5: count only uncalled
       leads =
           leads
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
@@ -243,7 +258,7 @@ class LeadScreenController extends ChangeNotifier {
         "icon": Icons.trending_down,
       },
       {
-        "title": "Rent-Out Calls",
+        "title": "Return Calls",
         "count":
             getUncalledLeadsCount(
               category: LeadConstants.categoryRentOut,
@@ -298,7 +313,7 @@ class LeadScreenController extends ChangeNotifier {
       );
     }
 
-    // Filter by date - but for All Calls, Loss of Sale, Rent-Out, and Booking Confirmation, show all leads (date filter is handled by API)
+    // Filter by date - but for All Calls, Loss of Sale, Return, and Booking Confirmation, show all leads (date filter is handled by API)
     // For other categories, filter by selected date
     if (_selectedCallTypeIndex != 0 &&
         _selectedCallTypeIndex != 1 &&
@@ -373,7 +388,7 @@ class LeadScreenController extends ChangeNotifier {
       case 1:
         return "Loss of Sale";
       case 2:
-        return "Rent-Out Calls";
+        return "Return Calls";
       case 3:
         return "Booking Confirmation";
       default:
@@ -458,13 +473,13 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Fetch Rent-Out leads from API
-  Future<void> fetchRentOutLeadsFromApi({String? store}) async {
+  /// Fetch Return leads from API
+  Future<void> fetchReturnLeadsFromApi({String? store}) async {
     try {
-      await _repository.fetchRentOutLeadsFromApi(store: store);
+      await _repository.fetchReturnLeadsFromApi(store: store);
       notifyListeners();
     } catch (e) {
-      print('LeadScreenController: Error fetching Rent-Out leads: $e');
+      print('LeadScreenController: Error fetching Return leads: $e');
       rethrow;
     }
   }
@@ -549,8 +564,8 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Update Rent-Out lead via API
-  Future<void> updateRentOutLead({
+  /// Update Return lead via API
+  Future<void> updateReturnLead({
     required String id,
     String? callStatus,
     String? leadStatus,
@@ -558,9 +573,12 @@ class LeadScreenController extends ChangeNotifier {
     DateTime? callDate,
     int? rating,
     String? remarks,
+    int? callDuration,
+    DateTime? followUpDate,
+    bool? clearFollowUpDate,
   }) async {
     try {
-      await _repository.updateRentOutLeadFromApi(
+      await _repository.updateReturnLeadFromApi(
         id: id,
         callStatus: callStatus,
         leadStatus: leadStatus,
@@ -568,11 +586,14 @@ class LeadScreenController extends ChangeNotifier {
         callDate: callDate,
         rating: rating,
         remarks: remarks,
+        callDuration: callDuration,
+        followUpDate: followUpDate,
+        clearFollowUpDate: clearFollowUpDate,
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();
     } catch (e) {
-      print('LeadScreenController: Error updating Rent-Out lead: $e');
+      print('LeadScreenController: Error updating Return lead: $e');
       rethrow;
     }
   }

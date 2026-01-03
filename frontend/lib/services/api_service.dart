@@ -137,24 +137,24 @@ class ApiService {
     }
   }
 
-  // Function to get Rent-out leads
-  Future<Map<String, dynamic>> getRentOutLeads({
+  // Function to get Return leads
+  Future<Map<String, dynamic>> getReturnLeads({
     String? store,
     int? page,
     int? limit,
   }) async {
     final url = Uri.parse(
-      ApiConfig.rentOutLeads(store: store, page: page, limit: limit),
+      ApiConfig.returnLeads(store: store, page: page, limit: limit),
     );
 
     try {
       final headers = await _getAuthHeaders();
-      print('ApiService: Fetching Rent-Out leads from: $url');
+      print('ApiService: Fetching Return leads from: $url');
 
       final response = await http.get(url, headers: headers);
 
-      print('ApiService: Rent-Out response status: ${response.statusCode}');
-      print('ApiService: Rent-Out response body: ${response.body}');
+      print('ApiService: Return response status: ${response.statusCode}');
+      print('ApiService: Return response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
@@ -177,13 +177,13 @@ class ApiService {
         } else if (decoded is List) {
           return {'data': decoded};
         } else {
-          throw Exception('Unexpected response format for Rent-Out leads');
+          throw Exception('Unexpected response format for Return leads');
         }
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
       } else {
         throw Exception(
-          'Failed to load Rent-Out leads: Status ${response.statusCode}',
+          'Failed to load Return leads: Status ${response.statusCode}',
         );
       }
     } catch (e) {
@@ -868,8 +868,8 @@ class ApiService {
     }
   }
 
-  /// Update Rent-Out lead
-  Future<Map<String, dynamic>> updateRentOutLead({
+  /// Update Return lead
+  Future<Map<String, dynamic>> updateReturnLead({
     required String id,
     String? callStatus,
     String? leadStatus,
@@ -877,8 +877,11 @@ class ApiService {
     DateTime? callDate,
     int? rating,
     String? remarks,
+    int? callDuration,
+    DateTime? followUpDate,
+    bool? clearFollowUpDate,
   }) async {
-    final url = Uri.parse(ApiConfig.updateRentOut(id));
+    final url = Uri.parse(ApiConfig.updateReturn(id));
 
     try {
       final headers = await _getAuthHeaders();
@@ -891,24 +894,38 @@ class ApiService {
       final requestBody = <String, dynamic>{};
       if (callStatus != null) requestBody['call_status'] = callStatus;
       if (leadStatus != null) requestBody['lead_status'] = leadStatus;
-      if (followUpFlag != null) {
+      
+      // Handle follow-up flag and date logic
+      if (clearFollowUpDate == true) {
+        requestBody['follow_up_flag'] = false;
+        // Don't include follow_up_date when clearing
+      } else if (followUpFlag != null) {
         requestBody['follow_up_flag'] = followUpFlag;
         // When follow_up_flag is true, send follow_up_date (required by backend)
-        if (followUpFlag && callDate != null) {
-          requestBody['follow_up_date'] = callDate.toIso8601String();
+        if (followUpFlag && followUpDate != null) {
+          requestBody['follow_up_date'] = followUpDate.toIso8601String();
+        } else if (followUpDate != null && !followUpFlag) {
+          // If followUpDate is provided but flag is false, don't include it
         }
+      } else if (followUpDate != null) {
+        // If followUpDate is provided without flag, set flag to true
+        requestBody['follow_up_flag'] = true;
+        requestBody['follow_up_date'] = followUpDate.toIso8601String();
       }
+      
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();
       }
       if (rating != null) requestBody['rating'] = rating;
       if (remarks != null) requestBody['remarks'] = remarks;
+      if (callDuration != null) requestBody['call_duration'] = callDuration;
 
       final requestBodyJson = json.encode(requestBody);
 
-      print('ApiService: Updating Rent-Out lead');
+      print('ApiService: Updating Return lead');
       print('ApiService: URL => $url');
       print('ApiService: Request body => $requestBodyJson');
+      print('ApiService: Headers => $headers');
 
       final response = await http.post(
         url,
@@ -918,6 +935,11 @@ class ApiService {
 
       print('ApiService: Update response status: ${response.statusCode}');
       print('ApiService: Update response body: ${response.body}');
+      
+      if (response.statusCode == 404) {
+        print('ApiService: 404 Error - Endpoint not found. Check if lead ID is correct: $id');
+        print('ApiService: Full URL was: $url');
+      }
 
       if (response.statusCode == 200) {
         final decodedResponse = json.decode(response.body);
@@ -945,7 +967,7 @@ class ApiService {
       } else {
         // Try to parse error message from response
         String errorMessage =
-            'Failed to update Rent-Out lead: Status ${response.statusCode}';
+            'Failed to update Return lead: Status ${response.statusCode}';
         try {
           final errorData = json.decode(response.body);
           if (errorData is Map<String, dynamic>) {
@@ -961,7 +983,7 @@ class ApiService {
         throw Exception(errorMessage);
       }
     } catch (e) {
-      print('ApiService: Error updating Rent-Out lead: $e');
+      print('ApiService: Error updating Return lead: $e');
       rethrow;
     }
   }
@@ -1367,7 +1389,7 @@ class ApiService {
 
   /// Move a lead to FollowUps collection by setting follow_up_date
   /// Matches backend POST https://telecallerappbackend.onrender.com/api/pages/leads/:id
-  /// Works for all lead types (general, loss of sale, booking confirmation, rent-out)
+  /// Works for all lead types (general, loss of sale, booking confirmation, return)
   Future<Map<String, dynamic>> moveLeadToFollowUp({
     required String id,
     required DateTime followUpDate,

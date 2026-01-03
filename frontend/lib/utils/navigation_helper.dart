@@ -32,10 +32,9 @@ class NavigationHelper {
     final category = lead.category ?? "";
     final callTypeIndex = getCallTypeIndex(category);
 
-    // Special handling for Return/Rent-Out leads
+    // Special handling for Return leads
     if (category == LeadConstants.categoryRentOut ||
-        category == "Return" ||
-        category == "Rent-Out") {
+        category == "Return") {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -46,26 +45,26 @@ class NavigationHelper {
     }
 
     // Special handling for Just Dial
-    if (category == LeadConstants.categoryJustDial ||
-        category == "Just Dial Enquiry") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (context) => JustDialDetailsScreen(
-                contact: {
-                  "name": lead.name,
-                  "phone": lead.phone,
-                  "date": formattedDate,
-                  "enquiryDate": formattedDate,
-                  "functionDate": "Not available",
-                  "storeName": lead.location ?? "Zorucci Edappally",
-                },
-              ),
-        ),
-      );
-      return;
-    }
+    // if (category == LeadConstants.categoryJustDial ||
+    //     category == "Just Dial Enquiry") {
+    //   Navigator.push(
+    //     context,
+    //     MaterialPageRoute(
+    //       builder:
+    //           (context) => JustDialDetailsScreen(
+    //             contact: {
+    //               "name": lead.name,
+    //               "phone": lead.phone,
+    //               "date": formattedDate,
+    //               "enquiryDate": formattedDate,
+    //               "functionDate": "Not available",
+    //               "storeName": lead.location ?? "Zorucci Edappally",
+    //             },
+    //           ),
+    //     ),
+    //   );
+    //   return;
+    // }
 
     // Prepare contact data
     final repository = LeadRepository();

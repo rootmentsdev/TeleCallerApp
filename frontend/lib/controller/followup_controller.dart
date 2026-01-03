@@ -267,9 +267,9 @@ class FollowupController extends ChangeNotifier {
           "iconBgColor": const Color(0xFFFFE8E8),
           "borderColor": const Color(0xFFE23434),
         };
-      case "Rent out":
+      case "Return":
         return {
-          "tag": "Rent Out",
+          "tag": "Return",
           "tagColor": const Color(0xFFFFCC00),
           "tagBgColor": const Color(0xFFFFF7CC),
           "icon": Icons.message_outlined,

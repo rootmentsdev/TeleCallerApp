@@ -18,7 +18,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
   final List<String> categories = const [
     "All",
     "Loss of Sales",
-    "Rent out",
+    "Return",
     "Booking confirmation",
     "Just Dial",
     "Follow Up",

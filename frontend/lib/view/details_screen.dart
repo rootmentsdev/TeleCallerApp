@@ -107,9 +107,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
   ];
 
   String get screenTitle {
-    // Check if it's a rentout feedback call
+    // Check if it's a return call
     if (widget.contact["isRentout"] == true) {
-      return "Rentout Feedback Call";
+      return "Return Call";
     }
 
     switch (widget.callTypeIndex) {
@@ -577,7 +577,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
           }
         }
 
-        // If it's a Rent-Out lead, also update via API
+        // If it's a Return lead, also update via API
         if (lead.category == LeadConstants.categoryRentOut ||
             widget.contact["isRentout"] == true) {
           try {
@@ -593,7 +593,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
               callDate = DateTime.now();
             }
 
-            await leadController.updateRentOutLead(
+            await leadController.updateReturnLead(
               id: leadId,
               callStatus: selectedCallStatus,
               leadStatus: selectedLeadStatus,
@@ -604,13 +604,16 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   remarksController.text.trim().isEmpty
                       ? null
                       : remarksController.text.trim(),
+              callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
+              followUpDate: markAsFollowUp ? callDate : null,
+              clearFollowUpDate: !markAsFollowUp && lead.followUpDate != null,
             );
 
             // Show success message
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Rent-Out lead updated successfully'),
+                  content: Text('Return lead updated successfully'),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2),
                 ),
@@ -629,7 +632,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 ),
               );
             }
-            print('Error updating Rent-Out lead via API: $e');
+            print('Error updating Return lead via API: $e');
           }
         }
 
@@ -1183,12 +1186,12 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           ),
                         ],
                       ],
-                      // Rating Section - Only for Rentout Feedback (replaces Reason dropdown)
+                      // Rating Section - Only for Return (replaces Reason dropdown)
                       if (widget.contact["isRentout"] == true) ...[
                         _buildRatingSection(),
                         const SizedBox(height: 16),
                       ],
-                      // Lead Status Dropdown - Only for Booking Confirmation and Rentout
+                      // Lead Status Dropdown - Only for Booking Confirmation and Return
                       if (widget.callTypeIndex == 3 ||
                           widget.contact["isRentout"] == true)
                         _buildDropdown(
@@ -1549,7 +1552,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
   }
 
   Widget _buildDetailsSection() {
-    // Check if it's a rentout feedback call
+    // Check if it's a return call
     if (widget.contact["isRentout"] == true) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,

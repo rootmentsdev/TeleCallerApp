@@ -32,7 +32,7 @@ class CategoryStyleHelper {
         );
       case LeadConstants.categoryRentOut:
         return const CategoryStyle(
-          tag: "Rent Out",
+          tag: "Return",
           tagColor: Color(0xFFFFCC00),
           tagBgColor: Color(0xFFFFF7CC),
           icon: Icons.message_outlined,

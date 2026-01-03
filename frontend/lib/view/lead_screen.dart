@@ -17,7 +17,7 @@ class LeadScreen extends StatefulWidget {
 class _LeadScreenState extends State<LeadScreen> {
   bool _isLoadingLossOfSale = false;
   bool _isLoadingBookingConfirmation = false;
-  bool _isLoadingRentOut = false;
+  bool _isLoadingReturn = false;
 
   @override
   void initState() {
@@ -60,7 +60,7 @@ class _LeadScreenState extends State<LeadScreen> {
         // Fetch category-specific leads
         _fetchLossOfSaleLeads(leadController, headerController);
         _fetchBookingConfirmationLeads(leadController, headerController);
-        _fetchRentOutLeads(leadController, headerController);
+        _fetchReturnLeads(leadController, headerController);
       });
     });
   }
@@ -117,28 +117,28 @@ class _LeadScreenState extends State<LeadScreen> {
     }
   }
 
-  Future<void> _fetchRentOutLeads(
+  Future<void> _fetchReturnLeads(
     LeadScreenController controller,
     HeaderController headerController,
   ) async {
-    if (_isLoadingRentOut) return;
+    if (_isLoadingReturn) return;
 
-    setState(() => _isLoadingRentOut = true);
+    setState(() => _isLoadingReturn = true);
 
     try {
       final store = headerController.selectedStore;
       final storeParam =
           (store == null || store == 'All Stores') ? null : store;
 
-      await controller.fetchRentOutLeadsFromApi(store: storeParam);
+      await controller.fetchReturnLeadsFromApi(store: storeParam);
 
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted && controller.selectedCallTypeIndex == 2) {
-        _showError("Failed to load Rent-Out leads", e);
+        _showError("Failed to load Return leads", e);
       }
     } finally {
-      if (mounted) setState(() => _isLoadingRentOut = false);
+      if (mounted) setState(() => _isLoadingReturn = false);
     }
   }
 
@@ -174,8 +174,8 @@ class _LeadScreenState extends State<LeadScreen> {
         _fetchLossOfSaleLeads(leadController, headerController);
       if (!_isLoadingBookingConfirmation)
         _fetchBookingConfirmationLeads(leadController, headerController);
-      if (!_isLoadingRentOut)
-        _fetchRentOutLeads(leadController, headerController);
+      if (!_isLoadingReturn)
+        _fetchReturnLeads(leadController, headerController);
     });
   }
 
@@ -233,8 +233,8 @@ class _LeadScreenState extends State<LeadScreen> {
                                   headerController,
                                 );
                               } else if (index == 2) {
-                                // FIXED for RentOut
-                                await _fetchRentOutLeads(
+                                // FIXED for Return
+                                await _fetchReturnLeads(
                                   controller,
                                   headerController,
                                 );
@@ -311,7 +311,7 @@ class _LeadScreenState extends State<LeadScreen> {
                     if (controller.selectedCallTypeIndex == 1) {
                       await _fetchLossOfSaleLeads(controller, headerController);
                     } else if (controller.selectedCallTypeIndex == 2) {
-                      await _fetchRentOutLeads(controller, headerController);
+                      await _fetchReturnLeads(controller, headerController);
                     } else if (controller.selectedCallTypeIndex == 3) {
                       await _fetchBookingConfirmationLeads(
                         controller,
@@ -322,7 +322,7 @@ class _LeadScreenState extends State<LeadScreen> {
                   child:
                       (_isLoadingLossOfSale &&
                                   controller.selectedCallTypeIndex == 1) ||
-                              (_isLoadingRentOut &&
+                              (_isLoadingReturn &&
                                   controller.selectedCallTypeIndex == 2) ||
                               (_isLoadingBookingConfirmation &&
                                   controller.selectedCallTypeIndex == 3)
@@ -366,7 +366,7 @@ class _LeadScreenState extends State<LeadScreen> {
                   if (controller.selectedCallTypeIndex == 1) {
                     _fetchLossOfSaleLeads(controller, headerController);
                   } else if (controller.selectedCallTypeIndex == 2) {
-                    _fetchRentOutLeads(controller, headerController);
+                    _fetchReturnLeads(controller, headerController);
                   } else if (controller.selectedCallTypeIndex == 3) {
                     _fetchBookingConfirmationLeads(
                       controller,

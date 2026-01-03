@@ -291,7 +291,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                 iconColor = const Color(0xFFE23434);
                                 icon = Icons.trending_down;
                                 break;
-                              case "rentout": // Used for Feedback Calls (Rent out)
+                              case "rentout": // Used for Return Calls
                                 iconBgColor = const Color(0xFFFFF7CC);
                                 iconColor = const Color(0xFFFFCC00);
                                 icon = Icons.message_outlined;

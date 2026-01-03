@@ -14,7 +14,7 @@ class ApiConfig {
   static const String lossOfSale = "lossOfSale";
   static const String walkIn = "general";
   static const String bookingConfirmation = "bookingConfirmation";
-  static const String rentOut = "return";
+  static const String returnLead = "return";
 
   // Sources
   static const String sourceWalkIn = "Walk-in";
@@ -84,8 +84,8 @@ class ApiConfig {
     return url;
   }
 
-  static String rentOutLeads({String? store, int? page, int? limit}) {
-    String url = "$leadsEndpoint?leadType=$rentOut";
+  static String returnLeads({String? store, int? page, int? limit}) {
+    String url = "$leadsEndpoint?leadType=$returnLead";
 
     if (store != null && store.isNotEmpty) {
       // Extract just the location from "Brand - Location" format
@@ -205,8 +205,7 @@ class ApiConfig {
     return "$pagesEndpoint/add-lead";
   }
 
-  static String updateRentOut(String id) {
-    // Backend API changed from "rent-out" to "return"
+  static String updateReturn(String id) {
     return "$pagesEndpoint/return/$id";
   }
 
@@ -215,10 +214,6 @@ class ApiConfig {
   }
 
   static String getReturn(String id) {
-    return "$pagesEndpoint/return/$id";
-  }
-
-  static String updateReturn(String id) {
     return "$pagesEndpoint/return/$id";
   }
 
