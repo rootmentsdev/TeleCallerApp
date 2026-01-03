@@ -206,7 +206,7 @@ class _LeadScreenState extends State<LeadScreen> {
                     itemBuilder: (context, index) {
                       final item = callSummary[index];
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: SizedBox(
                           width: 80,
                           child: CallSummaryCard(

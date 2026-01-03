@@ -64,7 +64,7 @@ class _ReportScreenState extends State<ReportScreen> {
           context,
           listen: false,
         );
-        await leadRepository.debugDataIntegrity();
+        leadRepository.debugDataIntegrity();
       } catch (e) {
         print('ReportScreen: Error refreshing data: $e');
       }

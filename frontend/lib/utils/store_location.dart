@@ -18,6 +18,13 @@ class StoreLocations {
     'Cochin': 'Edappally',
     'cochin': 'Edappally',
     'COCHIN': 'Edappally',
+    'mg road': 'MG Road',
+    'MG road': 'MG Road',
+    'mg Road': 'MG Road',
+    'MG_Road': 'MG Road',
+    'mg_road': 'MG Road',
+    'MG-Road': 'MG Road',
+    'mg-road': 'MG Road',
   };
 
   /// Store lists by brand

@@ -28,6 +28,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
         private var previousState = TelephonyManager.CALL_STATE_IDLE
         private var offhookOccurred = false
         private var callEndProcessed = false  // Prevent duplicate onCallEnded events
+        private var currentCallSessionId: Long = 0  // Unique ID for each call to prevent cross-call collision
 
         fun setFlutterEngine(engine: FlutterEngine) {
             flutterEngine = engine
@@ -36,13 +37,22 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
         fun setOutgoingCallNumber(phoneNumber: String) {
             Log.d(TAG, "📱 Outgoing call: '$phoneNumber'")
+            // Increment session ID to mark new call session
+            currentCallSessionId = System.currentTimeMillis()
             lastPhoneNumber = phoneNumber
             isOutgoing = true
             callAnswerTime = 0
             callEndTime = 0
             previousState = TelephonyManager.CALL_STATE_IDLE
             offhookOccurred = false
-            callEndProcessed = false
+            callEndProcessed = false  // Reset flag to allow processing of this new call
+            Log.d(TAG, "🔄 Reset callEndProcessed for new outgoing call")
+        }
+        
+        private fun startNewCallSession() {
+            // Increment session ID to mark new call session
+            currentCallSessionId = System.currentTimeMillis()
+            Log.d(TAG, "🆔 New call session started: $currentCallSessionId")
         }
     }
 
@@ -51,10 +61,14 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
         when (intent.action) {
             Intent.ACTION_NEW_OUTGOING_CALL -> {
+                startNewCallSession()
                 val rawNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
                 lastPhoneNumber = if (!rawNumber.isNullOrEmpty()) cleanNumber(rawNumber) else null
                 isOutgoing = true
-                callEndProcessed = false
+                callAnswerTime = 0
+                callEndTime = 0
+                callEndProcessed = false  // Reset flag to allow processing of this new call
+                Log.d(TAG, "🔄 Reset callEndProcessed for ACTION_NEW_OUTGOING_CALL")
                 sendToFlutterMain(
                     "onCallStateChanged",
                     mapOf("state" to "outgoing", "phoneNumber" to (lastPhoneNumber ?: "Unknown"))
@@ -70,13 +84,17 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
                 when (state) {
                     TelephonyManager.EXTRA_STATE_RINGING -> {
+                        startNewCallSession()
                         if (!phoneNumber.isNullOrEmpty()) {
                             lastPhoneNumber = cleanNumber(phoneNumber)
                         }
                         isOutgoing = false
                         previousState = TelephonyManager.CALL_STATE_RINGING
                         callStartTime = System.currentTimeMillis()
-                        callEndProcessed = false
+                        callAnswerTime = 0
+                        callEndTime = 0
+                        callEndProcessed = false  // Reset flag to allow processing of this new call
+                        Log.d(TAG, "🔄 Reset callEndProcessed for RINGING state")
                         
                         sendToFlutterMain(
                             "onCallStateChanged",
@@ -111,6 +129,8 @@ class CallTrackingReceiver : BroadcastReceiver() {
                             callEndTime = System.currentTimeMillis()
                             Log.d(TAG, "🔴 IDLE - Call ended at: $callEndTime")
                             processCallEnd(context)
+                        } else {
+                            Log.w(TAG, "⚠️ IDLE event ignored - call end already processed")
                         }
                     }
                 }
@@ -119,25 +139,38 @@ class CallTrackingReceiver : BroadcastReceiver() {
     }
 
     private fun processCallEnd(context: Context) {
+        // Capture session ID and all state BEFORE resetting
+        val sessionIdSnapshot = currentCallSessionId
         val phoneSnapshot = lastPhoneNumber
         val outgoingSnapshot = isOutgoing
         val offhookSnapshot = offhookOccurred
         val answerTimeSnapshot = callAnswerTime
         val endTimeSnapshot = callEndTime
 
-        // Reset state immediately
+        Log.d(TAG, "🔴 Processing call end for session: $sessionIdSnapshot")
+
+        // Reset state immediately to allow new call to start
+        // BUT keep callEndProcessed = true until processing completes
         lastPhoneNumber = null
         isOutgoing = false
         callStartTime = 0
-        callAnswerTime = 0
-        callEndTime = 0
+        // DON'T reset callAnswerTime and callEndTime here - they're used in the thread
+        // They will be reset when a new call starts
         previousState = TelephonyManager.CALL_STATE_IDLE
         offhookOccurred = false
+        // Note: callEndProcessed stays true until processing completes or new call starts
 
         Thread {
             try {
                 // Wait longer for call log to be written (Android needs time)
                 Thread.sleep(3000)
+
+                // CRITICAL: Validate session ID before sending event
+                // If session ID changed, a new call started - discard this event
+                if (sessionIdSnapshot != currentCallSessionId) {
+                    Log.w(TAG, "⚠️ Session ID mismatch (old: $sessionIdSnapshot, current: $currentCallSessionId) - new call started, discarding old call end event")
+                    return@Thread
+                }
 
                 var number = phoneSnapshot
                 if (number == null || number == "Unknown") {
@@ -178,6 +211,12 @@ class CallTrackingReceiver : BroadcastReceiver() {
                     Log.d(TAG, "🔴 Call not answered: duration=0")
                 }
 
+                // Final validation: Check session ID one more time before sending
+                if (sessionIdSnapshot != currentCallSessionId) {
+                    Log.w(TAG, "⚠️ Session ID changed during processing - discarding event")
+                    return@Thread
+                }
+
                 // Cache and send to Flutter
                 CallResultCache.cacheCallResult(
                     context,
@@ -190,11 +229,29 @@ class CallTrackingReceiver : BroadcastReceiver() {
                     "onCallEnded",
                     mapOf(
                         "phoneNumber" to (number ?: "Unknown"),
-                        "duration" to duration
+                        "duration" to duration,
+                        "callType" to (if (outgoingSnapshot) "outgoing" else "incoming")
                     )
                 )
+                Log.d(TAG, "✅ Call end event sent for session: $sessionIdSnapshot")
+                
+                // Reset callEndProcessed AFTER sending event (allows next call to be processed)
+                // But only if no new call has started (session ID hasn't changed)
+                if (sessionIdSnapshot == currentCallSessionId) {
+                    callEndProcessed = false
+                    // Reset call times only if no new call started (they're already reset if new call started)
+                    callAnswerTime = 0
+                    callEndTime = 0
+                    Log.d(TAG, "🔄 Reset callEndProcessed flag and call times - ready for next call")
+                } else {
+                    Log.d(TAG, "🔄 New call started (session changed) - callEndProcessed and call times already reset by new call")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error in processCallEnd: ${e.message}")
+                // Reset flag and times on error too
+                callEndProcessed = false
+                callAnswerTime = 0
+                callEndTime = 0
             }
         }.start()
     }

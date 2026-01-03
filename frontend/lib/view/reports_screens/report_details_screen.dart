@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/format_helper.dart';
 
-class ReportDetailsScreen extends StatelessWidget {
+class ReportDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
   final int callTypeIndex;
 
@@ -12,6 +13,60 @@ class ReportDetailsScreen extends StatelessWidget {
     required this.contact,
     required this.callTypeIndex,
   });
+
+  @override
+  State<ReportDetailsScreen> createState() => _ReportDetailsScreenState();
+}
+
+class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
+  int? _callDuration;
+  bool _isLoadingDuration = false;
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with contact data if available
+    _callDuration = widget.contact["callDuration"] as int?;
+    // Fetch latest call duration from backend
+    _fetchCallDuration();
+  }
+
+  Future<void> _fetchCallDuration() async {
+    final leadId = widget.contact["id"] as String?;
+    if (leadId == null) return;
+
+    setState(() {
+      _isLoadingDuration = true;
+    });
+
+    try {
+      final response = await _apiService.getReportById(leadId);
+      
+      // Extract call_duration from response
+      final callDuration = response["call_duration"] as int? ?? 
+                          response["callDuration"] as int? ??
+                          response["data"]?["call_duration"] as int? ??
+                          response["data"]?["callDuration"] as int?;
+
+      if (mounted) {
+        setState(() {
+          _callDuration = callDuration;
+          _isLoadingDuration = false;
+        });
+      }
+    } catch (e) {
+      print('ReportDetailsScreen: Error fetching call duration: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingDuration = false;
+        });
+      }
+    }
+  }
+
+  Map<String, dynamic> get contact => widget.contact;
+  int get callTypeIndex => widget.callTypeIndex;
 
   String get screenSubtitle {
     final storeName = contact["storeName"] ?? "Store";
@@ -135,21 +190,19 @@ class ReportDetailsScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  // Call Duration Badge
-                                  if (contact["callDuration"] != null &&
-                                      (contact["callDuration"] as int?) !=
-                                          null &&
-                                      (contact["callDuration"] as int?)! > 0)
+                                  // Call Duration Badge - Small Container
+                                  if (_callDuration != null && _callDuration! > 0)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
+                                        horizontal: 10,
+                                        vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.green[50],
-                                        borderRadius: BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
                                           color: Colors.green[300]!,
+                                          width: 1,
                                         ),
                                       ),
                                       child: Row(
@@ -157,21 +210,31 @@ class ReportDetailsScreen extends StatelessWidget {
                                         children: [
                                           Icon(
                                             Icons.timer,
-                                            size: 14,
+                                            size: 12,
                                             color: Colors.green[700],
                                           ),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            _formatCallDuration(
-                                              contact["callDuration"] as int?,
-                                            ),
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.green[700],
-                                              fontFamily:
-                                                  TextConstant.dmSansMedium,
-                                            ),
-                                          ),
+                                          _isLoadingDuration
+                                              ? SizedBox(
+                                                  width: 12,
+                                                  height: 12,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 1.5,
+                                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                                      Colors.green[700]!,
+                                                    ),
+                                                  ),
+                                                )
+                                              : Text(
+                                                  _formatCallDuration(_callDuration),
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.green[700],
+                                                    fontFamily:
+                                                        TextConstant.dmSansMedium,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
                                         ],
                                       ),
                                     ),
@@ -183,71 +246,6 @@ class ReportDetailsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 24),
-
-                    // Call Duration Display Section
-                    if (contact["callDuration"] != null &&
-                        (contact["callDuration"] as int?) != null &&
-                        (contact["callDuration"] as int?)! > 0)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.green[300]!,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.green[100],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.timer,
-                                size: 24,
-                                color: Colors.green[700],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Call Duration",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.green[600],
-                                      fontFamily: TextConstant.dmSansRegular,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _formatCallDuration(
-                                      contact["callDuration"] as int?,
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
-                                      fontFamily: TextConstant.dmSansMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    if (contact["callDuration"] != null &&
-                        (contact["callDuration"] as int?) != null &&
-                        (contact["callDuration"] as int?)! > 0)
-                      const SizedBox(height: 24),
 
                     // Report Details - Read Only
                     _buildReadOnlyDetailsSection(),
