@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 
@@ -86,11 +87,15 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   Future<void> _saveChanges() async {
     try {
       final apiService = ApiService();
-      await apiService.updateRentOutLead(
+      await apiService.updateReturn(
         id: widget.lead.id,
         callStatus: selectedCallStatus,
         leadStatus: selectedLeadStatus,
-        remarks: remarksController.text.trim(),
+        rating: rating > 0 ? rating : null,
+        remarks:
+            remarksController.text.trim().isEmpty
+                ? null
+                : remarksController.text.trim(),
       );
 
       if (mounted) {
@@ -258,16 +263,19 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                     children: [
                                       Row(
                                         children: [
-                                          Text(
-                                            widget.lead.name,
-                                            style: const TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.bold,
-                                              fontFamily:
-                                                  TextConstant.dmSansMedium,
+                                          Expanded(
+                                            child: Text(
+                                              widget.lead.name,
+                                              style: const TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                                fontFamily:
+                                                    TextConstant.dmSansMedium,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          const SizedBox(width: 132),
+                                          const SizedBox(width: 8),
                                           ElevatedButton.icon(
                                             onPressed: _makeCall,
                                             icon: const Icon(
@@ -298,6 +306,34 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                               TextConstant.dmSansRegular,
                                         ),
                                       ),
+                                      if (widget.lead.callDuration != null &&
+                                          widget.lead.callDuration! > 0)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 8,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.timer,
+                                                size: 16,
+                                                color: Colors.green,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Duration: ${FormatHelper.formatCallDurationWithUnits(widget.lead.callDuration!)}',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.green,
+                                                  fontWeight: FontWeight.w500,
+                                                  fontFamily:
+                                                      TextConstant
+                                                          .dmSansRegular,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),

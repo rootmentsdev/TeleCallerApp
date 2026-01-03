@@ -226,6 +226,66 @@ class ApiService {
     }
   }
 
+  /// Update Return lead
+  Future<Map<String, dynamic>> updateReturn({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    DateTime? callDate,
+    int? rating,
+    String? remarks,
+  }) async {
+    final url = Uri.parse(ApiConfig.updateReturn(id));
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      // Prepare request body
+      final requestBody = <String, dynamic>{};
+      if (callStatus != null) requestBody['call_status'] = callStatus;
+      if (leadStatus != null) requestBody['lead_status'] = leadStatus;
+      if (callDate != null) {
+        requestBody['call_date'] = callDate.toIso8601String();
+      }
+      if (rating != null) requestBody['rating'] = rating;
+      if (remarks != null) requestBody['remarks'] = remarks;
+
+      final requestBodyJson = json.encode(requestBody);
+
+      print('ApiService: Updating Return lead');
+      print('ApiService: URL => $url');
+      print('ApiService: Request body => $requestBodyJson');
+
+      final response = await http.put(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print('ApiService: Update response status: ${response.statusCode}');
+      print('ApiService: Update response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        return decoded is Map<String, dynamic> ? decoded : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Return lead not found');
+      } else {
+        throw Exception(
+          'Failed to update Return lead: Status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Convert snake_case to camelCase
   String _snakeToCamel(String str) {
     List<String> parts = str.split('_');
@@ -479,17 +539,17 @@ class ApiService {
       final requestBody = <String, dynamic>{};
       if (callStatus != null) requestBody['call_status'] = callStatus;
       if (leadStatus != null) requestBody['lead_status'] = leadStatus;
-      
+
       // When follow_up_date is provided, set follow_up_flag=true (required by API)
       if (followUpDate != null && followUpDate.isNotEmpty) {
         requestBody['follow_up_flag'] = true;
         requestBody['follow_up_date'] = followUpDate;
       }
-      
+
       if (reasonCollectedFromStore != null) {
         requestBody['reason_collected_from_store'] = reasonCollectedFromStore;
       }
-      
+
       // Only include remarks if user provided input (not empty string)
       if (remarks != null && remarks.trim().isNotEmpty) {
         requestBody['remarks'] = remarks.trim();
@@ -719,7 +779,7 @@ class ApiService {
       } else {
         requestBody['remarks'] = null; // Explicitly set to null if no input
       }
-      
+
       // When follow_up_flag is true, follow_up_date is REQUIRED by backend
       if (followUpFlag) {
         requestBody['follow_up_flag'] = followUpFlag;
@@ -727,10 +787,12 @@ class ApiService {
           requestBody['follow_up_date'] = followUpDate;
         } else {
           // If follow_up_flag is true but no date provided, throw error
-          throw Exception('follow_up_date is required when follow_up_flag is true. Please provide the follow-up date from frontend.');
+          throw Exception(
+            'follow_up_date is required when follow_up_flag is true. Please provide the follow-up date from frontend.',
+          );
         }
       }
-      
+
       // If follow_up_date is provided without follow_up_flag, set flag to true
       if (!followUpFlag && followUpDate != null && followUpDate.isNotEmpty) {
         requestBody['follow_up_flag'] = true;
@@ -1227,10 +1289,10 @@ class ApiService {
         requestBody['remarks'] = remarks.trim();
       }
       // If remarks is null or empty, don't include it in the request body
-      
+
       // Note: call_date is deprecated - backend expects call_duration instead
       // Keeping callDate for backward compatibility but not sending it
-      
+
       if (followUpDate != null) {
         requestBody['follow_up_date'] = followUpDate.toIso8601String();
       }

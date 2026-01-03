@@ -75,31 +75,6 @@ class LeadRepository extends ChangeNotifier {
 
   // ========== Persistence ==========
 
-  /// Force reload leads from storage (useful for debugging or manual refresh)
-  Future<void> forceReloadFromStorage() async {
-    _isInitialized = false;
-    await _loadLeads();
-    _isInitialized = true;
-    notifyListeners();
-  }
-
-  /// Debug method to check data integrity
-  void debugDataIntegrity() {
-    print('LeadRepository: Debug Data Integrity Check');
-    print('Total leads: ${_leads.length}');
-    print('Follow-up leads: ${followUpLeads.length}');
-    print('Today follow-ups: ${todayFollowUps.length}');
-    print('Upcoming follow-ups: ${upcomingFollowUps.length}');
-    print('Overdue follow-ups: ${overdueFollowUps.length}');
-    
-    // Check for duplicates
-    final ids = _leads.map((l) => l.id).toList();
-    final uniqueIds = ids.toSet();
-    if (ids.length != uniqueIds.length) {
-      print('WARNING: Duplicate lead IDs found!');
-    }
-  }
-
   Future<void> _loadLeads() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -202,90 +177,6 @@ class LeadRepository extends ChangeNotifier {
 
   // ========== Filtered Queries ==========
 
-  /// Shared helper method for store matching logic
-  /// Handles case-insensitive matching, extracts locations from formats like "SG-Edappally",
-  /// and supports partial matching to keep behavior consistent across the app
-  bool matchesStore(LeadModel lead, String store) {
-    if (lead.location == null || lead.location!.isEmpty) return false;
-
-    // Extract location and brand from selected store
-    final selectedLocation = StoreLocations.resolveSelection(store).location;
-    final selectedBrand = StoreLocations.resolveSelection(store).brand;
-
-    // Normalize for case-insensitive comparison
-    final normalizedSelectedLocation = selectedLocation.toLowerCase().trim();
-    final normalizedSelectedBrand = selectedBrand.toLowerCase().trim();
-    final normalizedStore = store.toLowerCase().trim();
-    final leadLocation = lead.location!.toLowerCase().trim();
-
-    // Extract location from API formats like "SG-Edappally" or "SG-Edappal"
-    String extractedLeadLocation;
-    if (leadLocation.startsWith('sg-')) {
-      // Handle "SG-Edappally" format - extract location part
-      extractedLeadLocation = leadLocation.substring(3); // Remove "sg-" prefix
-    } else if (leadLocation.contains('-')) {
-      // Handle other formats with dashes
-      final parts = leadLocation.split('-');
-      extractedLeadLocation = parts.last.trim();
-    } else {
-      // Just location name
-      extractedLeadLocation = leadLocation;
-    }
-
-    // Try exact match first (full "Brand - Location" format, case-insensitive)
-    if (leadLocation == normalizedStore) return true;
-
-    // Try matching just the location part (case-insensitive)
-    if (leadLocation == normalizedSelectedLocation) return true;
-    if (extractedLeadLocation == normalizedSelectedLocation) return true;
-
-    // Try matching if lead.location contains the selected location (case-insensitive)
-    if (leadLocation.contains(normalizedSelectedLocation)) return true;
-    if (extractedLeadLocation.contains(normalizedSelectedLocation)) return true;
-
-    // Try reverse - if selected location contains lead location
-    if (normalizedSelectedLocation.contains(leadLocation)) return true;
-    if (normalizedSelectedLocation.contains(extractedLeadLocation)) return true;
-
-    // Try matching if lead.location contains the selected brand (case-insensitive)
-    if (leadLocation.contains(normalizedSelectedBrand)) return true;
-
-    // Handle cases where API returns formats like "SG-Edappally"
-    // and we're filtering by "Suitor Guy - Edappal" or "Suitor Guy - Edappally"
-    final storeParts = normalizedStore.split(' - ');
-    if (storeParts.length > 1) {
-      final storeLocationPart = storeParts.last; // Get "edappal" from "suitor guy - edappal"
-
-      // Match if lead location equals the location part, or contains it
-      if (leadLocation == storeLocationPart ||
-          leadLocation.contains(storeLocationPart) ||
-          storeLocationPart.contains(leadLocation)) {
-        return true;
-      }
-
-      // Match extracted location (e.g., "edappally" from "sg-edappally")
-      if (extractedLeadLocation == storeLocationPart ||
-          extractedLeadLocation.contains(storeLocationPart) ||
-          storeLocationPart.contains(extractedLeadLocation)) {
-        return true;
-      }
-    } else {
-      // If store format is just location (shouldn't happen, but handle it)
-      if (leadLocation == normalizedStore ||
-          leadLocation.contains(normalizedStore) ||
-          normalizedStore.contains(leadLocation)) {
-        return true;
-      }
-      if (extractedLeadLocation == normalizedStore ||
-          extractedLeadLocation.contains(normalizedStore) ||
-          normalizedStore.contains(extractedLeadLocation)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   List<LeadModel> getLeadsByCategory(String? category, {DateTime? date}) {
     List<LeadModel> filtered = _leads;
 
@@ -305,6 +196,39 @@ class LeadRepository extends ChangeNotifier {
     return filtered.where((lead) => lead.category == category).toList();
   }
 
+  /// Helper method to check if a lead matches a store filter
+  /// Handles case-insensitive matching, extracts locations from "Brand - Location" formats,
+  /// and supports partial matching
+  bool matchesStore(LeadModel lead, String store) {
+    if (store.isEmpty || store == 'All Stores') {
+      return true;
+    }
+
+    // Extract location from "Brand - Location" format, or use as-is if already a location
+    final location =
+        store.contains(' - ')
+            ? StoreLocations.resolveSelection(store).location
+            : store;
+
+    // Case-insensitive matching
+    final leadLocation = lead.location ?? '';
+    final normalizedLeadLocation = leadLocation.toLowerCase().trim();
+    final normalizedFilterLocation = location.toLowerCase().trim();
+
+    // Exact match
+    if (normalizedLeadLocation == normalizedFilterLocation) {
+      return true;
+    }
+
+    // Partial match (check if filter location is contained in lead location or vice versa)
+    if (normalizedLeadLocation.contains(normalizedFilterLocation) ||
+        normalizedFilterLocation.contains(normalizedLeadLocation)) {
+      return true;
+    }
+
+    return false;
+  }
+
   List<LeadModel> getLeadsByStore(String? store, {DateTime? date}) {
     List<LeadModel> filtered = _leads;
 
@@ -321,7 +245,12 @@ class LeadRepository extends ChangeNotifier {
 
     // Apply store filter
     if (store == null || store == 'All Stores') return filtered;
-    return filtered.where((lead) => matchesStore(lead, store)).toList();
+    // Extract location from "Brand - Location" format, or use as-is if already a location
+    final location =
+        store.contains(' - ')
+            ? StoreLocations.resolveSelection(store).location
+            : store;
+    return filtered.where((lead) => lead.location == location).toList();
   }
 
   List<LeadModel> getLeadsByDate(DateTime date) {
@@ -339,7 +268,12 @@ class LeadRepository extends ChangeNotifier {
     List<LeadModel> baseList = _leads;
 
     if (store != null && store != 'All Stores') {
-      baseList = baseList.where((lead) => matchesStore(lead, store)).toList();
+      final location =
+          store.contains(' - ')
+              ? StoreLocations.resolveSelection(store).location
+              : store;
+
+      baseList = baseList.where((lead) => lead.location == location).toList();
     }
 
     // Apply date filter to show only selected date
@@ -365,7 +299,12 @@ class LeadRepository extends ChangeNotifier {
     }
 
     if (store != null && store != 'All Stores') {
-      filtered = filtered.where((lead) => matchesStore(lead, store)).toList();
+      // Extract location from "Brand - Location" format, or use as-is if already a location
+      final location =
+          store.contains(' - ')
+              ? StoreLocations.resolveSelection(store).location
+              : store;
+      filtered = filtered.where((lead) => lead.location == location).toList();
     }
 
     return filtered.where((lead) => lead.category == category).length;
@@ -385,7 +324,12 @@ class LeadRepository extends ChangeNotifier {
     }
 
     if (store != null && store != 'All Stores') {
-      filtered = filtered.where((lead) => matchesStore(lead, store)).toList();
+      // Extract location from "Brand - Location" format, or use as-is if already a location
+      final location =
+          store.contains(' - ')
+              ? StoreLocations.resolveSelection(store).location
+              : store;
+      filtered = filtered.where((lead) => lead.location == location).toList();
     }
 
     return filtered.where((lead) => lead.callStatus == callStatus).length;
@@ -433,10 +377,32 @@ class LeadRepository extends ChangeNotifier {
     }
 
     if (store != null && store != 'All Stores') {
-      filtered = filtered.where((lead) => matchesStore(lead, store)).toList();
+      // Extract location from "Brand - Location" format, or use as-is if already a location
+      final location =
+          store.contains(' - ')
+              ? StoreLocations.resolveSelection(store).location
+              : store;
+      filtered = filtered.where((lead) => lead.location == location).toList();
     }
 
     return filtered.length;
+  }
+
+  // ========== Storage Operations ==========
+
+  /// Force reload leads from SharedPreferences storage
+  Future<void> forceReloadFromStorage() async {
+    await _loadLeads();
+    notifyListeners();
+  }
+
+  /// Debug method to check data integrity
+  void debugDataIntegrity() {
+    print('LeadRepository: Total leads: ${_leads.length}');
+    print('LeadRepository: Follow-up leads: ${followUpLeads.length}');
+    print('LeadRepository: Today follow-ups: ${todayFollowUps.length}');
+    print('LeadRepository: Upcoming follow-ups: ${upcomingFollowUps.length}');
+    print('LeadRepository: Overdue follow-ups: ${overdueFollowUps.length}');
   }
 
   // ========== API Integration ==========
@@ -1128,7 +1094,6 @@ class LeadRepository extends ChangeNotifier {
   }
 
   /// Fetch Follow-Up leads from API and sync with repository
-  /// This will replace existing follow-up leads with fresh data from API
   Future<void> fetchFollowUpLeadsFromApi({String? store}) async {
     try {
       await ensureInitialized();
@@ -1136,9 +1101,7 @@ class LeadRepository extends ChangeNotifier {
       // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
-      final response = await _apiService.getFollowUpLeads(
-        store: storeFilter,
-      );
+      final response = await _apiService.getFollowUpLeads(store: storeFilter);
 
       // Parse response - handle different response formats
       List<dynamic> leadsData = [];
@@ -1174,10 +1137,11 @@ class LeadRepository extends ChangeNotifier {
       }
 
       // Remove existing follow-up leads (to avoid duplicates)
-      // BUT: Only remove if they don't have follow-up dates set (shouldn't happen for follow-up leads, but be safe)
+      // BUT: Preserve follow-up leads that have follow-up dates set
       _leads.removeWhere(
         (lead) =>
-            lead.needsFollowUp && lead.followUpDate != null, // Remove existing follow-up leads
+            lead.category == LeadConstants.categoryFollowUp &&
+            !lead.needsFollowUp, // Keep if it has follow-up date
       );
 
       // Convert API data to LeadModel and add to repository
@@ -1187,9 +1151,22 @@ class LeadRepository extends ChangeNotifier {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
-            // Ensure follow-up date is preserved from API
-            // The API should return leads with followUpDate set
-            _leads.add(lead);
+            // Ensure category is set to Follow-Up
+            final followUpLead = LeadModel(
+              id: lead.id,
+              name: lead.name,
+              phone: lead.phone,
+              brand: lead.brand,
+              location: lead.location,
+              leadStatus: lead.leadStatus,
+              callStatus: lead.callStatus,
+              followUpDate: lead.followUpDate,
+              reason: lead.reason,
+              category: LeadConstants.categoryFollowUp,
+              callDuration: lead.callDuration,
+              createdAt: lead.createdAt,
+            );
+            _leads.add(followUpLead);
           } else {
             failedCount++;
           }
@@ -1207,6 +1184,55 @@ class LeadRepository extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('LeadRepository: Error fetching Follow-Up leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Update Follow-Up lead via API
+  Future<void> updateFollowUpLeadFromApi({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    String? remarks,
+    int? callDuration,
+    DateTime? followUpDate,
+    required bool clearFollowUpDate,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      await _apiService.postFollowUp(
+        id: id,
+        callStatus: callStatus ?? LeadConstants.callStatusNotCalled,
+        leadStatus: leadStatus ?? 'No Status',
+        remarks: remarks,
+        callDuration: callDuration,
+        followUpDate: followUpDate,
+        clearFollowUpDate: clearFollowUpDate,
+      );
+
+      // Update local lead if it exists
+      final lead = getLeadById(id);
+      if (lead != null) {
+        final updatedLead = LeadModel(
+          id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          brand: lead.brand,
+          location: lead.location,
+          leadStatus: leadStatus ?? lead.leadStatus,
+          callStatus: callStatus ?? lead.callStatus,
+          followUpDate:
+              clearFollowUpDate ? null : (followUpDate ?? lead.followUpDate),
+          reason: remarks ?? lead.reason,
+          category: lead.category,
+          callDuration: callDuration ?? lead.callDuration,
+          createdAt: lead.createdAt,
+        );
+        await updateLead(updatedLead);
+      }
+    } catch (e) {
+      print('LeadRepository: Error updating Follow-Up lead: $e');
       rethrow;
     }
   }
@@ -1381,56 +1407,6 @@ class LeadRepository extends ChangeNotifier {
       print('LeadRepository: Successfully moved lead $id to report screen');
     } catch (e) {
       print('LeadRepository: Error moving lead to report: $e');
-      rethrow;
-    }
-  }
-
-  // ========== Follow-Up Lead Updates ==========
-
-  /// Update Follow-Up lead via API
-  Future<void> updateFollowUpLeadFromApi({
-    required String id,
-    required String callStatus,
-    required String leadStatus,
-    String? remarks,
-    int? callDuration,
-    DateTime? followUpDate,
-    required bool clearFollowUpDate,
-  }) async {
-    try {
-      await ensureInitialized();
-
-      await _apiService.postFollowUp(
-        id: id,
-        callStatus: callStatus,
-        leadStatus: leadStatus,
-        remarks: remarks,
-        callDuration: callDuration,
-        followUpDate: followUpDate,
-        clearFollowUpDate: clearFollowUpDate,
-      );
-
-      // Update local lead if it exists
-      final lead = getLeadById(id);
-      if (lead != null) {
-        final updatedLead = LeadModel(
-          id: lead.id,
-          name: lead.name,
-          phone: lead.phone,
-          brand: lead.brand,
-          location: lead.location,
-          leadStatus: leadStatus,
-          callStatus: callStatus,
-          followUpDate: clearFollowUpDate ? null : (followUpDate ?? lead.followUpDate),
-          reason: remarks ?? lead.reason,
-          category: lead.category,
-          callDuration: callDuration ?? lead.callDuration,
-          createdAt: lead.createdAt,
-        );
-        await updateLead(updatedLead);
-      }
-    } catch (e) {
-      print('LeadRepository: Error updating Follow-Up lead: $e');
       rethrow;
     }
   }

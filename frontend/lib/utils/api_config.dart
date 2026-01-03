@@ -206,7 +206,8 @@ class ApiConfig {
   }
 
   static String updateRentOut(String id) {
-    return "$pagesEndpoint/rent-out/$id";
+    // Backend API changed from "rent-out" to "return"
+    return "$pagesEndpoint/return/$id";
   }
 
   static String updateBookingConfirmation(String id) {
@@ -214,6 +215,10 @@ class ApiConfig {
   }
 
   static String getReturn(String id) {
+    return "$pagesEndpoint/return/$id";
+  }
+
+  static String updateReturn(String id) {
     return "$pagesEndpoint/return/$id";
   }
 
