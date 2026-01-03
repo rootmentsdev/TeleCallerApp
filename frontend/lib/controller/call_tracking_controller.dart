@@ -1,238 +1,139 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:telecaller_app/services/call_tracking_service.dart';
+import 'package:flutter/services.dart';
+import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 
-/// Controller for managing call tracking and integration with lead management
 class CallTrackingController extends ChangeNotifier {
-  final CallTrackingService _callTrackingService = CallTrackingService();
   final LeadRepository _leadRepository = LeadRepository();
+  static const MethodChannel _methodChannel = MethodChannel(
+    'com.telecaller.app/call_tracking',
+  );
 
-  StreamSubscription<CallData>? _callDataSubscription;
-  StreamSubscription<CallData>? _callEndedSubscription;
-
-  // Current call state
-  CallData? _currentCall;
-  CallData? _lastEndedCall;
+  String? _lastPhone;
+  int? _lastDuration;
   bool _isInitialized = false;
 
-  // Callbacks for UI integration
-  Function(String phoneNumber, int duration)? onCallEnded;
-  Function(CallData callData)? onCallStateChanged;
-
-  // Getters
   bool get isInitialized => _isInitialized;
-  CallData? get currentCall => _currentCall;
-  CallData? get lastEndedCall => _lastEndedCall;
-  bool get isCallActive => _callTrackingService.isCallActive;
-  int get currentCallDuration => _callTrackingService.currentCallDuration;
+  String? get lastPhone => _lastPhone;
+  int? get lastDuration => _lastDuration;
+
+  get lastEndedCall => null;
 
   Future<bool> initialize() async {
     if (_isInitialized) return true;
-    try {
-      if (!await _callTrackingService.initialize()) return false;
-      _subscribeToCallEvents();
-      _isInitialized = true;
-      return true;
-    } catch (e) {
-      return false;
+
+    // Listen to PhoneCallService (EVENT channel for outgoing calls)
+    PhoneCallService.initialize((phone, duration) {
+      print(
+        'CallTrackingController: Received duration=$duration for phone=$phone',
+      );
+      _lastPhone = phone;
+      _lastDuration = duration;
+      _updateLeadWithDuration(phone, duration);
+
+      // Only notify if controller is not disposed
+      if (!_disposed) {
+        notifyListeners();
+      }
+    });
+
+    // Listen to CallTrackingReceiver (METHOD channel for incoming calls)
+    _methodChannel.setMethodCallHandler((call) async {
+      print('CallTrackingController: Method channel received: ${call.method}');
+
+      if (call.method == 'onCallEnded') {
+        final phoneNumber = call.arguments['phoneNumber'] as String? ?? '';
+        final duration = call.arguments['duration'] as int? ?? 0;
+
+        print(
+          'CallTrackingController: Received onCallEnded - phone=$phoneNumber, duration=$duration',
+        );
+
+        _lastPhone = phoneNumber;
+        _lastDuration = duration;
+        _updateLeadWithDuration(phoneNumber, duration);
+
+        print('CallTrackingController: Notifying listeners...');
+        // Only notify if controller is not disposed
+        if (!_disposed) {
+          notifyListeners();
+          print('CallTrackingController: Listeners notified');
+        } else {
+          print(
+            'CallTrackingController: Controller is disposed, not notifying',
+          );
+        }
+      } else if (call.method == 'onCallStateChanged') {
+        final state = call.arguments['state'] as String? ?? '';
+        final phoneNumber = call.arguments['phoneNumber'] as String? ?? '';
+
+        print(
+          'CallTrackingController: Received onCallStateChanged - state=$state, phone=$phoneNumber',
+        );
+      }
+    });
+
+    _isInitialized = true;
+    return true;
+  }
+
+  void startOutgoingCall(String phone) {
+    PhoneCallService.makeCall(phone);
+  }
+
+  void _updateLeadWithDuration(String phone, int duration) {
+    final cleanPhone = _cleanPhoneNumber(phone);
+    final lead = _findLeadByPhone(cleanPhone);
+
+    if (lead != null && duration > 0) {
+      // Increment call count for each successful call
+      final newCallCount = lead.callCount + 1;
+      print(
+        'CallTrackingController: Updating lead $cleanPhone with duration=$duration, callCount=$newCallCount',
+      );
+      final updatedLead = LeadModel(
+        id: lead.id,
+        name: lead.name,
+        phone: lead.phone,
+        brand: lead.brand,
+        location: lead.location,
+        leadStatus: lead.leadStatus,
+        callStatus: lead.callStatus,
+        followUpDate: lead.followUpDate,
+        reason: lead.reason,
+        category: lead.category,
+        callDuration: duration,
+        callCount: newCallCount, // Increment call count
+        createdAt: lead.createdAt,
+      );
+      _leadRepository.updateLead(updatedLead);
     }
   }
 
-  void _subscribeToCallEvents() {
-    _callDataSubscription = _callTrackingService.onCallData.listen((callData) {
-      _currentCall = callData;
-      onCallStateChanged?.call(callData);
-      notifyListeners();
-    }, onError: (_) {});
-
-    _callEndedSubscription = _callTrackingService.onCallEnded.listen(
-      _handleCallEnded,
-      onError: (_) {},
+  LeadModel? _findLeadByPhone(String phone) {
+    return _leadRepository.allLeads.cast<LeadModel?>().firstWhere(
+      (lead) => lead != null && _cleanPhoneNumber(lead.phone) == phone,
+      orElse: () => null,
     );
   }
 
-  void _handleCallEnded(CallData callData) {
-    _lastEndedCall = callData;
-    _currentCall = null;
-    _updateExistingLeadWithCallData(callData);
-    onCallEnded?.call(callData.phoneNumber, callData.duration);
-    notifyListeners();
-  }
-
-  /// Update existing lead with call data
-  Future<void> _updateExistingLeadWithCallData(CallData callData) async {
-    try {
-      // Clean phone number for matching
-      final cleanPhoneNumber = _cleanPhoneNumber(callData.phoneNumber);
-
-      // Find existing lead with matching phone number
-      final existingLead = _findLeadByPhoneNumber(cleanPhoneNumber);
-
-      if (existingLead != null) {
-        print(
-          'CallTrackingController: Found existing lead for phone ${cleanPhoneNumber}: ${existingLead.name}',
-        );
-
-        // Update lead with call duration
-        final updatedLead = LeadModel(
-          id: existingLead.id,
-          name: existingLead.name,
-          phone: existingLead.phone,
-          brand: existingLead.brand,
-          location: existingLead.location,
-          leadStatus: existingLead.leadStatus,
-          callStatus: existingLead.callStatus,
-          followUpDate: existingLead.followUpDate,
-          reason: existingLead.reason,
-          category: existingLead.category,
-          callDuration: callData.duration, // Update call duration
-          createdAt: existingLead.createdAt,
-        );
-
-        await _leadRepository.updateLead(updatedLead);
-        print(
-          'CallTrackingController: Updated existing lead with call duration: ${callData.duration}s',
-        );
-      } else {
-        print(
-          'CallTrackingController: No existing lead found for phone number: ${cleanPhoneNumber}',
-        );
-      }
-    } catch (e) {
-      print(
-        'CallTrackingController: Error updating existing lead with call data: $e',
-      );
-    }
-  }
-
-  /// Find lead by phone number
-  LeadModel? _findLeadByPhoneNumber(String phoneNumber) {
-    try {
-      final allLeads = _leadRepository.allLeads;
-
-      for (final lead in allLeads) {
-        final leadPhone = _cleanPhoneNumber(lead.phone);
-        if (leadPhone == phoneNumber) {
-          return lead;
-        }
-      }
-
-      return null;
-    } catch (e) {
-      print('CallTrackingController: Error finding lead by phone number: $e');
-      return null;
-    }
-  }
-
-  /// Clean phone number for comparison
-  String _cleanPhoneNumber(String phoneNumber) {
-    // Remove all non-digit characters
-    String cleaned = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Handle country codes - if number starts with 91 and is 12 digits, remove 91
+  String _cleanPhoneNumber(String phone) {
+    String cleaned = phone.replaceAll(RegExp(r'[^\d]'), '');
     if (cleaned.startsWith('91') && cleaned.length == 12) {
       cleaned = cleaned.substring(2);
     }
-
-    // Handle +91 format
     if (cleaned.startsWith('0') && cleaned.length == 11) {
       cleaned = cleaned.substring(1);
     }
-
     return cleaned;
   }
 
-  /// Start tracking outgoing call
-  void startOutgoingCall(String phoneNumber) {
-    print(
-      'CallTrackingController: Starting outgoing call tracking for: $phoneNumber',
-    );
-    _callTrackingService.startOutgoingCallTracking(phoneNumber);
-  }
-
-  /// Get call data for phone number (for pre-filling forms)
-  CallData? getCallDataForPhoneNumber(String phoneNumber) {
-    final cleanNumber = _cleanPhoneNumber(phoneNumber);
-
-    if (_lastEndedCall != null) {
-      final lastCallCleanNumber = _cleanPhoneNumber(
-        _lastEndedCall!.phoneNumber,
-      );
-      if (lastCallCleanNumber == cleanNumber) {
-        return _lastEndedCall;
-      }
-    }
-
-    return null;
-  }
-
-  /// Check if phone number matches current/recent call
-  bool isPhoneNumberFromRecentCall(String phoneNumber) {
-    final cleanNumber = _cleanPhoneNumber(phoneNumber);
-
-    // Check current call
-    if (_currentCall != null) {
-      final currentCallCleanNumber = _cleanPhoneNumber(
-        _currentCall!.phoneNumber,
-      );
-      if (currentCallCleanNumber == cleanNumber) {
-        return true;
-      }
-    }
-
-    // Check last ended call
-    if (_lastEndedCall != null) {
-      final lastCallCleanNumber = _cleanPhoneNumber(
-        _lastEndedCall!.phoneNumber,
-      );
-      if (lastCallCleanNumber == cleanNumber) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /// Get recent call logs
-  Future<List<dynamic>> getRecentCallLogs({int limit = 10}) async {
-    return await _callTrackingService.getRecentCallLogs(limit: limit);
-  }
-
-  /// Check permissions
-  Future<Map<String, bool>> checkPermissions() async {
-    return await _callTrackingService.checkPermissions();
-  }
-
-  /// Request permissions
-  Future<bool> requestPermissions() async {
-    return await _callTrackingService.initialize();
-  }
-
-  /// Set callback for call ended events
-  void setOnCallEndedCallback(
-    Function(String phoneNumber, int duration) callback,
-  ) {
-    onCallEnded = callback;
-  }
-
-  /// Set callback for call state changes
-  void setOnCallStateChangedCallback(Function(CallData callData) callback) {
-    onCallStateChanged = callback;
-  }
-
-  /// Clear callbacks
-  void clearCallbacks() {
-    onCallEnded = null;
-    onCallStateChanged = null;
-  }
+  bool _disposed = false;
 
   @override
   void dispose() {
-    _callDataSubscription?.cancel();
-    _callEndedSubscription?.cancel();
-    clearCallbacks();
+    _disposed = true;
     super.dispose();
   }
 }

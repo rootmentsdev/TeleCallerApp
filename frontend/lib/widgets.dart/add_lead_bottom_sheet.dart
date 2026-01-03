@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
+import 'package:telecaller_app/model/call_model.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
-import 'package:telecaller_app/services/call_tracking_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 
@@ -70,7 +70,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       listen: false,
     );
     final selectedStore = headerController.selectedStore;
-    if (selectedStore != null && selectedStore != 'All Stores') {
+    if (selectedStore != 'All Stores') {
       final storeInfo = StoreLocations.resolveSelection(selectedStore);
       _selectedBrand = storeInfo.brand;
       _selectedLocation = storeInfo.location;
@@ -183,11 +183,44 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedLocation,
+                      value: _selectedLocation != null &&
+                              _selectedBrand != null &&
+                              (StoreLocations.brandStores[_selectedBrand!] ?? [])
+                                  .contains(_selectedLocation)
+                          ? _selectedLocation
+                          : null,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Location',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: _selectedBrand == null
+                                ? const Color(0xFFCCCCCC)
+                                : const Color(0xFFE0E0E0),
+                          ),
+                        ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFCCCCCC)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF003D7A),
+                            width: 2,
+                          ),
+                        ),
+                        filled: _selectedBrand == null,
+                        fillColor: _selectedBrand == null
+                            ? const Color(0xFFF5F5F5)
+                            : Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
                       ),
                       items:
@@ -197,11 +230,25 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                                   .map(
                                     (item) => DropdownMenuItem(
                                       value: item,
-                                      child: Text(item),
+                                      child: Text(
+                                        item,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
                                   )
                                   .toList()
                               : [],
+                      selectedItemBuilder: (BuildContext context) {
+                        if (_selectedBrand == null) return [];
+                        return (StoreLocations.brandStores[_selectedBrand!] ?? [])
+                            .map((item) => Text(
+                                  item,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ))
+                            .toList();
+                      },
                       onChanged:
                           _selectedBrand == null
                               ? null
@@ -388,6 +435,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
 
     return DropdownButtonFormField<String>(
       value: validValue,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
@@ -421,8 +469,24 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       ),
       items:
           items.map((item) {
-            return DropdownMenuItem(value: item, child: Text(item));
+            return DropdownMenuItem(
+              value: item,
+              child: Text(
+                item,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            );
           }).toList(),
+      selectedItemBuilder: (BuildContext context) {
+        return items.map((item) {
+          return Text(
+            item,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          );
+        }).toList();
+      },
       onChanged: isDisabled ? null : onChanged,
     );
   }
@@ -564,6 +628,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                 : _remarksController.text.trim(),
         category: null,
         callDuration: _callDuration,
+        callCount: _callDuration != null && _callDuration! > 0 ? 1 : 0,
         createdAt: DateTime.now(),
         source: 'Walk-in',
         leadType: 'General',

@@ -8,7 +8,6 @@ import 'package:telecaller_app/view/lead_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_screen.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
 import 'package:telecaller_app/widgets.dart/add_lead_bottom_sheet.dart';
-import 'package:telecaller_app/services/call_tracking_service.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key, this.initialIndex});
@@ -50,14 +49,16 @@ class BottomNavState extends State<BottomNav>
         listen: false,
       );
 
-      callTrackingController.initialize().then((success) {
-        if (success) {
-          callTrackingController.setOnCallEndedCallback((
-            phoneNumber,
-            duration,
-          ) {
-            _handleCallEnded(phoneNumber, duration);
-          });
+      callTrackingController.initialize();
+
+      // Listen to controller changes for call ended events
+      callTrackingController.addListener(() {
+        if (callTrackingController.lastPhone != null &&
+            callTrackingController.lastDuration != null) {
+          _handleCallEnded(
+            callTrackingController.lastPhone!,
+            callTrackingController.lastDuration!,
+          );
         }
       });
     });
@@ -66,24 +67,16 @@ class BottomNavState extends State<BottomNav>
   /// Handle call ended event - show Add Lead bottom sheet for incoming calls
   void _handleCallEnded(String phoneNumber, int duration) {
     if (duration > 0 && mounted) {
-      final callTrackingController = Provider.of<CallTrackingController>(
-        context,
-        listen: false,
-      );
-      final callData = callTrackingController.lastEndedCall;
+      // For now, we'll only handle outgoing calls since we don't have incoming call detection
+      // in the simplified service. This can be enhanced later if needed.
 
-      if (callData != null && callData.callType == CallType.incoming) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            showAddLeadBottomSheet(
-              context,
-              phoneNumber: phoneNumber,
-              callDuration: duration,
-              callData: callData,
-            );
-          }
-        });
-      }
+      // Optional: Show a snackbar or notification about the completed call
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Call completed: ${duration}s'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 

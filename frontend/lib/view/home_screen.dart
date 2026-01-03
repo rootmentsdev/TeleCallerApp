@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final item = callSummary[index];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: SizedBox(
                             width: 80,
                             child: CallSummaryCard(

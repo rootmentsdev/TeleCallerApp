@@ -1,273 +1,97 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:telecaller_app/model/call_model.dart';
 import 'package:telecaller_app/services/call_tracking_service.dart';
-import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/format_helper.dart';
+import 'package:telecaller_app/utils/text_constant.dart';
 
-/// Widget to display real-time call duration using StreamBuilder
-/// Listens to onCallData stream for live updates during active calls
-class CallDurationDisplay extends StatelessWidget {
+class CallStatusDisplay extends StatefulWidget {
   final String phoneNumber;
-  final CallTrackingService callTrackingService;
+  final CallTrackingService service;
 
-  const CallDurationDisplay({
+  const CallStatusDisplay({
     super.key,
     required this.phoneNumber,
-    required this.callTrackingService,
-  });
-
-  /// Check if phone numbers match (handles different formats)
-  bool _isPhoneNumberMatch(String phone1, String phone2) {
-    // Clean both numbers
-    String clean1 = phone1.replaceAll(RegExp(r'[^\d]'), '');
-    String clean2 = phone2.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Handle country codes
-    if (clean1.startsWith('91') && clean1.length == 12) {
-      clean1 = clean1.substring(2);
-    }
-    if (clean2.startsWith('91') && clean2.length == 12) {
-      clean2 = clean2.substring(2);
-    }
-
-    // Handle leading zeros
-    if (clean1.startsWith('0') && clean1.length == 11) {
-      clean1 = clean1.substring(1);
-    }
-    if (clean2.startsWith('0') && clean2.length == 11) {
-      clean2 = clean2.substring(1);
-    }
-
-    return clean1 == clean2 ||
-        clean1.contains(clean2) ||
-        clean2.contains(clean1);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<CallData>(
-      stream: callTrackingService.onCallData,
-      builder: (context, snapshot) {
-        // Check if we have data and it matches our phone number
-        if (!snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
-
-        final callData = snapshot.data!;
-
-        // Only show if phone number matches
-        if (!_isPhoneNumberMatch(callData.phoneNumber, phoneNumber)) {
-          return const SizedBox.shrink();
-        }
-
-        // Only show during active calls (ringing or answered)
-        if (callData.callState == CallState.ended) {
-          return const SizedBox.shrink();
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue[300]!, width: 1.5),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.blue[100],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.phone_in_talk,
-                  size: 24,
-                  color: Colors.blue[700],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getCallStateText(callData.callState),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue[600],
-                        fontFamily: TextConstant.dmSansRegular,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      callData.callState == CallState.answered
-                          ? FormatHelper.formatCallDurationWithUnits(
-                            callData.duration,
-                          )
-                          : 'Ringing...',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[700],
-                        fontFamily: TextConstant.dmSansMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  String _getCallStateText(CallState state) {
-    switch (state) {
-      case CallState.ringing:
-        return 'Call Ringing...';
-      case CallState.answered:
-        return 'Call Duration';
-      case CallState.ended:
-        return 'Call Ended';
-    }
-  }
-}
-
-/// Widget to display final call duration when call ends
-/// Listens to onCallEnded stream and shows duration with 500ms delay
-class CallEndedDurationDisplay extends StatefulWidget {
-  final String phoneNumber;
-  final CallTrackingService callTrackingService;
-  final VoidCallback? onDurationReceived;
-
-  const CallEndedDurationDisplay({
-    super.key,
-    required this.phoneNumber,
-    required this.callTrackingService,
-    this.onDurationReceived,
+    required this.service,
   });
 
   @override
-  State<CallEndedDurationDisplay> createState() =>
-      _CallEndedDurationDisplayState();
+  State<CallStatusDisplay> createState() => _CallStatusDisplayState();
 }
 
-class _CallEndedDurationDisplayState extends State<CallEndedDurationDisplay> {
-  CallData? _lastCallData;
-  bool _showDuration = false;
+class _CallStatusDisplayState extends State<CallStatusDisplay> {
+  StreamSubscription<CallData>? _sub;
+  CallData? _data;
+  bool _visible = false;
 
   @override
   void initState() {
     super.initState();
-    _setupCallEndedListener();
-  }
 
-  void _setupCallEndedListener() {
-    widget.callTrackingService.onCallEnded.listen((callData) {
-      if (_isPhoneNumberMatch(callData.phoneNumber, widget.phoneNumber)) {
-        // Store the call data
-        _lastCallData = callData;
+    _sub = widget.service.stream.listen((data) {
+      if (!_isSamePhone(data.phone, widget.phoneNumber)) return;
 
-        // Add 500ms delay before showing duration
-        Future.delayed(const Duration(milliseconds: 500), () {
+      setState(() {
+        _data = data;
+        _visible = true;
+      });
+
+      // Auto-hide ONLY after ended
+      if (data.state == CallState.ended) {
+        Future.delayed(const Duration(seconds: 5), () {
           if (mounted) {
-            setState(() {
-              _showDuration = true;
-            });
-
-            // Notify parent widget
-            widget.onDurationReceived?.call();
-
-            // Auto-hide after 5 seconds
-            Future.delayed(const Duration(seconds: 5), () {
-              if (mounted) {
-                setState(() {
-                  _showDuration = false;
-                  _lastCallData = null;
-                });
-              }
-            });
+            setState(() => _visible = false);
           }
         });
       }
     });
   }
 
-  /// Check if phone numbers match (handles different formats)
-  bool _isPhoneNumberMatch(String phone1, String phone2) {
-    // Clean both numbers
-    String clean1 = phone1.replaceAll(RegExp(r'[^\d]'), '');
-    String clean2 = phone2.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Handle country codes
-    if (clean1.startsWith('91') && clean1.length == 12) {
-      clean1 = clean1.substring(2);
-    }
-    if (clean2.startsWith('91') && clean2.length == 12) {
-      clean2 = clean2.substring(2);
-    }
-
-    // Handle leading zeros
-    if (clean1.startsWith('0') && clean1.length == 11) {
-      clean1 = clean1.substring(1);
-    }
-    if (clean2.startsWith('0') && clean2.length == 11) {
-      clean2 = clean2.substring(1);
-    }
-
-    return clean1 == clean2 ||
-        clean1.contains(clean2) ||
-        clean2.contains(clean1);
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_showDuration || _lastCallData == null) {
-      return const SizedBox.shrink();
-    }
+    if (!_visible || _data == null) return const SizedBox.shrink();
+
+    final isEnded = _data!.state == CallState.ended;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green[50],
+        color: isEnded ? Colors.green[50] : Colors.blue[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green[300]!, width: 1.5),
+        border: Border.all(
+          color: isEnded ? Colors.green[300]! : Colors.blue[300]!,
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.green[100],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.timer, size: 24, color: Colors.green[700]),
-          ),
+          _icon(isEnded),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Call Duration',
+                  _title(_data!.state),
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.green[600],
+                    color: isEnded ? Colors.green[700] : Colors.blue[700],
                     fontFamily: TextConstant.dmSansRegular,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _lastCallData!.duration > 0
-                      ? FormatHelper.formatCallDurationWithUnits(
-                        _lastCallData!.duration,
-                      )
-                      : 'Call not answered',
+                  _valueText(_data!),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green[700],
+                    color: isEnded ? Colors.green[800] : Colors.blue[800],
                     fontFamily: TextConstant.dmSansMedium,
                   ),
                 ),
@@ -277,5 +101,54 @@ class _CallEndedDurationDisplayState extends State<CallEndedDurationDisplay> {
         ],
       ),
     );
+  }
+
+  Widget _icon(bool ended) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: ended ? Colors.green[100] : Colors.blue[100],
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        ended ? Icons.timer : Icons.phone_in_talk,
+        color: ended ? Colors.green[700] : Colors.blue[700],
+        size: 24,
+      ),
+    );
+  }
+
+  String _title(CallState state) {
+    switch (state) {
+      case CallState.ringing:
+        return 'Calling...';
+      case CallState.answered:
+        return 'On Call';
+      case CallState.ended:
+        return 'Call Duration';
+    }
+  }
+
+  String _valueText(CallData data) {
+    if (data.state == CallState.ended) {
+      return FormatHelper.formatCallDurationWithUnits(data.duration);
+    }
+    if (data.state == CallState.answered) {
+      return 'Connected';
+    }
+    return 'Ringing...';
+  }
+
+  bool _isSamePhone(String a, String b) {
+    String c1 = a.replaceAll(RegExp(r'[^\d]'), '');
+    String c2 = b.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (c1.startsWith('91') && c1.length == 12) c1 = c1.substring(2);
+    if (c2.startsWith('91') && c2.length == 12) c2 = c2.substring(2);
+
+    if (c1.startsWith('0') && c1.length == 11) c1 = c1.substring(1);
+    if (c2.startsWith('0') && c2.length == 11) c2 = c2.substring(1);
+
+    return c1 == c2;
   }
 }

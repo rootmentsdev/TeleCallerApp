@@ -22,7 +22,6 @@ class MainActivity : FlutterActivity() {
     private var eventSink: EventChannel.EventSink? = null
 
     private val PHONE_STATE_PERMISSION = Manifest.permission.READ_PHONE_STATE
-    private val CALL_LOG_PERMISSION = Manifest.permission.READ_CALL_LOG
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -126,9 +125,6 @@ class MainActivity : FlutterActivity() {
         }
         if (ContextCompat.checkSelfPermission(this, PHONE_STATE_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
             neededPermissions.add(PHONE_STATE_PERMISSION)
-        }
-        if (ContextCompat.checkSelfPermission(this, CALL_LOG_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
-            neededPermissions.add(CALL_LOG_PERMISSION)
         }
 
         if (neededPermissions.isNotEmpty()) {

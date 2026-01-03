@@ -123,7 +123,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   Future<void> _makeCall() async {
     try {
       final phoneNumber = widget.lead.phone;
-      await PhoneCallService.makeCall(phoneNumber, leadId: widget.lead.id);
+      await PhoneCallService.makeCall(phoneNumber);
 
       // Enable form fields after call is initiated
       if (mounted) {

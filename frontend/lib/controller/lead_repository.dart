@@ -165,7 +165,17 @@ class LeadRepository extends ChangeNotifier {
 
   LeadModel? getLeadById(String id) {
     try {
-      return _leads.firstWhere((lead) => lead.id == id);
+      // First check main leads list
+      try {
+        return _leads.firstWhere((lead) => lead.id == id);
+      } catch (e) {
+        // If not found in main leads, check follow-up leads
+        try {
+          return _followUpLeads.firstWhere((lead) => lead.id == id);
+        } catch (e) {
+          return null;
+        }
+      }
     } catch (e) {
       return null;
     }
@@ -406,6 +416,7 @@ class LeadRepository extends ChangeNotifier {
               reason: lead.reason,
               category: LeadConstants.categoryBookingConfirmation,
               callDuration: lead.callDuration,
+              callCount: lead.callCount,
               createdAt: lead.createdAt,
             );
             _leads.add(bookingLead);
@@ -626,6 +637,8 @@ class LeadRepository extends ChangeNotifier {
       final reason = leadData['reason']?.toString();
       final callDuration =
           leadData['callDuration'] as int? ?? leadData['call_duration'] as int?;
+      final callCount =
+          leadData['callCount'] as int? ?? leadData['call_count'] as int? ?? 0;
 
       // Parse dates using the helper function that handles multiple formats
       // Backend uses: enquiry_date, function_date, created_at
@@ -731,6 +744,7 @@ class LeadRepository extends ChangeNotifier {
         reason: reason,
         category: category,
         callDuration: callDuration,
+        callCount: callCount,
         createdAt: createdAt,
       );
     } catch (e) {
@@ -771,6 +785,7 @@ class LeadRepository extends ChangeNotifier {
               reason: lead.reason,
               category: LeadConstants.categoryRentOut,
               callDuration: lead.callDuration,
+              callCount: lead.callCount,
               createdAt: lead.createdAt,
             );
             _leads.add(rentOutLead);
@@ -828,6 +843,7 @@ class LeadRepository extends ChangeNotifier {
           reason: reasonCollectedFromStore ?? lead.reason,
           category: lead.category,
           callDuration: lead.callDuration,
+          callCount: lead.callCount,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
@@ -878,6 +894,7 @@ class LeadRepository extends ChangeNotifier {
           reason: remarks ?? lead.reason,
           category: lead.category,
           callDuration: lead.callDuration,
+          callCount: lead.callCount,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
@@ -926,6 +943,7 @@ class LeadRepository extends ChangeNotifier {
           reason: remarks ?? lead.reason,
           category: lead.category,
           callDuration: lead.callDuration,
+          callCount: lead.callCount,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
@@ -1109,12 +1127,16 @@ class LeadRepository extends ChangeNotifier {
   }
 
   /// Update a follow-up lead via API
-  /// Updates call status, remarks, call date, and follow-up date for a follow-up lead
+  /// Updates call status, lead status, remarks, call duration, and follow-up date for a follow-up lead
+  /// According to API docs: call_status and lead_status are REQUIRED
+  /// Backend expects: call_status, lead_status, call_duration (number in seconds), remarks (optional string)
   Future<void> updateFollowUpLeadFromApi({
     required String id,
     required String callStatus,
+    required String leadStatus, // REQUIRED according to API docs
     String? remarks,
-    DateTime? callDate,
+    int? callDuration, // Call duration in seconds (number) - backend expects this
+    DateTime? callDate, // Deprecated - kept for backward compatibility
     DateTime? followUpDate,
     bool clearFollowUpDate = false,
   }) async {
@@ -1124,8 +1146,10 @@ class LeadRepository extends ChangeNotifier {
       await _apiService.postFollowUp(
         id: id,
         callStatus: callStatus,
+        leadStatus: leadStatus, // REQUIRED field
         remarks: remarks,
-        callDate: callDate,
+        callDuration: callDuration, // Pass call duration (number in seconds)
+        callDate: callDate, // Deprecated but kept for compatibility
         followUpDate: followUpDate,
         clearFollowUpDate: clearFollowUpDate,
       );
@@ -1141,10 +1165,12 @@ class LeadRepository extends ChangeNotifier {
           location: lead.location,
           leadStatus: lead.leadStatus,
           callStatus: callStatus,
-          followUpDate: clearFollowUpDate ? null : (followUpDate ?? lead.followUpDate),
+          followUpDate:
+              clearFollowUpDate ? null : (followUpDate ?? lead.followUpDate),
           reason: lead.reason,
           category: lead.category,
           callDuration: lead.callDuration,
+          callCount: lead.callCount,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);

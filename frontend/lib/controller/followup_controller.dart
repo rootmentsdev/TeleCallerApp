@@ -229,9 +229,11 @@ class FollowupController extends ChangeNotifier {
   }
 
   // Convert LeadModel to display format
+  // Includes all fields needed by DetailsScreen to properly identify and update follow-up leads
   Map<String, dynamic> leadToDisplayMap(LeadModel lead) {
     final categoryStyle = _getCategoryStyle(lead.category);
     return {
+      "id": lead.id, // REQUIRED: Needed to identify the lead for API updates
       "name": lead.name,
       "phone": lead.phone,
       "tag": categoryStyle["tag"],
@@ -242,6 +244,14 @@ class FollowupController extends ChangeNotifier {
       "iconBgColor": categoryStyle["iconBgColor"],
       "borderColor": categoryStyle["borderColor"],
       "reason": lead.reason ?? "No reason provided.",
+      "followUpDate": lead.followUpDate, // REQUIRED: Needed to identify follow-up leads
+      "callStatus": lead.callStatus, // Needed for initial status display
+      "leadStatus": lead.leadStatus, // Needed for initial status display
+      "category": lead.category, // Needed for category-specific updates
+      "brand": lead.brand, // Needed for display
+      "location": lead.location, // Needed for display
+      "callDuration": lead.callDuration, // Needed to display call duration
+      "callCount": lead.callCount, // Needed to display call count
     };
   }
 

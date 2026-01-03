@@ -24,6 +24,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
         private var isOutgoing = false
         private var callStartTime: Long = 0
         private var callAnswerTime: Long = 0
+        private var callEndTime: Long = 0
         private var previousState = TelephonyManager.CALL_STATE_IDLE
         private var offhookOccurred = false
         private var callEndProcessed = false  // Prevent duplicate onCallEnded events
@@ -38,6 +39,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
             lastPhoneNumber = phoneNumber
             isOutgoing = true
             callAnswerTime = 0
+            callEndTime = 0
             previousState = TelephonyManager.CALL_STATE_IDLE
             offhookOccurred = false
             callEndProcessed = false
@@ -106,7 +108,8 @@ class CallTrackingReceiver : BroadcastReceiver() {
                         // Prevent duplicate processing
                         if (!callEndProcessed) {
                             callEndProcessed = true
-                            Log.d(TAG, "🔴 IDLE - Call ended")
+                            callEndTime = System.currentTimeMillis()
+                            Log.d(TAG, "🔴 IDLE - Call ended at: $callEndTime")
                             processCallEnd(context)
                         }
                     }
@@ -120,19 +123,21 @@ class CallTrackingReceiver : BroadcastReceiver() {
         val outgoingSnapshot = isOutgoing
         val offhookSnapshot = offhookOccurred
         val answerTimeSnapshot = callAnswerTime
+        val endTimeSnapshot = callEndTime
 
         // Reset state immediately
         lastPhoneNumber = null
         isOutgoing = false
         callStartTime = 0
         callAnswerTime = 0
+        callEndTime = 0
         previousState = TelephonyManager.CALL_STATE_IDLE
         offhookOccurred = false
 
         Thread {
             try {
-                // Initial wait for call log to be written
-                Thread.sleep(2000)
+                // Wait longer for call log to be written (Android needs time)
+                Thread.sleep(3000)
 
                 var number = phoneSnapshot
                 if (number == null || number == "Unknown") {
@@ -144,26 +149,28 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
                 // Only fetch duration if call was answered
                 if (offhookSnapshot && answerTimeSnapshot > 0) {
-                    // Call was answered - get duration from call log
-                    duration = getDurationFromCallLog(context, number)
-                    Log.d(TAG, "📊 First read: duration=$duration for $number (call was answered)")
-
-                    // Retry logic: if call log shows 0, retry after 2s
-                    if (duration == 0) {
-                        Log.w(TAG, "⏳ Call was answered but call log duration=0, retrying after 2s...")
-                        Thread.sleep(2000)
+                    // Try to get duration from call log by phone number first
+                    if (number != null && number != "Unknown") {
                         duration = getDurationFromCallLog(context, number)
-                        Log.d(TAG, "📊 Retry read: duration=$duration for $number")
+                        Log.d(TAG, "📊 First read: duration=$duration for $number (call was answered)")
                     }
 
-                    // If still 0, use calculated time as fallback
+                    // If still 0, try to get duration by time (most recent call)
                     if (duration == 0) {
-                        val calculatedDuration = ((System.currentTimeMillis() - answerTimeSnapshot) / 1000).toInt()
+                        Log.w(TAG, "⏳ Duration still 0, trying to get from most recent call log entry...")
+                        Thread.sleep(2000)
+                        duration = getDurationFromLatestCall(context)
+                        Log.d(TAG, "📊 Read from latest call: duration=$duration")
+                    }
+
+                    // If still 0, use calculated time as fallback (using actual call end time)
+                    if (duration == 0 && endTimeSnapshot > 0 && answerTimeSnapshot > 0) {
+                        val calculatedDuration = ((endTimeSnapshot - answerTimeSnapshot) / 1000).toInt()
                         if (calculatedDuration > 0) {
                             duration = calculatedDuration
-                            Log.d(TAG, "⚠️ Using calculated duration: ${duration}s (call log was 0)")
+                            Log.d(TAG, "⚠️ Using calculated duration: ${duration}s (from OFFHOOK to IDLE, call log was 0)")
                         }
-                    } else {
+                    } else if (duration > 0) {
                         Log.d(TAG, "✅ Final: $number, duration=${duration}s (from call log)")
                     }
                 } else {
@@ -199,9 +206,9 @@ class CallTrackingReceiver : BroadcastReceiver() {
         return try {
             val cursor = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
-                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE),
-                "${CallLog.Calls.NUMBER} = ?",
-                arrayOf(phoneNumber),
+                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE, CallLog.Calls.NUMBER),
+                "${CallLog.Calls.NUMBER} = ? OR ${CallLog.Calls.NUMBER} = ?",
+                arrayOf(phoneNumber, cleanNumber(phoneNumber)),
                 "${CallLog.Calls.DATE} DESC"
             )
 
@@ -211,12 +218,12 @@ class CallTrackingReceiver : BroadcastReceiver() {
                     val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
                     val ageMs = System.currentTimeMillis() - date
                     
-                    // Only use if call is recent (within last 30 seconds)
-                    if (ageMs < 30000) {
+                    // Only use if call is recent (within last 60 seconds) and duration > 0
+                    if (ageMs < 60000 && duration > 0) {
                         Log.d(TAG, "📞 Call log: duration=$duration, age=${ageMs}ms")
                         duration
                     } else {
-                        Log.w(TAG, "⚠️ Call log entry too old: ${ageMs}ms")
+                        Log.w(TAG, "⚠️ Call log entry too old or duration=0: age=${ageMs}ms, duration=$duration")
                         0
                     }
                 } else {
@@ -226,6 +233,43 @@ class CallTrackingReceiver : BroadcastReceiver() {
             } ?: 0
         } catch (e: Exception) {
             Log.e(TAG, "Call log error: ${e.message}")
+            0
+        }
+    }
+
+    private fun getDurationFromLatestCall(context: Context): Int {
+        if (!hasCallLogPermission(context)) return 0
+
+        return try {
+            val cursor = context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE),
+                null,
+                null,
+                "${CallLog.Calls.DATE} DESC"
+            )
+
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val duration = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.DURATION))
+                    val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
+                    val ageMs = System.currentTimeMillis() - date
+                    
+                    // Only use if call is recent (within last 60 seconds) and duration > 0
+                    if (ageMs < 60000 && duration > 0) {
+                        Log.d(TAG, "📞 Latest call log: duration=$duration, age=${ageMs}ms")
+                        duration
+                    } else {
+                        Log.w(TAG, "⚠️ Latest call log entry too old or duration=0: age=${ageMs}ms, duration=$duration")
+                        0
+                    }
+                } else {
+                    Log.w(TAG, "⚠️ No call log entries found")
+                    0
+                }
+            } ?: 0
+        } catch (e: Exception) {
+            Log.e(TAG, "Latest call log error: ${e.message}")
             0
         }
     }

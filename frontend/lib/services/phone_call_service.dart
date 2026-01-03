@@ -1,5 +1,13 @@
 import 'package:flutter/services.dart';
 
+enum CallState { idle, answered }
+
+// Global storage for last call duration (persists across widget lifecycle)
+class _CallDurationStore {
+  static int? lastDuration;
+  static DateTime? lastDurationTime;
+}
+
 class PhoneCallService {
   static const MethodChannel _methodChannel = MethodChannel(
     'com.telecaller_app/phone',
@@ -8,94 +16,116 @@ class PhoneCallService {
     'com.telecaller_app/phone_events',
   );
 
-  static Stream<dynamic>? _callEventsStream;
-  static Function(String phoneNumber, int? duration)? _onCallEndedCallback;
-  static Function(String phoneNumber)? _onCallAnsweredCallback;
-  static Function(String phoneNumber)? _onCallStartedCallback;
+  static CallState _state = CallState.idle;
+  static int? _offhookTime;
+  static bool _callAnswered = false;
+  static bool _callEndedAlready = false;
+  static Function(String phone, int duration)? _callback;
+  static bool _listenerInitialized = false;
 
-  /// Initialize the phone call service and listen for call events
-  static void initialize({
-    required Function(String phoneNumber, int? duration) onCallEnded,
-    Function(String phoneNumber)? onCallAnswered,
-    Function(String phoneNumber)? onCallStarted,
-  }) {
-    _onCallEndedCallback = onCallEnded;
-    _onCallAnsweredCallback = onCallAnswered;
-    _onCallStartedCallback = onCallStarted;
-    _startListening();
-  }
+  static void initialize(Function(String phone, int duration) callback) {
+    _callback = callback;
 
-  /// Start listening to call events from native
-  static void _startListening() {
-    _callEventsStream = _eventChannel.receiveBroadcastStream();
-    _callEventsStream?.listen(
-      (dynamic event) {
-        print('PhoneCallService: Received event: $event');
-        if (event is Map) {
-          final eventType = event['event'] as String?;
-          final phoneNumber = event['phoneNumber'] as String? ?? '';
+    // Only set up listener once
+    if (_listenerInitialized) return;
+    _listenerInitialized = true;
+
+    _eventChannel.receiveBroadcastStream().listen((event) {
+      if (event is! Map) return;
+      final type = event['event'] as String?;
+      final phone = event['phoneNumber'] as String? ?? '';
+      final duration = event['duration'] as int? ?? 0;
+
+      print(
+        'PhoneCallService: Event=$type, Phone=$phone, Duration=$duration, State=$_state',
+      );
+
+      if (type == 'callAnswered') {
+        // Set answer time ONLY ONCE per call
+        if (!_callAnswered) {
+          _callAnswered = true;
+          _offhookTime = DateTime.now().millisecondsSinceEpoch;
           print(
-            'PhoneCallService: Event type: $eventType, Phone: $phoneNumber',
+            'PhoneCallService: OFFHOOK recorded at $_offhookTime (first time)',
+          );
+        } else {
+          print('PhoneCallService: Ignoring duplicate OFFHOOK event');
+        }
+      } else if (type == 'callEnded') {
+        // Emit duration event ONLY ONCE per call
+        if (!_callEndedAlready) {
+          _callEndedAlready = true;
+          print(
+            'PhoneCallService: Call ended - Duration=$duration seconds (first time)',
           );
 
-          switch (eventType) {
-            case 'callStarted':
-              print('PhoneCallService: Call started for $phoneNumber');
-              _onCallStartedCallback?.call(phoneNumber);
-              break;
+          // Store in global cache (persists even if widget unmounts)
+          // Use timestamp to track when duration was cached
+          _CallDurationStore.lastDuration = duration;
+          _CallDurationStore.lastDurationTime = DateTime.now();
+          print(
+            'PhoneCallService: Stored in cache - duration=$duration at ${_CallDurationStore.lastDurationTime}',
+          );
 
-            case 'callRinging':
-              print('PhoneCallService: Call ringing for $phoneNumber');
-              break;
-
-            case 'callAnswered':
-              print('PhoneCallService: Call answered for $phoneNumber');
-              _onCallAnsweredCallback?.call(phoneNumber);
-              break;
-
-            case 'callEnded':
-              final durationValue = event['duration'] as int?;
-              print(
-                'PhoneCallService: Call ended - Phone: $phoneNumber, Duration: $durationValue',
-              );
-              // Duration is valid if >= 0
-              final duration =
-                  (durationValue != null && durationValue >= 0)
-                      ? durationValue
-                      : null;
-              print(
-                'PhoneCallService: Calling callback with phone: $phoneNumber, duration: $duration',
-              );
-              _onCallEndedCallback?.call(phoneNumber, duration);
-              break;
-          }
+          _callback?.call(phone, duration);
+        } else {
+          print(
+            'PhoneCallService: Ignoring duplicate IDLE event (already emitted duration=$duration)',
+          );
         }
-      },
-      onError: (error) {
-        print('Error listening to call events: $error');
-      },
-    );
+        _reset();
+      }
+    });
   }
 
-  /// Make a phone call and start tracking
-  static Future<bool> makeCall(String phoneNumber, {String? leadId}) async {
+  static Future<bool> makeCall(String phone) async {
+    _reset();
     try {
-      final result = await _methodChannel.invokeMethod<bool>('callPhone', {
-        'phoneNumber': phoneNumber,
-        'leadId': leadId,
-      });
-      return result ?? false;
+      return await _methodChannel.invokeMethod('callPhone', {
+            'phoneNumber': phone,
+          }) ??
+          false;
     } catch (e) {
-      print('Error making phone call: $e');
+      print('PhoneCallService: Error making call: $e');
       return false;
     }
   }
 
-  /// Dispose the service
-  static void dispose() {
-    _callEventsStream = null;
-    _onCallEndedCallback = null;
-    _onCallAnsweredCallback = null;
-    _onCallStartedCallback = null;
+  static void _reset() {
+    _state = CallState.idle;
+    _offhookTime = null;
+    _callAnswered = false;
+    _callEndedAlready = false;
+  }
+
+  // Get cached duration (for UI that mounts after call ends)
+  // Returns duration if it was cached within last 30 seconds
+  static int? getCachedDuration() {
+    if (_CallDurationStore.lastDuration != null &&
+        _CallDurationStore.lastDurationTime != null) {
+      final ageMs =
+          DateTime.now()
+              .difference(_CallDurationStore.lastDurationTime!)
+              .inMilliseconds;
+
+      // Only return if cached within last 30 seconds
+      if (ageMs < 30000) {
+        print(
+          'PhoneCallService: Returning cached duration=${_CallDurationStore.lastDuration} (age=${ageMs}ms)',
+        );
+        return _CallDurationStore.lastDuration;
+      } else {
+        print(
+          'PhoneCallService: Cached duration too old (${ageMs}ms), ignoring',
+        );
+      }
+    }
+    return null;
+  }
+
+  // Clear cache
+  static void clearCache() {
+    _CallDurationStore.lastDuration = null;
+    _CallDurationStore.lastDurationTime = null;
   }
 }

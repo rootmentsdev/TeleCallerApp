@@ -83,12 +83,17 @@ class _ReportScreenState extends State<ReportScreen> {
     return Consumer2<HeaderController, ReportController>(
       builder: (context, headerController, reportController, child) {
         final currentCallList = reportController.getFilteredLeads();
+        // Tabs with their corresponding icons
+        // Index mapping: 0=All Calls, 1=Loss of Sale, 2=Return Calls, 3=Booking Confirmation, 4=New Leads
         final tabs = [
-          "All Calls",
-          "Loss of Sale",
-          "Return Calls",
-          "booking calls",
-          "New Leads",
+          {"title": "All Calls", "icon": Icons.people_alt_outlined}, // Index 0
+          {"title": "Loss of Sale", "icon": Icons.trending_down}, // Index 1
+          {"title": "Return Calls", "icon": Icons.message_outlined}, // Index 2
+          {
+            "title": "Booking Confirmation",
+            "icon": Icons.flag_outlined,
+          }, // Index 3
+          {"title": "New Leads", "icon": Icons.person_add_outlined}, // Index 4
         ];
 
         return Scaffold(
@@ -131,7 +136,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   ],
                 ),
               ),
-              // Tabs with horizontal scrolling
+              // Tabs with horizontal scrolling and icons
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -139,6 +144,10 @@ class _ReportScreenState extends State<ReportScreen> {
                   children: List.generate(tabs.length, (index) {
                     final isSelected =
                         reportController.selectedCallTypeIndex == index;
+                    final tab = tabs[index];
+                    final tabTitle = tab["title"] as String;
+                    final tabIcon = tab["icon"] as IconData;
+
                     return GestureDetector(
                       onTap: () {
                         reportController.setSelectedCallTypeIndex(index);
@@ -160,17 +169,35 @@ class _ReportScreenState extends State<ReportScreen> {
                             ),
                           ),
                         ),
-                        child: Text(
-                          tabs[index],
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w400,
-                            fontFamily: TextConstant.dmSansMedium,
-                            color:
-                                isSelected ? Colors.black87 : Colors.grey[600],
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              tabIcon,
+                              size: 18,
+                              color:
+                                  isSelected
+                                      ? ColorConstant.primaryColor
+                                      : Colors.grey[600],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              tabTitle,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight:
+                                    isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w400,
+                                fontFamily: TextConstant.dmSansMedium,
+                                color:
+                                    isSelected
+                                        ? Colors.black87
+                                        : Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );

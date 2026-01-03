@@ -457,6 +457,7 @@ class ApiService {
   }
 
   /// Update Loss of Sale lead
+  /// When followUpDate is provided, automatically sets follow_up_flag=true (required by API)
   Future<Map<String, dynamic>> updateLossOfSaleLead({
     required String id,
     String? callStatus,
@@ -478,11 +479,23 @@ class ApiService {
       final requestBody = <String, dynamic>{};
       if (callStatus != null) requestBody['call_status'] = callStatus;
       if (leadStatus != null) requestBody['lead_status'] = leadStatus;
-      if (followUpDate != null) requestBody['follow_up_date'] = followUpDate;
+      
+      // When follow_up_date is provided, set follow_up_flag=true (required by API)
+      if (followUpDate != null && followUpDate.isNotEmpty) {
+        requestBody['follow_up_flag'] = true;
+        requestBody['follow_up_date'] = followUpDate;
+      }
+      
       if (reasonCollectedFromStore != null) {
         requestBody['reason_collected_from_store'] = reasonCollectedFromStore;
       }
-      if (remarks != null) requestBody['remarks'] = remarks;
+      
+      // Only include remarks if user provided input (not empty string)
+      if (remarks != null && remarks.trim().isNotEmpty) {
+        requestBody['remarks'] = remarks.trim();
+      } else {
+        requestBody['remarks'] = null;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 
@@ -700,15 +713,28 @@ class ApiService {
       };
 
       // Add optional fields if provided
-      if (remarks != null && remarks.isNotEmpty) {
-        requestBody['remarks'] = remarks;
+      // Only include remarks if user provided input (not empty string)
+      if (remarks != null && remarks.trim().isNotEmpty) {
+        requestBody['remarks'] = remarks.trim();
+      } else {
+        requestBody['remarks'] = null; // Explicitly set to null if no input
       }
+      
+      // When follow_up_flag is true, follow_up_date is REQUIRED by backend
       if (followUpFlag) {
         requestBody['follow_up_flag'] = followUpFlag;
-        // When follow_up_flag is true, send follow_up_date (required by backend)
         if (followUpDate != null && followUpDate.isNotEmpty) {
           requestBody['follow_up_date'] = followUpDate;
+        } else {
+          // If follow_up_flag is true but no date provided, throw error
+          throw Exception('follow_up_date is required when follow_up_flag is true. Please provide the follow-up date from frontend.');
         }
+      }
+      
+      // If follow_up_date is provided without follow_up_flag, set flag to true
+      if (!followUpFlag && followUpDate != null && followUpDate.isNotEmpty) {
+        requestBody['follow_up_flag'] = true;
+        requestBody['follow_up_date'] = followUpDate;
       }
       if (functionDate != null && functionDate.isNotEmpty) {
         requestBody['function_date'] = functionDate;
@@ -1161,14 +1187,18 @@ class ApiService {
   /// Matches backend POST /api/pages/follow-up/:id
   /// Updates a follow-up lead with new call status, remarks, and call date
   /// Endpoint: POST /api/pages/follow-ups/:id (plural "follow-ups")
-  /// Updates a follow-up lead with call status, remarks, call date, and follow-up date
+  /// Updates a follow-up lead with call status, lead status, remarks, call duration, and follow-up date
+  /// According to API docs: call_status and lead_status are REQUIRED
+  /// Backend expects: call_status, lead_status, call_duration (number in seconds), remarks (optional string)
   Future<Map<String, dynamic>> postFollowUp({
     required String id,
     required String callStatus,
+    required String leadStatus, // REQUIRED according to API docs
     String? remarks,
-    DateTime? callDate,
+    int? callDuration, // Call duration in seconds (number)
+    DateTime? callDate, // Deprecated - kept for backward compatibility
     DateTime? followUpDate,
-    bool clearFollowUpDate = false,
+    required bool clearFollowUpDate,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/follow-ups/$id');
 
@@ -1179,21 +1209,29 @@ class ApiService {
         throw Exception('Authentication required. Please login again.');
       }
 
-      // Prepare request body with required and optional fields
-      final requestBody = <String, dynamic>{'call_status': callStatus};
+      // Prepare request body with REQUIRED fields (call_status and lead_status)
+      final requestBody = <String, dynamic>{
+        'call_status': callStatus,
+        'lead_status': leadStatus,
+      };
+
+      // Add call_duration if provided (backend expects number in seconds)
+      if (callDuration != null && callDuration > 0) {
+        requestBody['call_duration'] = callDuration;
+      }
 
       // Add optional fields if provided
-      if (remarks != null && remarks.isNotEmpty) {
-        requestBody['remarks'] = remarks;
+      // Only include remarks if user provided input (not empty string)
+      // Backend requires remarks to be a string, so omit the field entirely if null
+      if (remarks != null && remarks.trim().isNotEmpty) {
+        requestBody['remarks'] = remarks.trim();
       }
-      if (callDate != null) {
-        requestBody['call_date'] = callDate.toIso8601String();
-      }
-
-      // Support clearing follow_up_date explicitly by sending null
-      if (clearFollowUpDate) {
-        requestBody['follow_up_date'] = null;
-      } else if (followUpDate != null) {
+      // If remarks is null or empty, don't include it in the request body
+      
+      // Note: call_date is deprecated - backend expects call_duration instead
+      // Keeping callDate for backward compatibility but not sending it
+      
+      if (followUpDate != null) {
         requestBody['follow_up_date'] = followUpDate.toIso8601String();
       }
 

@@ -11,6 +11,7 @@ class LeadModel {
   final String? category; // Loss of Sale, Feedback, Booking Confirmation, etc.
   final DateTime createdAt;
   final int? callDuration; // Call duration in seconds
+  final int callCount; // Number of calls made to this lead
   final String? source; // Source of lead (Walk-in, Call, etc.)
   final String? leadType; // Type of lead
 
@@ -26,6 +27,7 @@ class LeadModel {
     this.reason,
     this.category,
     this.callDuration,
+    this.callCount = 0,
     DateTime? createdAt,
     this.source,
     this.leadType,
@@ -46,6 +48,7 @@ class LeadModel {
       'category': category,
       'createdAt': createdAt.toIso8601String(),
       'callDuration': callDuration,
+      'callCount': callCount,
       'source': source,
       'leadType': leadType,
     };
@@ -86,6 +89,7 @@ class LeadModel {
       reason: map['reason'],
       category: map['category'],
       callDuration: map['callDuration'],
+      callCount: map['callCount'] ?? 0,
       createdAt:
           map['createdAt'] != null
               ? DateTime.parse(map['createdAt'])
@@ -112,6 +116,7 @@ class LeadModel {
       reason: json['remarks'] ?? json['reason'],
       category: json['category'],
       callDuration: json['call_duration'],
+      callCount: json['call_count'] ?? json['callCount'] ?? 0,
       createdAt:
           json['created_at'] != null
               ? DateTime.parse(json['created_at'])
