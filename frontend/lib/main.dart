@@ -35,6 +35,7 @@ Future<void> main() async {
       (route) => false,
     );
   };
+  
   runApp(const MyApp());
 }
 

@@ -1,3 +1,4 @@
+import 'package:clarity_flutter/clarity_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       homeController.init(headerController);
     });
+
+    _initializeClarity();
+  }
+
+  void _initializeClarity() {
+    final config = ClarityConfig(projectId: "uw421dl7m3");
+
+    Clarity.initialize(context, config);
   }
 
   @override
