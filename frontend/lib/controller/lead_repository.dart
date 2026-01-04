@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
@@ -523,8 +524,9 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error fetching Booking Confirmation leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchBookingConfirmationLeadsFromApi failed');
       rethrow;
     }
   }
@@ -616,8 +618,9 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error fetching Loss of Sale leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchLossOfSaleLeadsFromApi failed');
       rethrow;
     }
   }
@@ -936,8 +939,9 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error fetching Return leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchReturnLeadsFromApi failed');
       rethrow;
     }
   }
@@ -988,8 +992,9 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error updating Loss of Sale lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateLossOfSaleLeadFromApi failed');
       rethrow;
     }
   }
@@ -1047,8 +1052,9 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error updating Return lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateReturnLeadFromApi failed');
       rethrow;
     }
   }
@@ -1096,8 +1102,9 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error updating Booking Confirmation lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateBookingConfirmationLeadFromApi failed');
       rethrow;
     }
   }
@@ -1191,8 +1198,9 @@ class LeadRepository extends ChangeNotifier {
 
       await _saveLeads();
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error fetching Follow-Up leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchFollowUpLeadsFromApi failed');
       rethrow;
     }
   }
@@ -1240,8 +1248,9 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error updating Follow-Up lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateFollowUpLeadFromApi failed');
       rethrow;
     }
   }
@@ -1381,8 +1390,9 @@ class LeadRepository extends ChangeNotifier {
 
       await _saveLeads();
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error fetching all leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchAllLeadsFromApi failed');
       rethrow;
     }
   }
@@ -1414,8 +1424,9 @@ class LeadRepository extends ChangeNotifier {
       notifyListeners();
 
       print('LeadRepository: Successfully moved lead $id to report screen');
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error moving lead to report: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'moveLeadToReport failed');
       rethrow;
     }
   }
@@ -1443,8 +1454,9 @@ class LeadRepository extends ChangeNotifier {
       );
 
       return response;
-    } catch (e) {
+    } catch (e, s) {
       print('LeadRepository: Error fetching call summary from API: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchCallSummaryFromApi failed');
       rethrow;
     }
   }

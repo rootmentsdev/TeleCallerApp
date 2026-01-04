@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
@@ -454,8 +455,13 @@ class LeadScreenController extends ChangeNotifier {
         visitTo: visitTo,
       );
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadScreenController: Error fetching Loss of Sale leads: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchLossOfSaleLeadsFromApi failed',
+      );
       rethrow;
     }
   }
@@ -465,9 +471,14 @@ class LeadScreenController extends ChangeNotifier {
     try {
       await _repository.fetchBookingConfirmationLeadsFromApi(store: store);
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print(
         'LeadScreenController: Error fetching Booking Confirmation leads: $e',
+      );
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchBookingConfirmationLeadsFromApi failed',
       );
       rethrow;
     }
@@ -478,8 +489,13 @@ class LeadScreenController extends ChangeNotifier {
     try {
       await _repository.fetchReturnLeadsFromApi(store: store);
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadScreenController: Error fetching Return leads: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchReturnLeadsFromApi failed',
+      );
       rethrow;
     }
   }
@@ -530,8 +546,13 @@ class LeadScreenController extends ChangeNotifier {
         createdAt: finalCreatedAt,
       );
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadScreenController: Error fetching all leads: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchAllLeadsFromApi failed',
+      );
       rethrow;
     }
   }
@@ -558,8 +579,13 @@ class LeadScreenController extends ChangeNotifier {
       _removeLeadFromActiveLists(id);
 
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadScreenController: Error updating Loss of Sale lead: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateLossOfSaleLead failed',
+      );
       rethrow;
     }
   }
@@ -592,8 +618,13 @@ class LeadScreenController extends ChangeNotifier {
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print('LeadScreenController: Error updating Return lead: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateReturnLead failed',
+      );
       rethrow;
     }
   }
@@ -618,9 +649,14 @@ class LeadScreenController extends ChangeNotifier {
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       print(
         'LeadScreenController: Error updating Booking Confirmation lead: $e',
+      );
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateBookingConfirmationLead failed',
       );
       rethrow;
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 /// Shared controller for header state (store and date/date range)
 /// This is used across Home Screen, Lead Screen, and Report Screen
@@ -52,6 +53,10 @@ class HeaderController extends ChangeNotifier {
   void setSelectedStore(String store) {
     if (_selectedStore != store) {
       _selectedStore = store;
+      // Set store as custom key in Firebase Crashlytics
+      if (store != 'All Stores') {
+        FirebaseCrashlytics.instance.setCustomKey("store", store);
+      }
       notifyListeners();
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/report_model.dart';
@@ -555,9 +556,10 @@ class ReportController extends ChangeNotifier {
 
       _isLoadingReports = false;
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       _isLoadingReports = false;
       _reportsError = e.toString();
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchReports failed');
       notifyListeners();
       rethrow;
     }

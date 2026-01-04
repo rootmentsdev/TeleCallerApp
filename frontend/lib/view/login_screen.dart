@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
@@ -218,6 +219,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 );
 
                                 if (mounted) {
+                                  // Set Firebase Crashlytics user identification
+                                  FirebaseCrashlytics.instance
+                                      .setUserIdentifier(empId);
+                                  FirebaseCrashlytics.instance.setCustomKey(
+                                    "empId",
+                                    empId,
+                                  );
+
                                   // success
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

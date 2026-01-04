@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/model/booking_cofirmation_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
 
@@ -53,8 +54,9 @@ class BookingConfirmationController extends ChangeNotifier {
       print(
         'BookingConfirmationController: Total Booking Confirmation leads: ${_leads.length}',
       );
-    } catch (e) {
+    } catch (e, s) {
       _errorMessage = e.toString();
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchBookingConfirmationLeads failed');
       print(
         'BookingConfirmationController: Error while fetching Booking Confirmation leads: $e',
       );

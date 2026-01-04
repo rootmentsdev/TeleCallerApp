@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/utils/api_config.dart';
@@ -57,8 +58,9 @@ class ApiService {
           'Failed to load Loss of Sale leads: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching Loss of Sale leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getLossOfSaleLeads failed');
       rethrow;
     }
   }
@@ -78,7 +80,8 @@ class ApiService {
       } else {
         throw Exception('Failed to load Walk-in leads');
       }
-    } catch (e) {
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getWalkInLeads failed');
       rethrow;
     }
   }
@@ -131,8 +134,9 @@ class ApiService {
           'Failed to load Booking Confirmation leads: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching Booking Confirmation leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getBookingConfirmationLeads failed');
       rethrow;
     }
   }
@@ -186,7 +190,8 @@ class ApiService {
           'Failed to load Return leads: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getReturnLeads failed');
       rethrow;
     }
   }
@@ -221,7 +226,8 @@ class ApiService {
           'Failed to load Return lead: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getReturn failed');
       rethrow;
     }
   }
@@ -281,7 +287,8 @@ class ApiService {
           'Failed to update Return lead: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateReturn failed');
       rethrow;
     }
   }
@@ -366,8 +373,9 @@ class ApiService {
           'Failed to load all leads: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching all leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getAllLeads failed');
       rethrow;
     }
   }
@@ -507,8 +515,9 @@ class ApiService {
           );
         }
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Login error: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'loginUser failed');
       if (e is Exception) {
         rethrow;
       }
@@ -597,8 +606,9 @@ class ApiService {
         }
         throw Exception(errorMessage);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error updating Loss of Sale lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateLossOfSaleLead failed');
       rethrow;
     }
   }
@@ -728,8 +738,9 @@ class ApiService {
         }
         throw Exception(errorMessage);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error creating lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'createLead failed');
       rethrow;
     }
   }
@@ -862,8 +873,9 @@ class ApiService {
         }
         throw Exception(errorMessage);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error updating lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateLead failed');
       rethrow;
     }
   }
@@ -982,8 +994,9 @@ class ApiService {
         }
         throw Exception(errorMessage);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error updating Return lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateReturnLead failed');
       rethrow;
     }
   }
@@ -1078,8 +1091,9 @@ class ApiService {
         }
         throw Exception(errorMessage);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error updating Booking Confirmation lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateBookingConfirmationLead failed');
       rethrow;
     }
   }
@@ -1137,8 +1151,9 @@ class ApiService {
           'Failed to load reports: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching reports: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getReports failed');
       rethrow;
     }
   }
@@ -1172,8 +1187,9 @@ class ApiService {
       } else {
         throw Exception('Failed to load report: Status ${response.statusCode}');
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching report by ID: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getReportById failed');
       rethrow;
     }
   }
@@ -1216,8 +1232,9 @@ class ApiService {
           'Failed to load call summary: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching call summary: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getCallSummary failed');
       rethrow;
     }
   }
@@ -1261,8 +1278,9 @@ class ApiService {
           'Failed to load follow-up lead: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching follow-up lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getFollowUp failed');
       rethrow;
     }
   }
@@ -1381,8 +1399,9 @@ class ApiService {
         }
         throw Exception(errorMessage);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error updating follow-up lead: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'postFollowUp failed');
       rethrow;
     }
   }
@@ -1480,8 +1499,9 @@ class ApiService {
         }
         throw Exception(errorMessage);
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error moving lead to follow-up: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'moveLeadToFollowUp failed');
       rethrow;
     }
   }
@@ -1535,8 +1555,9 @@ class ApiService {
           'Failed to load follow-up leads: Status ${response.statusCode}',
         );
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error fetching follow-up leads: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getFollowUpLeads failed');
       rethrow;
     }
   }
@@ -1591,8 +1612,9 @@ class ApiService {
         await AuthService.clearAuth();
         return false;
       }
-    } catch (e) {
+    } catch (e, s) {
       print('ApiService: Error refreshing token: $e');
+      FirebaseCrashlytics.instance.recordError(e, s, reason: '_refreshToken failed');
     }
 
     return false;

@@ -1,9 +1,16 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // Kotlin plugin (use ONLY ONE)
+    id("org.jetbrains.kotlin.android")
+
+    // Flutter plugin (must come after Android & Kotlin)
     id("dev.flutter.flutter-gradle-plugin")
+
+    // Firebase plugins
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
+
 
 android {
     namespace = "com.example.telecaller_app"

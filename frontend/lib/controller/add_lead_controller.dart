@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
@@ -145,7 +146,8 @@ class AddLeadController extends ChangeNotifier {
       clearForm();
 
       return {'success': true, 'message': 'Lead added successfully'};
-    } catch (e) {
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'createLead failed');
       // Return error message
       return {
         'success': false,
