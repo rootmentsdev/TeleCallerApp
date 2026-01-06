@@ -878,7 +878,9 @@ class ApiService {
       }
       
       // Add call_duration if provided (backend expects number in seconds)
-      if (callDuration != null && callDuration > 0) {
+      // IMPORTANT: Include duration even if 0, as 0 is a valid duration for unanswered calls
+      // Backend needs duration 0 to create report entries
+      if (callDuration != null) {
         requestBody['call_duration'] = callDuration;
       }
 
@@ -1411,7 +1413,9 @@ class ApiService {
       };
 
       // Add call_duration if provided (backend expects number in seconds)
-      if (callDuration != null && callDuration > 0) {
+      // IMPORTANT: Include duration even if 0, as 0 is a valid duration for unanswered calls
+      // Backend needs duration 0 to create report entries
+      if (callDuration != null) {
         requestBody['call_duration'] = callDuration;
       }
 

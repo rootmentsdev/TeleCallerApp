@@ -30,7 +30,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     _callDuration = widget.contact["callDuration"] as int? ??
                     widget.contact["call_duration"] as int?;
     // Fetch latest call duration from backend if not already available
-    if (_callDuration == null || _callDuration == 0) {
+    // Note: Only fetch if duration is null (not if it's 0, as 0 is a valid duration for unanswered calls)
+    if (_callDuration == null) {
       _fetchCallDuration();
     }
   }
@@ -39,8 +40,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     final leadId = widget.contact["id"] as String?;
     if (leadId == null) return;
 
-    // If duration already exists in contact, use it and don't fetch
-    if (_callDuration != null && _callDuration! > 0) {
+    // If duration already exists in contact (including 0), use it and don't fetch
+    if (_callDuration != null) {
       return;
     }
 
@@ -341,7 +342,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
           "Call Duration",
           _isLoadingDuration
               ? "Loading..."
-              : (_callDuration != null && _callDuration! > 0
+              : (_callDuration != null
                   ? _formatCallDuration(_callDuration)
                   : "Not available"),
         ),

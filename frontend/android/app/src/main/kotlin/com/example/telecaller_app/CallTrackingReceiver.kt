@@ -348,8 +348,11 @@ class CallTrackingReceiver : BroadcastReceiver() {
                         logNumberCleaned == variantCleaned || logNumber == variant
                     }
                     
+                    // CRITICAL: Only use duration if call was answered (duration > 0 means call was answered)
+                    // Call log DURATION = answered call time ONLY (from when customer answered to call ended)
+                    // This does NOT include dialing time - it's exactly what we need
                     if (matches && ageMs < 90000 && duration > 0) { // Increased window to 90 seconds
-                        Log.d(TAG, "✅ Match found: duration=$duration, age=${ageMs}ms")
+                        Log.d(TAG, "✅ Match found: duration=$duration (answered time only), age=${ageMs}ms")
                         foundDuration = duration
                         break // Found match, exit loop
                     }

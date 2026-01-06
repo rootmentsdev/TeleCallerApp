@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
@@ -524,9 +523,8 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error fetching Booking Confirmation leads: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchBookingConfirmationLeadsFromApi failed');
       rethrow;
     }
   }
@@ -618,9 +616,8 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error fetching Loss of Sale leads: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchLossOfSaleLeadsFromApi failed');
       rethrow;
     }
   }
@@ -939,9 +936,8 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error fetching Return leads: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchReturnLeadsFromApi failed');
       rethrow;
     }
   }
@@ -992,9 +988,8 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error updating Loss of Sale lead: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateLossOfSaleLeadFromApi failed');
       rethrow;
     }
   }
@@ -1052,9 +1047,8 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error updating Return lead: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateReturnLeadFromApi failed');
       rethrow;
     }
   }
@@ -1102,9 +1096,8 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error updating Booking Confirmation lead: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateBookingConfirmationLeadFromApi failed');
       rethrow;
     }
   }
@@ -1152,15 +1145,51 @@ class LeadRepository extends ChangeNotifier {
         }
       }
 
-      // Remove existing follow-up leads (to avoid duplicates)
-      // BUT: Preserve follow-up leads that have follow-up dates set
+      // Debug: Log current state before fetch
+      final leadsBeforeFetch = _leads.length;
+      final followUpLeadsBeforeFetch = _leads
+          .where((lead) => lead.category == LeadConstants.categoryFollowUp)
+          .length;
+      print(
+        'LeadRepository: Before fetch - Total leads: $leadsBeforeFetch, Follow-up leads: $followUpLeadsBeforeFetch',
+      );
+
+      // Extract all IDs from API response to identify which leads to replace
+      final apiLeadIds = <String>{};
+      for (var leadData in leadsData) {
+        try {
+          final id = leadData['id']?.toString() ?? leadData['_id']?.toString();
+          if (id != null && id.isNotEmpty) {
+            apiLeadIds.add(id);
+          }
+        } catch (e) {
+          // Ignore parsing errors for ID extraction
+        }
+      }
+
+      print(
+        'LeadRepository: API returned ${leadsData.length} leads with ${apiLeadIds.length} unique IDs',
+      );
+
+      // Remove ALL existing follow-up leads to prevent duplicates
+      // Strategy: Remove leads that either:
+      // 1. Have category == "Follow Up", OR
+      // 2. Have an ID matching any ID from the API response
+      // This ensures that if a lead exists with a different category but is now a follow-up,
+      // it's correctly replaced
+      final removedCount = _leads.length;
       _leads.removeWhere(
         (lead) =>
-            lead.category == LeadConstants.categoryFollowUp &&
-            !lead.needsFollowUp, // Keep if it has follow-up date
+            lead.category == LeadConstants.categoryFollowUp ||
+            apiLeadIds.contains(lead.id),
+      );
+      final actuallyRemoved = removedCount - _leads.length;
+      print(
+        'LeadRepository: Removed $actuallyRemoved existing follow-up leads (category match or ID match)',
       );
 
       // Convert API data to LeadModel and add to repository
+      int addedCount = 0;
       int failedCount = 0;
 
       for (var leadData in leadsData) {
@@ -1183,6 +1212,7 @@ class LeadRepository extends ChangeNotifier {
               createdAt: lead.createdAt,
             );
             _leads.add(followUpLead);
+            addedCount++;
           } else {
             failedCount++;
           }
@@ -1192,15 +1222,26 @@ class LeadRepository extends ChangeNotifier {
         }
       }
 
+      // Debug: Log final state after fetch
+      final leadsAfterFetch = _leads.length;
+      final followUpLeadsAfterFetch = _leads
+          .where((lead) => lead.category == LeadConstants.categoryFollowUp)
+          .length;
+      print(
+        'LeadRepository: After fetch - Total leads: $leadsAfterFetch, Follow-up leads: $followUpLeadsAfterFetch',
+      );
+      print(
+        'LeadRepository: Added $addedCount new follow-up leads, failed to parse $failedCount',
+      );
+
       if (failedCount > 0) {
         print('LeadRepository: Failed to parse $failedCount follow-up leads');
       }
 
       await _saveLeads();
       notifyListeners();
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error fetching Follow-Up leads: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchFollowUpLeadsFromApi failed');
       rethrow;
     }
   }
@@ -1248,9 +1289,8 @@ class LeadRepository extends ChangeNotifier {
         );
         await updateLead(updatedLead);
       }
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error updating Follow-Up lead: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'updateFollowUpLeadFromApi failed');
       rethrow;
     }
   }
@@ -1390,9 +1430,8 @@ class LeadRepository extends ChangeNotifier {
 
       await _saveLeads();
       notifyListeners();
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error fetching all leads: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchAllLeadsFromApi failed');
       rethrow;
     }
   }
@@ -1424,9 +1463,8 @@ class LeadRepository extends ChangeNotifier {
       notifyListeners();
 
       print('LeadRepository: Successfully moved lead $id to report screen');
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error moving lead to report: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'moveLeadToReport failed');
       rethrow;
     }
   }
@@ -1454,9 +1492,8 @@ class LeadRepository extends ChangeNotifier {
       );
 
       return response;
-    } catch (e, s) {
+    } catch (e) {
       print('LeadRepository: Error fetching call summary from API: $e');
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchCallSummaryFromApi failed');
       rethrow;
     }
   }

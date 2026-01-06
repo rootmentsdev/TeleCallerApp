@@ -449,8 +449,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 lead.followUpDate ?? followUpDateFromContact;
             
             // Get call duration from the current call duration (in seconds)
+            // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
+            // Backend needs duration 0 to create report entries
             final callDurationToSend =
-                _callDurationSeconds > 0 ? _callDurationSeconds : null;
+                _callDurationSeconds >= 0 ? _callDurationSeconds : null;
             
             await repository.updateFollowUpLeadFromApi(
               id: leadId,
@@ -604,7 +606,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   remarksController.text.trim().isEmpty
                       ? null
                       : remarksController.text.trim(),
-              callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
+              // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
+              // Backend needs duration 0 to create report entries
+              callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : null,
               followUpDate: markAsFollowUp ? callDate : null,
               clearFollowUpDate: !markAsFollowUp && lead.followUpDate != null,
             );
@@ -740,9 +744,36 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 followUpDate:
                     markAsFollowUp ? followUpDate?.toIso8601String() : null,
                 functionDate: null,
-                callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
+                // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
+                // Backend needs duration 0 to create report entries
+                callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : null,
               );
               print('DetailsScreen: General lead updated successfully via API');
+
+              // Update local repository immediately to remove lead from lead screen if no longer uncalled
+              try {
+                final repository = LeadRepository();
+                final updatedLead = LeadModel(
+                  id: lead.id,
+                  name: lead.name,
+                  phone: lead.phone,
+                  brand: lead.brand,
+                  location: lead.location,
+                  leadStatus: selectedLeadStatus ?? lead.leadStatus ?? 'No Status',
+                  callStatus: selectedCallStatus ?? 'Not Called',
+                  followUpDate: markAsFollowUp ? followUpDate : lead.followUpDate,
+                  reason: lead.reason,
+                  category: lead.category,
+                  callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : lead.callDuration,
+                  createdAt: lead.createdAt,
+                  callCount: lead.callCount,
+                );
+                await repository.updateLead(updatedLead);
+                print('DetailsScreen: Local repository updated - lead will be removed from lead screen if no longer uncalled');
+              } catch (e) {
+                print('DetailsScreen: Error updating local repository: $e');
+                // Don't block navigation if local update fails
+              }
             }
 
             // Show success message
