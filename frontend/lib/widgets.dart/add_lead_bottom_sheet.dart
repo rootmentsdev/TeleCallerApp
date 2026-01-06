@@ -183,12 +183,15 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedLocation != null &&
-                              _selectedBrand != null &&
-                              (StoreLocations.brandStores[_selectedBrand!] ?? [])
-                                  .contains(_selectedLocation)
-                          ? _selectedLocation
-                          : null,
+                      value:
+                          _selectedLocation != null &&
+                                  _selectedBrand != null &&
+                                  (StoreLocations
+                                              .brandStores[_selectedBrand!] ??
+                                          [])
+                                      .contains(_selectedLocation)
+                              ? _selectedLocation
+                              : null,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Location',
@@ -198,14 +201,17 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: _selectedBrand == null
-                                ? const Color(0xFFCCCCCC)
-                                : const Color(0xFFE0E0E0),
+                            color:
+                                _selectedBrand == null
+                                    ? const Color(0xFFCCCCCC)
+                                    : const Color(0xFFE0E0E0),
                           ),
                         ),
                         disabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFCCCCCC)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCCCCCC),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -215,9 +221,10 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                           ),
                         ),
                         filled: _selectedBrand == null,
-                        fillColor: _selectedBrand == null
-                            ? const Color(0xFFF5F5F5)
-                            : Colors.white,
+                        fillColor:
+                            _selectedBrand == null
+                                ? const Color(0xFFF5F5F5)
+                                : Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 14,
@@ -241,12 +248,15 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                               : [],
                       selectedItemBuilder: (BuildContext context) {
                         if (_selectedBrand == null) return [];
-                        return (StoreLocations.brandStores[_selectedBrand!] ?? [])
-                            .map((item) => Text(
-                                  item,
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ))
+                        return (StoreLocations.brandStores[_selectedBrand!] ??
+                                [])
+                            .map(
+                              (item) => Text(
+                                item,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            )
                             .toList();
                       },
                       onChanged:
@@ -471,20 +481,12 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
           items.map((item) {
             return DropdownMenuItem(
               value: item,
-              child: Text(
-                item,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
+              child: Text(item, overflow: TextOverflow.ellipsis, maxLines: 1),
             );
           }).toList(),
       selectedItemBuilder: (BuildContext context) {
         return items.map((item) {
-          return Text(
-            item,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          );
+          return Text(item, overflow: TextOverflow.ellipsis, maxLines: 1);
         }).toList();
       },
       onChanged: isDisabled ? null : onChanged,
@@ -580,6 +582,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                 : _remarksController.text.trim(),
         followUpFlag: _markAsFollowUp,
         functionDate: _markAsFollowUp ? _followUpDate?.toIso8601String() : null,
+        callDuration: _callDuration,
       );
 
       print('AddLeadBottomSheet: API Response: $apiResponse');

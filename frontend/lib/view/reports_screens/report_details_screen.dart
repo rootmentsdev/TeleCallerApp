@@ -26,15 +26,23 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize with contact data if available
-    _callDuration = widget.contact["callDuration"] as int?;
-    // Fetch latest call duration from backend
-    _fetchCallDuration();
+    // Initialize with contact data if available (check both formats)
+    _callDuration = widget.contact["callDuration"] as int? ??
+                    widget.contact["call_duration"] as int?;
+    // Fetch latest call duration from backend if not already available
+    if (_callDuration == null || _callDuration == 0) {
+      _fetchCallDuration();
+    }
   }
 
   Future<void> _fetchCallDuration() async {
     final leadId = widget.contact["id"] as String?;
     if (leadId == null) return;
+
+    // If duration already exists in contact, use it and don't fetch
+    if (_callDuration != null && _callDuration! > 0) {
+      return;
+    }
 
     setState(() {
       _isLoadingDuration = true;
@@ -43,11 +51,17 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     try {
       final response = await _apiService.getReportById(leadId);
       
-      // Extract call_duration from response
+      print('ReportDetailsScreen: Report response: $response');
+      
+      // Extract call_duration from response - check multiple possible locations
       final callDuration = response["call_duration"] as int? ?? 
                           response["callDuration"] as int? ??
                           response["data"]?["call_duration"] as int? ??
-                          response["data"]?["callDuration"] as int?;
+                          response["data"]?["callDuration"] as int? ??
+                          response["report"]?["call_duration"] as int? ??
+                          response["report"]?["callDuration"] as int?;
+
+      print('ReportDetailsScreen: Extracted call duration: $callDuration');
 
       if (mounted) {
         setState(() {
@@ -191,7 +205,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                   ),
                                   const SizedBox(width: 12),
                                   // Call Duration Badge - Small Container
-                                  if (_callDuration != null && _callDuration! > 0)
+                                  if (_callDuration != null && _callDuration! > 0 || _isLoadingDuration)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 10,
@@ -225,16 +239,18 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                                     ),
                                                   ),
                                                 )
-                                              : Text(
-                                                  _formatCallDuration(_callDuration),
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.green[700],
-                                                    fontFamily:
-                                                        TextConstant.dmSansMedium,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
+                                              : (_callDuration != null && _callDuration! > 0
+                                                  ? Text(
+                                                      _formatCallDuration(_callDuration),
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: Colors.green[700],
+                                                        fontFamily:
+                                                            TextConstant.dmSansMedium,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    )
+                                                  : const SizedBox.shrink()),
                                         ],
                                       ),
                                     ),
@@ -318,6 +334,16 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
           "Remarks",
           contact["remarks"] ?? "No remarks",
           isMultiline: true,
+        ),
+        const SizedBox(height: 16),
+        // Call Duration field
+        _buildDetailRow(
+          "Call Duration",
+          _isLoadingDuration
+              ? "Loading..."
+              : (_callDuration != null && _callDuration! > 0
+                  ? _formatCallDuration(_callDuration)
+                  : "Not available"),
         ),
       ],
     );

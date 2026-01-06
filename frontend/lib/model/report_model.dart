@@ -12,6 +12,7 @@ class ReportModel {
   final Map<String, dynamic>? editedBy;
   final List<String>? changedFields;
   final String? note;
+  final int? callDuration; // Call duration from top-level API response
 
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -28,6 +29,7 @@ class ReportModel {
     this.editedBy,
     this.changedFields,
     this.note,
+    this.callDuration,
     required this.createdAt,
     required this.updatedAt,
     this.editedAt,
@@ -60,6 +62,8 @@ class ReportModel {
       "function_date": json["function_date"],
       "return_date": json["return_date"],
       "created_at": json["created_at"],
+      "call_duration": json["call_duration"], // Include call_duration from top level
+      "callDuration": json["callDuration"] ?? json["call_duration"], // Support both formats
     };
 
     return ReportModel(
@@ -85,6 +89,9 @@ class ReportModel {
               ? List<String>.from(json['changedFields'] as List)
               : null,
       note: json['note']?.toString(),
+      
+      // Get call_duration from top-level API response
+      callDuration: json['call_duration'] as int? ?? json['callDuration'] as int?,
 
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
@@ -112,7 +119,20 @@ class ReportModel {
   }
 
   // Helper for UI
-  Map<String, dynamic>? get leadData => leadSnapshot ?? afterSnapshot;
+  // Returns leadData with call_duration included from top-level if not in snapshot
+  Map<String, dynamic>? get leadData {
+    final data = leadSnapshot ?? afterSnapshot;
+    if (data != null && callDuration != null) {
+      // Ensure call_duration is included in leadData
+      final updatedData = Map<String, dynamic>.from(data);
+      if (!updatedData.containsKey('call_duration') && !updatedData.containsKey('callDuration')) {
+        updatedData['call_duration'] = callDuration;
+        updatedData['callDuration'] = callDuration;
+      }
+      return updatedData;
+    }
+    return data;
+  }
 }
 class PaginationInfo {
   final int page;

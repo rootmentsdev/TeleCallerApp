@@ -352,9 +352,12 @@ class ReportController extends ChangeNotifier {
               final reason =
                   leadData['reason']?.toString() ??
                   leadData['reason_collected_from_store']?.toString();
+              // Get call_duration from leadData (leadSnapshot/afterSnapshot) or from report model
+              // API response has call_duration at top level: {"call_duration": 2, ...}
               final callDuration =
                   leadData['callDuration'] as int? ??
-                  leadData['call_duration'] as int?;
+                  leadData['call_duration'] as int? ??
+                  report.callDuration; // Get from top-level report model
 
               // Parse dates
               DateTime? parseDate(dynamic dateValue) {

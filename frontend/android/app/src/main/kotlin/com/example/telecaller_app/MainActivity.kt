@@ -110,6 +110,36 @@ class MainActivity : FlutterActivity() {
             } else {
                 Log.e("MainActivity", "CALL_PHONE permission denied by user")
             }
+        } else if (requestCode == PERMISSIONS_REQUEST) {
+            // Handle general permissions request (CALL_PHONE, READ_PHONE_STATE, READ_CALL_LOG)
+            for (i in permissions.indices) {
+                val permission = permissions[i]
+                val granted = i < grantResults.size && grantResults[i] == PackageManager.PERMISSION_GRANTED
+                
+                when (permission) {
+                    Manifest.permission.CALL_PHONE -> {
+                        if (granted) {
+                            Log.d("MainActivity", "CALL_PHONE permission granted")
+                        } else {
+                            Log.e("MainActivity", "CALL_PHONE permission denied")
+                        }
+                    }
+                    Manifest.permission.READ_PHONE_STATE -> {
+                        if (granted) {
+                            Log.d("MainActivity", "READ_PHONE_STATE permission granted")
+                        } else {
+                            Log.e("MainActivity", "READ_PHONE_STATE permission denied")
+                        }
+                    }
+                    Manifest.permission.READ_CALL_LOG -> {
+                        if (granted) {
+                            Log.d("MainActivity", "READ_CALL_LOG permission granted - call duration tracking enabled")
+                        } else {
+                            Log.e("MainActivity", "READ_CALL_LOG permission denied - call duration will not be available")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -126,9 +156,17 @@ class MainActivity : FlutterActivity() {
         if (ContextCompat.checkSelfPermission(this, PHONE_STATE_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
             neededPermissions.add(PHONE_STATE_PERMISSION)
         }
+        // CRITICAL: Request READ_CALL_LOG permission to read call duration
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(Manifest.permission.READ_CALL_LOG)
+            Log.d("MainActivity", "READ_CALL_LOG permission needed - will request")
+        }
 
         if (neededPermissions.isNotEmpty()) {
+            Log.d("MainActivity", "Requesting permissions: $neededPermissions")
             ActivityCompat.requestPermissions(this, neededPermissions.toTypedArray(), PERMISSIONS_REQUEST)
+        } else {
+            Log.d("MainActivity", "All permissions already granted")
         }
     }
 }
