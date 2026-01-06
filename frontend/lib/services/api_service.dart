@@ -682,38 +682,23 @@ class ApiService {
         'source': source,
         'lead_status': 'No Status',
         'call_status': 'Not Called',
-        'follow_up_flag': followUpFlag,
-        'call_duration': callDuration ?? 0,
-        'rating': 0,
-        'closing_status': null,
       };
 
       // Add optional fields if provided
       if (remarks != null && remarks.isNotEmpty) {
         requestBody['remarks'] = remarks;
-      } else {
-        requestBody['remarks'] = null;
       }
-
-      if (followUpFlag && functionDate != null && functionDate.isNotEmpty) {
-        requestBody['follow_up_date'] = functionDate;
+      if (followUpFlag) {
+        requestBody['follow_up_flag'] = followUpFlag;
       }
-
       if (functionDate != null && functionDate.isNotEmpty) {
         requestBody['function_date'] = functionDate;
       }
-
       if (bookingNumber != null && bookingNumber.isNotEmpty) {
         requestBody['booking_number'] = bookingNumber;
       }
-
       if (securityAmount > 0) {
         requestBody['security_amount'] = securityAmount;
-      }
-
-      // Add reason_collected_from_store if remarks provided
-      if (remarks != null && remarks.isNotEmpty) {
-        requestBody['reason_collected_from_store'] = remarks;
       }
 
       final requestBodyJson = json.encode(requestBody);
@@ -767,7 +752,6 @@ class ApiService {
             functionDate: functionDate,
             bookingNumber: bookingNumber,
             securityAmount: securityAmount,
-            callDuration: callDuration,
           );
         } else {
           // Token refresh failed, session expired
@@ -819,7 +803,6 @@ class ApiService {
     String? functionDate,
     String? bookingNumber,
     int securityAmount = 0,
-    int? callDuration, // Call duration in seconds
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/leads/$id');
 
@@ -843,11 +826,10 @@ class ApiService {
 
       // Add optional fields if provided
       // Only include remarks if user provided input (not empty string)
-      // Backend expects remarks to be a string, so omit it if null/empty
       if (remarks != null && remarks.trim().isNotEmpty) {
         requestBody['remarks'] = remarks.trim();
       }
-      // Don't include remarks field at all if null/empty (backend will use default or existing value)
+      // Don't include remarks field if empty - backend will reject null values
 
       // When follow_up_flag is true, follow_up_date is REQUIRED by backend
       if (followUpFlag) {
@@ -875,11 +857,6 @@ class ApiService {
       }
       if (securityAmount > 0) {
         requestBody['security_amount'] = securityAmount;
-      }
-      
-      // Add call_duration if provided (backend expects number in seconds)
-      if (callDuration != null && callDuration > 0) {
-        requestBody['call_duration'] = callDuration;
       }
 
       final requestBodyJson = json.encode(requestBody);

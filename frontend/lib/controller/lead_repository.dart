@@ -1152,16 +1152,38 @@ class LeadRepository extends ChangeNotifier {
         }
       }
 
-      // Remove existing follow-up leads (to avoid duplicates)
-      // BUT: Preserve follow-up leads that have follow-up dates set
+      // Extract IDs from API response first to remove any existing leads with these IDs
+      // This prevents duplicates even if leads exist with different categories
+      final Set<String> followUpLeadIds = {};
+      for (var leadData in leadsData) {
+        try {
+          final id = leadData['id']?.toString() ?? 
+                     leadData['_id']?.toString();
+          if (id != null && id.isNotEmpty) {
+            followUpLeadIds.add(id);
+          }
+        } catch (e) {
+          // Ignore parsing errors here - will be handled in main loop
+        }
+      }
+
+      // Remove ALL existing follow-up leads AND any leads with matching IDs
+      // Backend is the source of truth - we replace local data with backend data
+      // This prevents duplicates when the same lead is fetched multiple times
+      final removedCount = _leads.length;
       _leads.removeWhere(
-        (lead) =>
-            lead.category == LeadConstants.categoryFollowUp &&
-            !lead.needsFollowUp, // Keep if it has follow-up date
+        (lead) => 
+            lead.category == LeadConstants.categoryFollowUp ||
+            followUpLeadIds.contains(lead.id),
+      );
+      final removedFollowUpLeads = removedCount - _leads.length;
+      print(
+        'LeadRepository: Removed $removedFollowUpLeads existing leads (follow-up category or matching IDs) before fetching fresh data',
       );
 
       // Convert API data to LeadModel and add to repository
       int failedCount = 0;
+      int addedCount = 0;
 
       for (var leadData in leadsData) {
         try {
@@ -1182,7 +1204,18 @@ class LeadRepository extends ChangeNotifier {
               callDuration: lead.callDuration,
               createdAt: lead.createdAt,
             );
-            _leads.add(followUpLead);
+            
+            // Check if a lead with this ID already exists (shouldn't happen after removal, but safety check)
+            final existingIndex = _leads.indexWhere((l) => l.id == lead.id);
+            if (existingIndex >= 0) {
+              // Update existing lead instead of adding duplicate
+              _leads[existingIndex] = followUpLead;
+              print('LeadRepository: Updated existing follow-up lead: ${lead.id}');
+            } else {
+              // Add new follow-up lead
+              _leads.add(followUpLead);
+              addedCount++;
+            }
           } else {
             failedCount++;
           }
@@ -1191,6 +1224,10 @@ class LeadRepository extends ChangeNotifier {
           print('LeadRepository: Error parsing follow-up lead: $e');
         }
       }
+
+      print(
+        'LeadRepository: Follow-up leads fetch complete - Added: $addedCount, Failed: $failedCount',
+      );
 
       if (failedCount > 0) {
         print('LeadRepository: Failed to parse $failedCount follow-up leads');

@@ -352,12 +352,9 @@ class ReportController extends ChangeNotifier {
               final reason =
                   leadData['reason']?.toString() ??
                   leadData['reason_collected_from_store']?.toString();
-              // Get call_duration from leadData (leadSnapshot/afterSnapshot) or from report model
-              // API response has call_duration at top level: {"call_duration": 2, ...}
               final callDuration =
                   leadData['callDuration'] as int? ??
-                  leadData['call_duration'] as int? ??
-                  report.callDuration; // Get from top-level report model
+                  leadData['call_duration'] as int?;
 
               // Parse dates
               DateTime? parseDate(dynamic dateValue) {
@@ -425,14 +422,17 @@ class ReportController extends ChangeNotifier {
             .toList();
 
     // For "All Calls" tab (index 0), also include newly created leads from local repository
+    // BUT ONLY if they have been called (not "Not Called" status)
     if (_selectedCallTypeIndex == 0) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
       final localLeads = _repository.getLeadsByDate(selectedDate);
 
       // Add newly created leads that aren't already in the API reports
+      // AND have been called (not "Not Called" status)
       final reportIds = filteredReports.map((r) => r["id"]).toSet();
       for (final lead in localLeads) {
-        if (!reportIds.contains(lead.id)) {
+        if (!reportIds.contains(lead.id) &&
+            LeadConstants.isCalledStatus(lead.callStatus)) {
           filteredReports.add({
             "id": lead.id,
             "name": lead.name,
@@ -562,7 +562,11 @@ class ReportController extends ChangeNotifier {
     } catch (e, s) {
       _isLoadingReports = false;
       _reportsError = e.toString();
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchReports failed');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchReports failed',
+      );
       notifyListeners();
       rethrow;
     }

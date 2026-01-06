@@ -198,21 +198,21 @@ class _DetailsScreenState extends State<DetailsScreen> {
       final duration = callTrackingController.lastDuration!;
       final phoneNumber = callTrackingController.lastPhone ?? '';
       final contactPhone = widget.contact["phone"] as String? ?? "";
-      
+
       final callWasAnswered = callTrackingController.lastCallWasAnswered;
       print(
         'DetailsScreen: Call tracking update - duration=$duration, phone=$phoneNumber, callWasAnswered=$callWasAnswered',
       );
-      
+
       // Check if this call matches our contact OR if we're currently in a call
       // This handles cases where phone number is "Unknown" but we just made a call
       final phoneMatches = _isPhoneNumberMatch(phoneNumber, contactPhone);
       final isCurrentlyInCall = _isCallActive || _hasCalled;
-      
+
       print(
         'DetailsScreen: phoneMatches=$phoneMatches, isCurrentlyInCall=$isCurrentlyInCall',
       );
-      
+
       // Update if phone matches OR if we're currently in a call (handles "Unknown" phone number case)
       if (phoneMatches || isCurrentlyInCall) {
         print(
@@ -235,7 +235,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 selectedCallStatus = "Connected";
               }
             });
-            
+
             // Also update the lead repository immediately
             _updateLeadDurationInRepository(duration);
           } else {
@@ -257,11 +257,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
               print(
                 'DetailsScreen: Call ended with 0 duration (not answered or no previous duration)',
               );
-            setState(() {
-              _isCallActive = false;
-              _callDurationSeconds = 0;
-              _isWaitingForDuration = false;
-            });
+              setState(() {
+                _isCallActive = false;
+                _callDurationSeconds = 0;
+                _isWaitingForDuration = false;
+              });
             }
           }
         } else {
@@ -326,7 +326,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
         // Increment call count if duration > 0 (call was answered)
         final newCallCount =
             duration > 0 ? (lead.callCount + 1) : lead.callCount;
-        
+
         final updatedLead = LeadModel(
           id: lead.id,
           name: lead.name,
@@ -416,17 +416,17 @@ class _DetailsScreenState extends State<DetailsScreen> {
         // Check if lead is from FollowUps collection (has followUpDate) AND call was made (not "Not Called")
         final newCallStatus =
             selectedCallStatus ?? lead.callStatus ?? 'Not Called';
-        
+
         // Check followUpDate from lead object OR from contact map (fallback)
         final followUpDateFromContact =
             widget.contact["followUpDate"] as DateTime?;
         final hasFollowUpDate =
             lead.needsFollowUp || followUpDateFromContact != null;
-        
+
         final isFollowUpLead =
             hasFollowUpDate; // Has followUpDate means it's in FollowUps collection
         final callWasMade = !LeadConstants.isUncalledStatus(newCallStatus);
-        
+
         print('DetailsScreen: Checking follow-up update conditions:');
         print(
           'DetailsScreen: lead.needsFollowUp=${lead.needsFollowUp}, followUpDateFromContact=$followUpDateFromContact',
@@ -434,7 +434,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
         print(
           'DetailsScreen: isFollowUpLead=$isFollowUpLead, newCallStatus=$newCallStatus, callWasMade=$callWasMade',
         );
-        
+
         if (isFollowUpLead && callWasMade) {
           try {
             print('DetailsScreen: Updating follow-up lead via API');
@@ -447,11 +447,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
             // Use followUpDate from lead object or fallback to contact map
             final followUpDateToUse =
                 lead.followUpDate ?? followUpDateFromContact;
-            
+
             // Get call duration from the current call duration (in seconds)
             final callDurationToSend =
                 _callDurationSeconds > 0 ? _callDurationSeconds : null;
-            
+
             await repository.updateFollowUpLeadFromApi(
               id: leadId,
               callStatus: newCallStatus,
@@ -740,7 +740,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 followUpDate:
                     markAsFollowUp ? followUpDate?.toIso8601String() : null,
                 functionDate: null,
-                callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
               );
               print('DetailsScreen: General lead updated successfully via API');
             }
@@ -1150,6 +1149,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                               }
                             });
                           },
+                          
                         ),
                         // Custom Reason TextField (shown when "Other" is selected)
                         if (selectedReason == "Other") ...[

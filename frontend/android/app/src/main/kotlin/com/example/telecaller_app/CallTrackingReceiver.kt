@@ -162,6 +162,9 @@ class CallTrackingReceiver : BroadcastReceiver() {
 
         Thread {
             try {
+                // Wait longer for call log to be written (Android needs time)
+                Thread.sleep(3000)
+
                 // CRITICAL: Validate session ID before sending event
                 // If session ID changed, a new call started - discard this event
                 if (sessionIdSnapshot != currentCallSessionId) {
@@ -170,76 +173,38 @@ class CallTrackingReceiver : BroadcastReceiver() {
                 }
 
                 var number = phoneSnapshot
+                if (number == null || number == "Unknown") {
+                    number = getLatestCallNumber(context)
+                    Log.d(TAG, "📱 Got number from call log: $number")
+                }
+
                 var duration = 0
 
                 // Only fetch duration if call was answered
                 if (offhookSnapshot && answerTimeSnapshot > 0) {
-                    // CRITICAL: We MUST get duration from call log ONLY
-                    // Call log DURATION field = actual answered call time (from when customer answered to call ended)
-                    // This is EXACTLY what we want - only the answered call duration, NOT dialing time
-                    // Calculated duration (OFFHOOK to IDLE) includes dialing time and is INACCURATE
-                    // NEVER use calculated duration - only use call log DURATION field
-                    
-                    // Progressive retry strategy: Wait longer each time for call log to be written
-                    // Android can take 5-20 seconds to write call log entries on some devices
-                    val maxRetries = 15
-                    var retryCount = 0
-                    
-                    while (duration == 0 && retryCount < maxRetries) {
-                        // Progressive wait: 3s, 4s, 5s, 6s, 7s, etc. (up to 17s)
-                        val waitTime = if (retryCount == 0) 3000 else (4000 + retryCount * 1000)
-                        if (retryCount > 0) {
-                            Log.d(TAG, "⏳ Retry #$retryCount: Waiting ${waitTime}ms for call log to be written...")
-                            Thread.sleep(waitTime.toLong())
-                        } else {
-                            // First attempt: wait 3 seconds
-                            Thread.sleep(3000)
-                        }
-                        
-                        // Check session ID after wait
-                        if (sessionIdSnapshot != currentCallSessionId) {
-                            Log.w(TAG, "⚠️ Session ID changed during wait - new call started, discarding")
-                            return@Thread
-                        }
-                        
-                        // Try to get phone number from call log if we don't have it
-                        if (number == null || number == "Unknown") {
-                            val logNumber = getLatestCallNumber(context)
-                            if (logNumber != null && logNumber != "Unknown") {
-                                number = logNumber
-                                Log.d(TAG, "📱 Got number from call log: $number")
-                            }
-                        }
-                        
-                        // PRIORITY 1: Try latest call log entry (works even without phone number)
-                        duration = getDurationFromLatestCall(context, outgoingSnapshot)
-                        if (duration > 0) {
-                            Log.d(TAG, "✅ Got duration from latest call log: ${duration}s (attempt ${retryCount + 1})")
-                            break
-                        }
-                        
-                        // PRIORITY 2: Try by phone number if we have it
-                        if (duration == 0 && number != null && number != "Unknown") {
-                            duration = getDurationFromCallLog(context, number)
-                            if (duration > 0) {
-                                Log.d(TAG, "✅ Got duration by phone number: ${duration}s for $number (attempt ${retryCount + 1})")
-                                break
-                            }
-                        }
-                        
-                        retryCount++
+                    // Try to get duration from call log by phone number first
+                    if (number != null && number != "Unknown") {
+                        duration = getDurationFromCallLog(context, number)
+                        Log.d(TAG, "📊 First read: duration=$duration for $number (call was answered)")
                     }
-                    
-                    // CRITICAL: NEVER use calculated duration - it includes dialing time and is INACCURATE
-                    // We ONLY want answered call time (from when customer answered to call ended)
-                    // Call log DURATION field provides exactly this - answered time only
-                    // If call log is unavailable, duration MUST stay 0 - DO NOT calculate duration
+
+                    // If still 0, try to get duration by time (most recent call)
                     if (duration == 0) {
-                        Log.w(TAG, "⚠️ Could not read call duration from call log after $retryCount attempts. Call log may not be written yet or call was not answered. Duration will be 0 (NOT using calculated duration).")
-                        // Duration stays 0 - ABSOLUTELY DO NOT use calculated duration
-                        // Calculated duration = (endTime - answerTime) includes dialing time and is WRONG
-                    } else {
-                        Log.d(TAG, "✅ Final: $number, duration=${duration}s (from call log DURATION field - accurate answered time only, NO dialing time)")
+                        Log.w(TAG, "⏳ Duration still 0, trying to get from most recent call log entry...")
+                        Thread.sleep(2000)
+                        duration = getDurationFromLatestCall(context)
+                        Log.d(TAG, "📊 Read from latest call: duration=$duration")
+                    }
+
+                    // If still 0, use calculated time as fallback (using actual call end time)
+                    if (duration == 0 && endTimeSnapshot > 0 && answerTimeSnapshot > 0) {
+                        val calculatedDuration = ((endTimeSnapshot - answerTimeSnapshot) / 1000).toInt()
+                        if (calculatedDuration > 0) {
+                            duration = calculatedDuration
+                            Log.d(TAG, "⚠️ Using calculated duration: ${duration}s (from OFFHOOK to IDLE, call log was 0)")
+                        }
+                    } else if (duration > 0) {
+                        Log.d(TAG, "✅ Final: $number, duration=${duration}s (from call log)")
                     }
                 } else {
                     // Call was not answered - duration is 0
@@ -292,142 +257,76 @@ class CallTrackingReceiver : BroadcastReceiver() {
     }
 
     private fun getDurationFromCallLog(context: Context, phoneNumber: String?): Int {
-        if (!hasCallLogPermission(context)) {
-            Log.w(TAG, "⚠️ No call log permission")
-            return 0
-        }
-        if (phoneNumber == null || phoneNumber == "Unknown") {
-            Log.w(TAG, "⚠️ Invalid phone number: $phoneNumber")
-            return 0
-        }
+        if (!hasCallLogPermission(context)) return 0
+        if (phoneNumber == null || phoneNumber == "Unknown") return 0
 
         return try {
-            val cleanedNumber = cleanNumber(phoneNumber)
-            Log.d(TAG, "🔍 Searching call log for: original=$phoneNumber, cleaned=$cleanedNumber")
-            
-            // Try multiple number formats to match call log entries
-            val numberVariants = mutableListOf<String>()
-            numberVariants.add(phoneNumber)
-            numberVariants.add(cleanedNumber)
-            
-            // Add variants with country code
-            if (cleanedNumber.length == 10) {
-                numberVariants.add("91$cleanedNumber")
-                numberVariants.add("0$cleanedNumber")
-            }
-            
-            // Remove duplicates
-            val uniqueVariants = numberVariants.distinct()
-            Log.d(TAG, "🔍 Trying number variants: $uniqueVariants")
-            
             val cursor = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
                 arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE, CallLog.Calls.NUMBER),
-                null, // No filter - we'll check manually
-                null,
+                "${CallLog.Calls.NUMBER} = ? OR ${CallLog.Calls.NUMBER} = ?",
+                arrayOf(phoneNumber, cleanNumber(phoneNumber)),
                 "${CallLog.Calls.DATE} DESC"
             )
 
-            var foundDuration = 0
             cursor?.use {
-                // Check first 5 most recent calls to find matching number
-                var checkedCount = 0
-                while (it.moveToNext() && checkedCount < 5) {
-                    checkedCount++
-                    val logNumber = it.getString(it.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
-                    val logNumberCleaned = cleanNumber(logNumber ?: "")
+                if (it.moveToFirst()) {
                     val duration = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.DURATION))
                     val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
                     val ageMs = System.currentTimeMillis() - date
                     
-                    Log.d(TAG, "📞 Checking call log entry: number=$logNumber, cleaned=$logNumberCleaned, duration=$duration, age=${ageMs}ms")
-                    
-                    // Check if this entry matches our phone number (any variant)
-                    val matches = uniqueVariants.any { variant ->
-                        val variantCleaned = cleanNumber(variant)
-                        logNumberCleaned == variantCleaned || logNumber == variant
+                    // Only use if call is recent (within last 60 seconds) and duration > 0
+                    if (ageMs < 60000 && duration > 0) {
+                        Log.d(TAG, "📞 Call log: duration=$duration, age=${ageMs}ms")
+                        duration
+                    } else {
+                        Log.w(TAG, "⚠️ Call log entry too old or duration=0: age=${ageMs}ms, duration=$duration")
+                        0
                     }
-                    
-                    if (matches && ageMs < 90000 && duration > 0) { // Increased window to 90 seconds
-                        Log.d(TAG, "✅ Match found: duration=$duration, age=${ageMs}ms")
-                        foundDuration = duration
-                        break // Found match, exit loop
-                    }
+                } else {
+                    Log.w(TAG, "⚠️ No call log entry found for $phoneNumber")
+                    0
                 }
-                
-                if (foundDuration == 0) {
-                    Log.w(TAG, "⚠️ No matching call log entry found for $phoneNumber (checked $checkedCount entries)")
-                }
-            }
-            
-            foundDuration
+            } ?: 0
         } catch (e: Exception) {
-            Log.e(TAG, "Call log error: ${e.message}", e)
+            Log.e(TAG, "Call log error: ${e.message}")
             0
         }
     }
 
-    private fun getDurationFromLatestCall(context: Context, isOutgoing: Boolean): Int {
-        if (!hasCallLogPermission(context)) {
-            Log.w(TAG, "⚠️ No call log permission for latest call")
-            return 0
-        }
+    private fun getDurationFromLatestCall(context: Context): Int {
+        if (!hasCallLogPermission(context)) return 0
 
         return try {
             val cursor = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
-                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE, CallLog.Calls.TYPE, CallLog.Calls.NUMBER),
+                arrayOf(CallLog.Calls.DURATION, CallLog.Calls.DATE),
                 null,
                 null,
                 "${CallLog.Calls.DATE} DESC"
             )
 
-            var foundDuration = 0
             cursor?.use {
-                // Check first 10 most recent calls to find the most recent one with duration > 0
-                var checkedCount = 0
-                while (it.moveToNext() && checkedCount < 10) {
-                    checkedCount++
+                if (it.moveToFirst()) {
                     val duration = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.DURATION))
                     val date = it.getLong(it.getColumnIndexOrThrow(CallLog.Calls.DATE))
-                    val callType = it.getInt(it.getColumnIndexOrThrow(CallLog.Calls.TYPE))
-                    val logNumber = it.getString(it.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
                     val ageMs = System.currentTimeMillis() - date
-                    val ageSeconds = ageMs / 1000
                     
-                    // CRITICAL: Only use INCOMING or OUTGOING calls (not MISSED)
-                    // Call type: 1=INCOMING, 2=OUTGOING, 3=MISSED
-                    val isAnsweredCall = callType == CallLog.Calls.INCOMING_TYPE || callType == CallLog.Calls.OUTGOING_TYPE
-                    
-                    Log.d(TAG, "📞 Checking latest call log entry #$checkedCount: duration=$duration, age=${ageSeconds}s, type=$callType, number=$logNumber, isAnswered=$isAnsweredCall")
-                    
-                    // Use if call is recent (within last 300 seconds), duration > 0, and call was answered
-                    // Increased window to 300 seconds to account for delayed call log writes on some devices
-                    // Call log DURATION field = answered call time ONLY (from when customer answered to call ended)
-                    // This does NOT include dialing time - it's exactly what we need
-                    if (ageMs < 300000 && duration > 0 && isAnsweredCall) {
-                        Log.d(TAG, "✅ Latest call log match: duration=$duration (answered time only - customer answered to call ended), age=${ageSeconds}s, type=$callType")
-                        foundDuration = duration
-                        break // Found valid duration, exit loop
+                    // Only use if call is recent (within last 60 seconds) and duration > 0
+                    if (ageMs < 60000 && duration > 0) {
+                        Log.d(TAG, "📞 Latest call log: duration=$duration, age=${ageMs}ms")
+                        duration
                     } else {
-                        if (!isAnsweredCall) {
-                            Log.d(TAG, "⏭️ Skipping entry: type=$callType (missed call, not answered)")
-                        } else if (duration == 0) {
-                            Log.d(TAG, "⏭️ Skipping entry: duration=0 (call log still writing or not answered)")
-                        } else {
-                            Log.d(TAG, "⏭️ Skipping entry: age=${ageSeconds}s too old")
-                        }
+                        Log.w(TAG, "⚠️ Latest call log entry too old or duration=0: age=${ageMs}ms, duration=$duration")
+                        0
                     }
+                } else {
+                    Log.w(TAG, "⚠️ No call log entries found")
+                    0
                 }
-                
-                if (foundDuration == 0) {
-                    Log.w(TAG, "⚠️ No recent call log entry with valid duration found (checked $checkedCount entries)")
-                }
-            }
-            
-            foundDuration
+            } ?: 0
         } catch (e: Exception) {
-            Log.e(TAG, "Latest call log error: ${e.message}", e)
+            Log.e(TAG, "Latest call log error: ${e.message}")
             0
         }
     }
