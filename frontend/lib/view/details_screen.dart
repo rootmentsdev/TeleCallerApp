@@ -1149,6 +1149,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                               }
                             });
                           },
+                          
                         ),
                         // Custom Reason TextField (shown when "Other" is selected)
                         if (selectedReason == "Other") ...[

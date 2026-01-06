@@ -156,44 +156,59 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
+    final horizontalPadding = isTablet ? 24.0 : 16.0;
+    final verticalPadding = isTablet ? 16.0 : 12.0;
+
     return Scaffold(
       backgroundColor: ColorConstant.primaryColor,
       body: Column(
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: verticalPadding,
+            ),
             child: Row(
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                  child: Icon(
+                    Icons.arrow_back_ios,
+                    color: Colors.white,
+                    size: isTablet ? 24 : 20,
+                  ),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Return Lead",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: TextConstant.dmSansMedium,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Return Lead",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: TextConstant.dmSansMedium,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.lead.location ?? "Store",
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 14,
-                        fontFamily: TextConstant.dmSansRegular,
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.lead.location ?? "Store",
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 14,
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const Spacer(),
               ],
             ),
           ),
@@ -345,21 +360,25 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                             _buildDetailRow(
                               "Booking Number",
                               returnData['bookingNumber'] ?? "N/A",
+                              isTablet,
                             ),
                             const SizedBox(height: 16),
                             _buildDetailRow(
                               "Return Date",
                               returnData['returnDate'] ?? "N/A",
+                              isTablet,
                             ),
                             const SizedBox(height: 16),
                             _buildDetailRow(
                               "Security Amount",
                               returnData['securityAmount'] ?? "N/A",
+                              isTablet,
                             ),
                             const SizedBox(height: 16),
                             _buildDetailRow(
                               "Refund Status",
                               returnData['refundStatus'] ?? "N/A",
+                              isTablet,
                             ),
                             const SizedBox(height: 24),
 
@@ -585,14 +604,14 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, bool isTablet) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: isTablet ? 13 : 12,
             fontWeight: FontWeight.w500,
             color: Colors.grey[600],
             fontFamily: TextConstant.dmSansRegular,
@@ -602,7 +621,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
         Text(
           value,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: isTablet ? 15 : 14,
             color: Colors.grey[800],
             fontFamily: TextConstant.dmSansMedium,
           ),

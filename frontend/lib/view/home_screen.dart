@@ -42,9 +42,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initializeClarity() {
-    final config = ClarityConfig(projectId: "uw421dl7m3");
+    // final config = ClarityConfig(projectId: "uw421dl7m3");
+    final config = ClarityConfig(
+  projectId: "uw421dl7m3",
+  logLevel: LogLevel.Verbose,  // Enable verbose logging in release mode
+);
 
-    Clarity.initialize(context, config);
+Clarity.initialize(context, config);
+
+
+    // Clarity.initialize(context, config);
   }
 
   @override
@@ -241,3 +248,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

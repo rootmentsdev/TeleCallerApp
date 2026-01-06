@@ -58,10 +58,15 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       _callDuration = widget.prefilledCallDuration;
     }
 
-    // Set default values
-    _selectedCallStatus =
-        LeadConstants
-            .callStatusConnected; // Default to Connected since call was made
+    // Set default call status based on whether this is from incoming call or manual add
+    if (widget.prefilledCallDuration != null) {
+      // From incoming call - default to Connected
+      _selectedCallStatus = LeadConstants.callStatusConnected;
+    } else {
+      // Manual add - default to Not Called (and field will be disabled)
+      _selectedCallStatus = LeadConstants.callStatusNotCalled;
+    }
+
     _selectedLeadStatus = LeadConstants.leadStatusNewLead;
 
     // Set default location from header controller
@@ -183,12 +188,15 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedLocation != null &&
-                              _selectedBrand != null &&
-                              (StoreLocations.brandStores[_selectedBrand!] ?? [])
-                                  .contains(_selectedLocation)
-                          ? _selectedLocation
-                          : null,
+                      value:
+                          _selectedLocation != null &&
+                                  _selectedBrand != null &&
+                                  (StoreLocations
+                                              .brandStores[_selectedBrand!] ??
+                                          [])
+                                      .contains(_selectedLocation)
+                              ? _selectedLocation
+                              : null,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Location',
@@ -198,14 +206,17 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: _selectedBrand == null
-                                ? const Color(0xFFCCCCCC)
-                                : const Color(0xFFE0E0E0),
+                            color:
+                                _selectedBrand == null
+                                    ? const Color(0xFFCCCCCC)
+                                    : const Color(0xFFE0E0E0),
                           ),
                         ),
                         disabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFCCCCCC)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCCCCCC),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -215,9 +226,10 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                           ),
                         ),
                         filled: _selectedBrand == null,
-                        fillColor: _selectedBrand == null
-                            ? const Color(0xFFF5F5F5)
-                            : Colors.white,
+                        fillColor:
+                            _selectedBrand == null
+                                ? const Color(0xFFF5F5F5)
+                                : Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 14,
@@ -241,12 +253,15 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                               : [],
                       selectedItemBuilder: (BuildContext context) {
                         if (_selectedBrand == null) return [];
-                        return (StoreLocations.brandStores[_selectedBrand!] ?? [])
-                            .map((item) => Text(
-                                  item,
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ))
+                        return (StoreLocations.brandStores[_selectedBrand!] ??
+                                [])
+                            .map(
+                              (item) => Text(
+                                item,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            )
                             .toList();
                       },
                       onChanged:
@@ -298,16 +313,19 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                       value: _selectedCallStatus,
                       label: 'Call Status',
                       items: [
+                        LeadConstants.callStatusNotCalled,
                         LeadConstants.callStatusConnected,
                         LeadConstants.callStatusNotConnected,
                         LeadConstants.callStatusCallBackLater,
-                        LeadConstants.callStatusNotCalled,
+                        LeadConstants.callStatusConfirmed,
+                        LeadConstants.callStatusCancelled,
                       ],
                       onChanged: (value) {
                         setState(() {
                           _selectedCallStatus = value;
                         });
                       },
+                      enabled: widget.prefilledCallDuration != null,
                     ),
                   ),
                 ],
@@ -428,10 +446,11 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     required String label,
     required List<String> items,
     required Function(String?) onChanged,
+    bool enabled = true,
   }) {
     // Ensure value is in items list, otherwise set to null
     final validValue = (value != null && items.contains(value)) ? value : null;
-    final isDisabled = items.isEmpty;
+    final isDisabled = items.isEmpty || !enabled;
 
     return DropdownButtonFormField<String>(
       value: validValue,
@@ -471,20 +490,12 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
           items.map((item) {
             return DropdownMenuItem(
               value: item,
-              child: Text(
-                item,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
+              child: Text(item, overflow: TextOverflow.ellipsis, maxLines: 1),
             );
           }).toList(),
       selectedItemBuilder: (BuildContext context) {
         return items.map((item) {
-          return Text(
-            item,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          );
+          return Text(item, overflow: TextOverflow.ellipsis, maxLines: 1);
         }).toList();
       },
       onChanged: isDisabled ? null : onChanged,
