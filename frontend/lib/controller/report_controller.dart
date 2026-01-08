@@ -185,7 +185,7 @@ class ReportController extends ChangeNotifier {
   }
 
   // Get filtered leads based on selected call type
-  // Backend-driven: Uses API reports for tabs 0-4, local repository for tabs 5-6
+  // Backend-driven: Uses API reports for tabs 0-3, local repository for tab 6 (Follow Up)
   // No local filtering - backend returns filtered data
   List<Map<String, dynamic>> getFilteredLeads() {
     final store = _headerController?.selectedStore;
@@ -196,10 +196,19 @@ class ReportController extends ChangeNotifier {
     // Special handling for tab 6 (Follow-up Leads)
     // Shows: Only leads with followUpDate set
     if (_selectedCallTypeIndex == 6) {
-      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-
-      // Get all leads from repository
-      List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
+      // Get leads by date range if available, otherwise by single date
+      List<dynamic> allLeads;
+      if (_headerController?.isRangeMode == true &&
+          _headerController?.dateRangeStart != null &&
+          _headerController?.dateRangeEnd != null) {
+        allLeads = _repository.getLeadsByDateRange(
+          _headerController!.dateRangeStart!,
+          _headerController!.dateRangeEnd!,
+        );
+      } else {
+        final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+        allLeads = _repository.getLeadsByDate(selectedDate);
+      }
 
       // Filter only leads with follow-up date set
       List<dynamic> followUpLeads =
@@ -240,56 +249,7 @@ class ReportController extends ChangeNotifier {
       }).toList();
     }
 
-    // Special handling for tab 5 (New Leads)
-    // Shows: Only newly added leads (not called yet)
-    if (_selectedCallTypeIndex == 5) {
-      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-
-      // Get all leads from repository
-      List<dynamic> allLeads = _repository.getLeadsByDate(selectedDate);
-
-      // Filter only newly added leads (not called yet)
-      List<dynamic> enquiryLeads =
-          allLeads.where((lead) {
-            // Include only leads that have NOT been called
-            final isNotCalled = !LeadConstants.isCalledStatus(lead.callStatus);
-            return isNotCalled;
-          }).toList();
-
-      // Filter by store if specified
-      if (storeFilter != null) {
-        final location = StoreLocations.resolveSelection(storeFilter).location;
-        enquiryLeads =
-            enquiryLeads.where((lead) {
-              final leadLocation = lead.location ?? '';
-              return leadLocation.toLowerCase().contains(
-                    location.toLowerCase(),
-                  ) ||
-                  location.toLowerCase().contains(leadLocation.toLowerCase());
-            }).toList();
-      }
-
-      // Convert to contact format
-      return enquiryLeads.map((lead) {
-        return {
-          "id": lead.id,
-          "name": lead.name,
-          "phone": lead.phone,
-          "date": _formatDate(lead.createdAt),
-          "callDate": _formatDate(lead.createdAt),
-          "storeName": lead.location ?? lead.brand ?? "Not available",
-          "type": "enquiry",
-          "callStatus": lead.callStatus ?? "Not called yet",
-          "leadStatus": lead.leadStatus,
-          "reason": lead.reason,
-          "followUpDate": lead.followUpDate?.toIso8601String(),
-          "callDuration": lead.callDuration,
-          "remarks": lead.reason ?? "",
-        };
-      }).toList();
-    }
-
-    // For tabs 0-4, use API reports
+    // For tabs 0-3, use API reports
     // Backend already filters by leadType based on tab selection
     // Filter to only show leads that have been called (called status)
     List<Map<String, dynamic>> filteredReports =
@@ -427,8 +387,19 @@ class ReportController extends ChangeNotifier {
     // For "All Calls" tab (index 0), also include newly created leads from local repository
     // BUT ONLY if they have been called (completed calls)
     if (_selectedCallTypeIndex == 0) {
-      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-      final localLeads = _repository.getLeadsByDate(selectedDate);
+      // Get leads by date range if available, otherwise by single date
+      List<dynamic> localLeads;
+      if (_headerController?.isRangeMode == true &&
+          _headerController?.dateRangeStart != null &&
+          _headerController?.dateRangeEnd != null) {
+        localLeads = _repository.getLeadsByDateRange(
+          _headerController!.dateRangeStart!,
+          _headerController!.dateRangeEnd!,
+        );
+      } else {
+        final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+        localLeads = _repository.getLeadsByDate(selectedDate);
+      }
 
       // Filter to only include leads that have been called
       final calledLocalLeads = localLeads
@@ -471,8 +442,8 @@ class ReportController extends ChangeNotifier {
 
     // NOTE: Backend already filters by leadType based on selected tab
     // No need to filter locally - trust backend
-    // Tabs 0-4 are handled by API with leadType parameter
-    // Tabs 5-6 are handled by local repository filtering above
+    // Tabs 0-3 are handled by API with leadType parameter
+    // Tab 6 (Follow Up) is handled by local repository filtering above
 
     return filteredReports;
   }
@@ -508,8 +479,6 @@ class ReportController extends ChangeNotifier {
         return "Booking Confirmation calls";
       case 4:
         return "Follow Up Calls";
-      case 5:
-        return "New Leads";
       default:
         return "All calls";
     }
@@ -580,15 +549,27 @@ class ReportController extends ChangeNotifier {
     // Note: Store filter is not directly supported by reports API
     // We'll filter by store in getFilteredLeads
 
-    // Get selected date from header controller
-    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-
     // Format date to YYYY-MM-DD for API
     String formatDate(DateTime date) {
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
 
-    final dateStr = formatDate(selectedDate);
+    // Use date range if available, otherwise use single selected date
+    String dateFromStr;
+    String dateToStr;
+    
+    if (_headerController?.isRangeMode == true &&
+        _headerController?.dateRangeStart != null &&
+        _headerController?.dateRangeEnd != null) {
+      // Use date range
+      dateFromStr = formatDate(_headerController!.dateRangeStart!);
+      dateToStr = formatDate(_headerController!.dateRangeEnd!);
+    } else {
+      // Use single date
+      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+      dateFromStr = formatDate(selectedDate);
+      dateToStr = formatDate(selectedDate);
+    }
 
     // Determine leadType based on selected call type index
     String? leadType;
@@ -617,8 +598,8 @@ class ReportController extends ChangeNotifier {
 
     await fetchReportsFromApi(
       leadType: leadType,
-      dateFrom: dateStr,
-      dateTo: dateStr,
+      dateFrom: dateFromStr,
+      dateTo: dateToStr,
       page: 1,
       limit: 100, // Increased limit to get more reports
     );

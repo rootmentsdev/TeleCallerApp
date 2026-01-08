@@ -195,11 +195,15 @@ class LeadRepository extends ChangeNotifier {
 
   // ========== Filtered Queries ==========
 
-  List<LeadModel> getLeadsByCategory(String? category, {DateTime? date}) {
+  List<LeadModel> getLeadsByCategory(String? category, {DateTime? date, DateTime? dateStart, DateTime? dateEnd}) {
     List<LeadModel> filtered = _leads;
 
     // Apply date filter if provided
-    if (date != null) {
+    if (dateStart != null && dateEnd != null) {
+      // Use date range filter
+      filtered = getLeadsByDateRange(dateStart, dateEnd);
+    } else if (date != null) {
+      // Use single date filter
       filtered =
           filtered.where((lead) {
             final leadDate = lead.createdAt;
@@ -278,6 +282,21 @@ class LeadRepository extends ChangeNotifier {
       return leadDate.year == date.year &&
           leadDate.month == date.month &&
           leadDate.day == date.day;
+    }).toList();
+  }
+
+  /// Get leads within a date range (inclusive)
+  List<LeadModel> getLeadsByDateRange(DateTime startDate, DateTime endDate) {
+    // Normalize dates to start of day for comparison
+    final start = DateTime.utc(startDate.year, startDate.month, startDate.day);
+    final end = DateTime.utc(endDate.year, endDate.month, endDate.day);
+    
+    return _leads.where((lead) {
+      final leadDate = lead.createdAt;
+      final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
+      // Check if lead date is within range (inclusive)
+      return normalizedLeadDate.compareTo(start) >= 0 && 
+             normalizedLeadDate.compareTo(end) <= 0;
     }).toList();
   }
 

@@ -46,20 +46,46 @@ class LeadScreenController extends ChangeNotifier {
     // Get current store and date filters
     final store = _headerController?.selectedStore;
     final storeParam = (store == null || store == 'All Stores') ? null : store;
-    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    
+    // Use date range if available, otherwise use single date
+    String? dateFrom;
+    String? dateTo;
+    DateTime? singleDate;
+    
+    if (_headerController?.isRangeMode == true &&
+        _headerController?.dateRangeStart != null &&
+        _headerController?.dateRangeEnd != null) {
+      dateFrom = _formatDateForApi(_headerController!.dateRangeStart!);
+      dateTo = _formatDateForApi(_headerController!.dateRangeEnd!);
+    } else {
+      singleDate = _headerController?.selectedDate ?? DateTime.now();
+    }
 
     // Fetch all lead types with store and date filters when header changes
     // This ensures all tabs show filtered data
     if (storeParam != null) {
       // Fetch all leads (for "All Calls" tab)
       // GET /api/pages/leads?store=Suitor Guy - Edappally&enquiryDateFrom=2024-12-08&enquiryDateTo=2024-12-08
-      fetchAllLeadsFromApi(store: storeParam, date: selectedDate).catchError((
-        e,
-      ) {
-        print(
-          'LeadScreenController: Error fetching all leads on header change: $e',
-        );
-      });
+      if (dateFrom != null && dateTo != null) {
+        fetchAllLeadsFromApi(
+          store: storeParam,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
+          dateField: 'createdAt',
+        ).catchError((e) {
+          print(
+            'LeadScreenController: Error fetching all leads on header change: $e',
+          );
+        });
+      } else {
+        fetchAllLeadsFromApi(store: storeParam, date: singleDate).catchError((
+          e,
+        ) {
+          print(
+            'LeadScreenController: Error fetching all leads on header change: $e',
+          );
+        });
+      }
 
       // Fetch Loss of Sale leads with store filter
       // GET /api/pages/leads?leadType=lossOfSale&store=Suitor Guy - Edappally
@@ -86,14 +112,29 @@ class LeadScreenController extends ChangeNotifier {
       });
     } else {
       // If "All Stores" is selected, fetch without store filter but with date filter
-      print(
-        'LeadScreenController: Fetching leads for "All Stores" with date: ${_formatDateForApi(selectedDate)}',
-      );
-      fetchAllLeadsFromApi(date: selectedDate).catchError((e) {
+      if (dateFrom != null && dateTo != null) {
         print(
-          'LeadScreenController: Error fetching all leads (no store filter): $e',
+          'LeadScreenController: Fetching leads for "All Stores" with date range: $dateFrom to $dateTo',
         );
-      });
+        fetchAllLeadsFromApi(
+          dateFrom: dateFrom,
+          dateTo: dateTo,
+          dateField: 'createdAt',
+        ).catchError((e) {
+          print(
+            'LeadScreenController: Error fetching all leads (no store filter): $e',
+          );
+        });
+      } else {
+        print(
+          'LeadScreenController: Fetching leads for "All Stores" with date: ${_formatDateForApi(singleDate!)}',
+        );
+        fetchAllLeadsFromApi(date: singleDate).catchError((e) {
+          print(
+            'LeadScreenController: Error fetching all leads (no store filter): $e',
+          );
+        });
+      }
       // Note: Category-specific API calls don't support date filters,
       // so they will fetch leads from all dates. The date filtering
       // is handled locally in getUncalledLeadsCount() and getFilteredLeads()
@@ -202,20 +243,50 @@ class LeadScreenController extends ChangeNotifier {
     //   return leads.length;
     // }
     int getUncalledLeadsCount({String? category}) {
-      final date = _headerController?.selectedDate ?? DateTime.now();
+      // Use date range if available, otherwise use single date
+      DateTime? date;
+      DateTime? dateStart;
+      DateTime? dateEnd;
+      
+      if (_headerController?.isRangeMode == true &&
+          _headerController?.dateRangeStart != null &&
+          _headerController?.dateRangeEnd != null) {
+        dateStart = _headerController!.dateRangeStart;
+        dateEnd = _headerController!.dateRangeEnd;
+      } else {
+        date = _headerController?.selectedDate ?? DateTime.now();
+      }
 
       // STEP 1: Get ALL leads first (don't filter by category/date yet)
       // This ensures we have the full dataset before filtering
       List<LeadModel> allLeads = _repository.allLeads;
 
       // STEP 2: Filter by date FIRST (critical for "All Stores" with date filter)
-      List<LeadModel> leads =
-          allLeads.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
+      List<LeadModel> leads;
+      if (dateStart != null && dateEnd != null) {
+        // Filter by date range
+        final start = dateStart!;
+        final end = dateEnd!;
+        leads = allLeads.where((lead) {
+          final leadDate = lead.createdAt;
+          final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
+          final normalizedStart = DateTime.utc(start.year, start.month, start.day);
+          final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+          return normalizedLeadDate.compareTo(normalizedStart) >= 0 && 
+                 normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+        }).toList();
+      } else if (date != null) {
+        // Filter by single date
+        final selectedDate = date;
+        leads = allLeads.where((lead) {
+          final leadDate = lead.createdAt;
+          return leadDate.year == selectedDate.year &&
+              leadDate.month == selectedDate.month &&
+              leadDate.day == selectedDate.day;
+        }).toList();
+      } else {
+        leads = allLeads;
+      }
 
       // STEP 3: Filter by category if specified
       if (category != null) {
@@ -291,12 +362,27 @@ class LeadScreenController extends ChangeNotifier {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
 
     final store = _headerController?.selectedStore;
-    final date = _headerController?.selectedDate ?? DateTime.now();
+    
+    // Use date range if available, otherwise use single date
+    DateTime? date;
+    DateTime? dateStart;
+    DateTime? dateEnd;
+    
+    if (_headerController?.isRangeMode == true &&
+        _headerController?.dateRangeStart != null &&
+        _headerController?.dateRangeEnd != null) {
+      dateStart = _headerController!.dateRangeStart;
+      dateEnd = _headerController!.dateRangeEnd;
+    } else {
+      date = _headerController?.selectedDate ?? DateTime.now();
+    }
 
     // Get leads filtered by category, store, and date
     List<LeadModel> filteredLeads = _repository.getLeadsByCategory(
       category,
       date: date,
+      dateStart: dateStart,
+      dateEnd: dateEnd,
     );
 
     // Debug: Print initial lead count
@@ -318,18 +404,34 @@ class LeadScreenController extends ChangeNotifier {
     }
 
     // Filter by date - but for All Calls, Loss of Sale, Return, and Booking Confirmation, show all leads (date filter is handled by API)
-    // For other categories, filter by selected date
+    // For other categories, filter by selected date or date range
     if (_selectedCallTypeIndex != 0 &&
         _selectedCallTypeIndex != 1 &&
         _selectedCallTypeIndex != 2 &&
         _selectedCallTypeIndex != 3) {
-      filteredLeads =
-          filteredLeads.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
+      if (dateStart != null && dateEnd != null) {
+        // Filter by date range
+        final start = dateStart!;
+        final end = dateEnd!;
+        filteredLeads = filteredLeads.where((lead) {
+          final leadDate = lead.createdAt;
+          final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
+          final normalizedStart = DateTime.utc(start.year, start.month, start.day);
+          final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+          return normalizedLeadDate.compareTo(normalizedStart) >= 0 && 
+                 normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+        }).toList();
+      } else if (date != null) {
+        // Filter by single date
+        final selectedDate = date;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
+      }
     }
 
     // Filter out leads that have been called (only show uncalled leads)

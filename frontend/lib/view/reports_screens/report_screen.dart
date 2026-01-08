@@ -84,7 +84,7 @@ class _ReportScreenState extends State<ReportScreen> {
       builder: (context, headerController, reportController, child) {
         final currentCallList = reportController.getFilteredLeads();
         // Tabs with their corresponding icons
-        // Index mapping: 0=All Calls, 1=Loss of Sale, 2=Return Calls, 3=Booking Confirmation, 4=New Leads
+        // Index mapping: 0=All Calls, 1=Loss of Sale, 2=Return Calls, 3=Booking Confirmation
         final tabs = [
           {"title": "All Calls", "icon": Icons.people_alt_outlined}, // Index 0
           {"title": "Loss of Sale", "icon": Icons.trending_down}, // Index 1
@@ -93,7 +93,6 @@ class _ReportScreenState extends State<ReportScreen> {
             "title": "Booking Confirmation",
             "icon": Icons.flag_outlined,
           }, // Index 3
-          {"title": "New Leads", "icon": Icons.person_add_outlined}, // Index 4
         ];
 
         return Scaffold(
@@ -265,8 +264,6 @@ class _ReportScreenState extends State<ReportScreen> {
                                 ? "No Return calls found"
                                 : reportController.selectedCallTypeIndex == 3
                                 ? "No Booking confirmation calls found"
-                                : reportController.selectedCallTypeIndex == 4
-                                ? "No new leads found"
                                 : "No calls found",
                             style: TextStyle(
                               fontFamily: TextConstant.dmSansRegular,

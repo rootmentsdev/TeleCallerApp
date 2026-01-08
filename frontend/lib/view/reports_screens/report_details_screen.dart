@@ -105,9 +105,6 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       case 4:
         category = "Just Dial";
         break;
-      case 5:
-        category = "New Leads";
-        break;
       case 6:
         category = "Follow-up";
         break;
