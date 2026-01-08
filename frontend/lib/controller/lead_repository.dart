@@ -43,7 +43,12 @@ class LeadRepository extends ChangeNotifier {
   }
 
   List<LeadModel> get followUpLeads {
-    return _leads.where((lead) => lead.needsFollowUp).toList();
+    // IMPORTANT: Only return leads with category "Follow Up" (from backend follow-up collection)
+    // Do NOT return leads that just have followUpDate set but are not in the follow-up collection
+    // This prevents duplicates where a lead exists both in local storage and in backend follow-up collection
+    return _leads
+        .where((lead) => lead.category == LeadConstants.categoryFollowUp)
+        .toList();
   }
 
   List<LeadModel> get todayFollowUps {
@@ -135,6 +140,19 @@ class LeadRepository extends ChangeNotifier {
     _leads.removeWhere((lead) => lead.id == id);
     await _saveLeads();
     notifyListeners();
+  }
+
+  /// Remove a lead by phone number (useful when ID might differ after backend update)
+  Future<void> removeLeadByPhone(String phoneNumber) async {
+    await ensureInitialized();
+    final removedCount = _leads.length;
+    _leads.removeWhere((lead) => lead.phone == phoneNumber);
+    final remainingCount = _leads.length;
+    if (removedCount != remainingCount) {
+      print('LeadRepository: Removed ${removedCount - remainingCount} lead(s) with phone number: $phoneNumber');
+      await _saveLeads();
+      notifyListeners();
+    }
   }
 
   Future<void> updateLead(LeadModel updatedLead) async {
@@ -1061,6 +1079,7 @@ class LeadRepository extends ChangeNotifier {
     bool? followUpFlag,
     DateTime? callDate,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
       await ensureInitialized();
@@ -1072,6 +1091,7 @@ class LeadRepository extends ChangeNotifier {
         followUpFlag: followUpFlag,
         callDate: callDate,
         remarks: remarks,
+        callDuration: callDuration,
       );
 
       // Update local lead if it exists
@@ -1091,7 +1111,7 @@ class LeadRepository extends ChangeNotifier {
                   : (followUpFlag == false ? null : lead.followUpDate),
           reason: remarks ?? lead.reason,
           category: lead.category,
-          callDuration: lead.callDuration,
+          callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
         );
         await updateLead(updatedLead);
@@ -1154,38 +1174,49 @@ class LeadRepository extends ChangeNotifier {
         'LeadRepository: Before fetch - Total leads: $leadsBeforeFetch, Follow-up leads: $followUpLeadsBeforeFetch',
       );
 
-      // Extract all IDs from API response to identify which leads to replace
+      // Extract all IDs and phone numbers from API response to identify which leads to replace
       final apiLeadIds = <String>{};
+      final apiPhoneNumbers = <String>{};
       for (var leadData in leadsData) {
         try {
           final id = leadData['id']?.toString() ?? leadData['_id']?.toString();
           if (id != null && id.isNotEmpty) {
             apiLeadIds.add(id);
           }
+          // Also extract phone number to match leads that were moved to follow-up
+          // (backend creates new lead with new ID, but same phone number)
+          final phone = leadData['phone_number']?.toString() ?? 
+                       leadData['phone']?.toString() ?? 
+                       leadData['phoneNumber']?.toString();
+          if (phone != null && phone.isNotEmpty) {
+            apiPhoneNumbers.add(phone.trim());
+          }
         } catch (e) {
-          // Ignore parsing errors for ID extraction
+          // Ignore parsing errors for ID/phone extraction
         }
       }
 
       print(
-        'LeadRepository: API returned ${leadsData.length} leads with ${apiLeadIds.length} unique IDs',
+        'LeadRepository: API returned ${leadsData.length} leads with ${apiLeadIds.length} unique IDs and ${apiPhoneNumbers.length} unique phone numbers',
       );
 
       // Remove ALL existing follow-up leads to prevent duplicates
-      // Strategy: Remove leads that either:
+      // Strategy: Remove leads that:
       // 1. Have category == "Follow Up", OR
-      // 2. Have an ID matching any ID from the API response
-      // This ensures that if a lead exists with a different category but is now a follow-up,
-      // it's correctly replaced
+      // 2. Have an ID matching any ID from the API response, OR
+      // 3. Have a phone number matching any phone number from the API response
+      // This ensures that if a lead was moved to follow-up (backend creates new lead with new ID),
+      // the original lead with the same phone number is removed
       final removedCount = _leads.length;
       _leads.removeWhere(
         (lead) =>
             lead.category == LeadConstants.categoryFollowUp ||
-            apiLeadIds.contains(lead.id),
+            apiLeadIds.contains(lead.id) ||
+            (lead.phone.isNotEmpty && apiPhoneNumbers.contains(lead.phone.trim())),
       );
       final actuallyRemoved = removedCount - _leads.length;
       print(
-        'LeadRepository: Removed $actuallyRemoved existing follow-up leads (category match or ID match)',
+        'LeadRepository: Removed $actuallyRemoved existing leads (category match, ID match, or phone number match)',
       );
 
       // Convert API data to LeadModel and add to repository
@@ -1371,19 +1402,31 @@ class LeadRepository extends ChangeNotifier {
       // If page is specified, we might want to merge/update existing leads
       // Otherwise, replace all leads with fresh data from API
       // BUT: Preserve called leads and follow-up leads so they remain available for reports screen
+      // EXCEPT: Don't preserve called return leads or booking confirmation leads (they've been moved to reports)
       if (page == null || page == 1) {
         // Store called leads and follow-up leads before clearing
+        // Exclude called return leads and booking confirmation leads (moved to reports)
         final preservedLeads =
             _leads
                 .where(
-                  (lead) =>
-                      LeadConstants.isCalledStatus(lead.callStatus) ||
-                      lead.needsFollowUp,
+                  (lead) {
+                    final isReturnLead = lead.category == LeadConstants.categoryRentOut;
+                    final isBookingConfirmationLead = lead.category == LeadConstants.categoryBookingConfirmation;
+                    final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+
+                    // Don't preserve called return leads or booking confirmation leads
+                    if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
+                      return false;
+                    }
+
+                    // Preserve other called leads and follow-up leads
+                    return isCalled || lead.needsFollowUp;
+                  },
                 )
                 .toList();
 
         print(
-          'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh',
+          'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh (excluding called return/booking confirmation leads)',
         );
 
         _leads.clear();
@@ -1394,11 +1437,24 @@ class LeadRepository extends ChangeNotifier {
 
       // Convert API data to LeadModel and add to repository
       int failedCount = 0;
+      int skippedCalledCount = 0;
 
       for (var leadData in leadsData) {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
+            // Skip return leads and booking confirmation leads that have been called
+            // These leads have been moved to reports and should not appear in the leads list
+            final isReturnLead = lead.category == LeadConstants.categoryRentOut;
+            final isBookingConfirmationLead = lead.category == LeadConstants.categoryBookingConfirmation;
+            final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+
+            if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
+              skippedCalledCount++;
+              print('LeadRepository: Skipping called ${lead.category} lead: ${lead.name} (${lead.phone}) - moved to reports');
+              continue;
+            }
+
             // Check if lead already exists (by ID) to avoid duplicates
             final existingIndex = _leads.indexWhere((l) => l.id == lead.id);
             if (existingIndex != -1) {
@@ -1415,6 +1471,10 @@ class LeadRepository extends ChangeNotifier {
           failedCount++;
           print('LeadRepository: Error parsing lead: $e');
         }
+      }
+
+      if (skippedCalledCount > 0) {
+        print('LeadRepository: Skipped $skippedCalledCount called return/booking confirmation leads (moved to reports)');
       }
 
       if (failedCount > 0) {

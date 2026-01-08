@@ -260,6 +260,9 @@ class ApiService {
     DateTime? callDate,
     int? rating,
     String? remarks,
+    int? callDuration,
+    bool? followUpFlag,
+    DateTime? followUpDate,
   }) async {
     final url = Uri.parse(ApiConfig.updateReturn(id));
 
@@ -271,22 +274,48 @@ class ApiService {
       }
 
       // Prepare request body
-      final requestBody = <String, dynamic>{};
-      if (callStatus != null) requestBody['call_status'] = callStatus;
-      if (leadStatus != null) requestBody['lead_status'] = leadStatus;
+      // IMPORTANT: Always include call_status and lead_status (backend may require these)
+      final requestBody = <String, dynamic>{
+        'call_status': callStatus ?? 'Not Called',
+        'lead_status': leadStatus ?? 'No Status',
+      };
+      
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();
       }
-      if (rating != null) requestBody['rating'] = rating;
-      if (remarks != null) requestBody['remarks'] = remarks;
+      if (rating != null && rating > 0) {
+        requestBody['rating'] = rating;
+      }
+      // Only include remarks if it's not null and not empty (backend validation requires string, not null)
+      if (remarks != null && remarks.trim().isNotEmpty) {
+        requestBody['remarks'] = remarks.trim();
+      }
+      // IMPORTANT: Include duration even if 0, as 0 is a valid duration for unanswered calls
+      // Backend needs duration 0 to create report entries
+      if (callDuration != null) {
+        requestBody['call_duration'] = callDuration;
+      }
+      
+      // Handle follow-up flag and date
+      if (followUpFlag != null) {
+        requestBody['follow_up_flag'] = followUpFlag;
+        if (followUpFlag && followUpDate != null) {
+          requestBody['follow_up_date'] = followUpDate.toIso8601String();
+        }
+      } else if (followUpDate != null) {
+        // If followUpDate is provided without flag, set flag to true
+        requestBody['follow_up_flag'] = true;
+        requestBody['follow_up_date'] = followUpDate.toIso8601String();
+      }
 
       final requestBodyJson = json.encode(requestBody);
 
       print('ApiService: Updating Return lead');
-      print('ApiService: URL => $url');
+      print('ApiService: POST URL => $url');
       print('ApiService: Request body => $requestBodyJson');
 
-      final response = await http.put(
+      // IMPORTANT: API documentation shows POST method, not PUT
+      final response = await http.post(
         url,
         headers: headers,
         body: requestBodyJson,
@@ -295,19 +324,49 @@ class ApiService {
       print('ApiService: Update response status: ${response.statusCode}');
       print('ApiService: Update response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
         return decoded is Map<String, dynamic> ? decoded : {};
+      } else if (response.statusCode == 400) {
+        // Validation error - try to get detailed error message
+        String errorMessage = 'Validation error. Please check your input.';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
       } else if (response.statusCode == 404) {
         throw Exception('Return lead not found');
       } else {
-        throw Exception(
-          'Failed to update Return lead: Status ${response.statusCode}',
-        );
+        // Try to parse error message from response
+        String errorMessage =
+            'Failed to update Return lead: Status ${response.statusCode}';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
+          }
+        } catch (e) {
+          print('ApiService: Could not parse error response: $e');
+        }
+        throw Exception(errorMessage);
       }
     } catch (e, s) {
+      print('ApiService: Error updating Return lead: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -972,9 +1031,11 @@ class ApiService {
       }
 
       // Prepare request body
-      final requestBody = <String, dynamic>{};
-      if (callStatus != null) requestBody['call_status'] = callStatus;
-      if (leadStatus != null) requestBody['lead_status'] = leadStatus;
+      // IMPORTANT: Always include call_status and lead_status (backend may require these)
+      final requestBody = <String, dynamic>{
+        'call_status': callStatus ?? 'Not Called',
+        'lead_status': leadStatus ?? 'No Status',
+      };
 
       // Handle follow-up flag and date logic
       if (clearFollowUpDate == true) {
@@ -998,8 +1059,15 @@ class ApiService {
         requestBody['call_date'] = callDate.toIso8601String();
       }
       if (rating != null) requestBody['rating'] = rating;
-      if (remarks != null) requestBody['remarks'] = remarks;
-      if (callDuration != null) requestBody['call_duration'] = callDuration;
+      // Only include remarks if it's not null and not empty (backend validation requires string, not null)
+      if (remarks != null && remarks.trim().isNotEmpty) {
+        requestBody['remarks'] = remarks.trim();
+      }
+      // IMPORTANT: Include duration even if 0, as 0 is a valid duration for unanswered calls
+      // Backend needs duration 0 to create report entries
+      if (callDuration != null) {
+        requestBody['call_duration'] = callDuration;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 
@@ -1084,6 +1152,7 @@ class ApiService {
     bool? followUpFlag,
     DateTime? callDate,
     String? remarks,
+    int? callDuration,
   }) async {
     final url = Uri.parse(ApiConfig.updateBookingConfirmation(id));
 
@@ -1095,9 +1164,12 @@ class ApiService {
       }
 
       // Prepare request body
-      final requestBody = <String, dynamic>{};
-      if (callStatus != null) requestBody['call_status'] = callStatus;
-      if (leadStatus != null) requestBody['lead_status'] = leadStatus;
+      // IMPORTANT: Always include call_status and lead_status (backend may require these)
+      final requestBody = <String, dynamic>{
+        'call_status': callStatus ?? 'Not Called',
+        'lead_status': leadStatus ?? 'No Status',
+      };
+      
       if (followUpFlag != null) {
         requestBody['follow_up_flag'] = followUpFlag;
         // When follow_up_flag is true, send follow_up_date (required by backend)
@@ -1108,7 +1180,15 @@ class ApiService {
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();
       }
-      if (remarks != null) requestBody['remarks'] = remarks;
+      // Only include remarks if it's not null and not empty (backend validation requires string, not null)
+      if (remarks != null && remarks.trim().isNotEmpty) {
+        requestBody['remarks'] = remarks.trim();
+      }
+      // IMPORTANT: Include duration even if 0, as 0 is a valid duration for unanswered calls
+      // Backend needs duration 0 to create report entries
+      if (callDuration != null) {
+        requestBody['call_duration'] = callDuration;
+      }
 
       final requestBodyJson = json.encode(requestBody);
 

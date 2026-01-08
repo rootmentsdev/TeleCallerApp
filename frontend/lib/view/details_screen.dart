@@ -11,6 +11,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/format_helper.dart';
+import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
 
@@ -48,6 +49,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
   bool _hasCalled = false; // Track if call was initiated from lead screen
   bool _isWaitingForDuration =
       false; // Track if waiting for call log to write duration
+  bool _isSaving = false; // Track if save operation is in progress
 
   final List<Map<String, dynamic>> callSummary = [
     {
@@ -106,7 +108,29 @@ class _DetailsScreenState extends State<DetailsScreen> {
     "Follow Up Required",
   ];
 
+  // Check if this is a follow-up lead
+  bool get isFollowUpLead {
+    final followUpDate = widget.contact["followUpDate"] as DateTime?;
+    final category = widget.contact["category"] as String?;
+    return followUpDate != null || category == "Follow Up";
+  }
+
+  // Get category name for follow-up screen
+  String get followUpCategory {
+    final category = widget.contact["category"] as String?;
+    if (category == "Loss of Sales") return "Loss of Sale";
+    if (category == "Return") return "Return";
+    if (category == "Booking confirmation") return "Booking Confirmation";
+    if (category == "Just Dial") return "Just Dial Enquiry";
+    return category ?? "Follow Up";
+  }
+
   String get screenTitle {
+    // Check if it's a follow-up lead
+    if (isFollowUpLead) {
+      return "Follow Up | $followUpCategory";
+    }
+
     // Check if it's a return call
     if (widget.contact["isRentout"] == true) {
       return "Return Call";
@@ -125,14 +149,26 @@ class _DetailsScreenState extends State<DetailsScreen> {
   }
 
   Color get iconColor {
+    // Purple for follow-up leads
+    if (isFollowUpLead) {
+      return const Color(0xFF7C5DFF);
+    }
     return callSummary[widget.callTypeIndex]["iconColor"] as Color;
   }
 
   Color get iconBgColor {
+    // Light purple for follow-up leads
+    if (isFollowUpLead) {
+      return const Color(0xFFE8E3FF);
+    }
     return callSummary[widget.callTypeIndex]["bgColor"] as Color;
   }
 
   IconData get icon {
+    // Headset icon for follow-up leads
+    if (isFollowUpLead) {
+      return Icons.headset_mic_outlined;
+    }
     return callSummary[widget.callTypeIndex]["icon"] as IconData;
   }
 
@@ -198,21 +234,21 @@ class _DetailsScreenState extends State<DetailsScreen> {
       final duration = callTrackingController.lastDuration!;
       final phoneNumber = callTrackingController.lastPhone ?? '';
       final contactPhone = widget.contact["phone"] as String? ?? "";
-      
+
       final callWasAnswered = callTrackingController.lastCallWasAnswered;
       print(
         'DetailsScreen: Call tracking update - duration=$duration, phone=$phoneNumber, callWasAnswered=$callWasAnswered',
       );
-      
+
       // Check if this call matches our contact OR if we're currently in a call
       // This handles cases where phone number is "Unknown" but we just made a call
       final phoneMatches = _isPhoneNumberMatch(phoneNumber, contactPhone);
       final isCurrentlyInCall = _isCallActive || _hasCalled;
-      
+
       print(
         'DetailsScreen: phoneMatches=$phoneMatches, isCurrentlyInCall=$isCurrentlyInCall',
       );
-      
+
       // Update if phone matches OR if we're currently in a call (handles "Unknown" phone number case)
       if (phoneMatches || isCurrentlyInCall) {
         print(
@@ -235,7 +271,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 selectedCallStatus = "Connected";
               }
             });
-            
+
             // Also update the lead repository immediately
             _updateLeadDurationInRepository(duration);
           } else {
@@ -257,11 +293,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
               print(
                 'DetailsScreen: Call ended with 0 duration (not answered or no previous duration)',
               );
-            setState(() {
-              _isCallActive = false;
-              _callDurationSeconds = 0;
-              _isWaitingForDuration = false;
-            });
+              setState(() {
+                _isCallActive = false;
+                _callDurationSeconds = 0;
+                _isWaitingForDuration = false;
+              });
             }
           }
         } else {
@@ -326,7 +362,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
         // Increment call count if duration > 0 (call was answered)
         final newCallCount =
             duration > 0 ? (lead.callCount + 1) : lead.callCount;
-        
+
         final updatedLead = LeadModel(
           id: lead.id,
           name: lead.name,
@@ -416,17 +452,17 @@ class _DetailsScreenState extends State<DetailsScreen> {
         // Check if lead is from FollowUps collection (has followUpDate) AND call was made (not "Not Called")
         final newCallStatus =
             selectedCallStatus ?? lead.callStatus ?? 'Not Called';
-        
+
         // Check followUpDate from lead object OR from contact map (fallback)
         final followUpDateFromContact =
             widget.contact["followUpDate"] as DateTime?;
         final hasFollowUpDate =
             lead.needsFollowUp || followUpDateFromContact != null;
-        
+
         final isFollowUpLead =
             hasFollowUpDate; // Has followUpDate means it's in FollowUps collection
         final callWasMade = !LeadConstants.isUncalledStatus(newCallStatus);
-        
+
         print('DetailsScreen: Checking follow-up update conditions:');
         print(
           'DetailsScreen: lead.needsFollowUp=${lead.needsFollowUp}, followUpDateFromContact=$followUpDateFromContact',
@@ -434,7 +470,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
         print(
           'DetailsScreen: isFollowUpLead=$isFollowUpLead, newCallStatus=$newCallStatus, callWasMade=$callWasMade',
         );
-        
+
         if (isFollowUpLead && callWasMade) {
           try {
             print('DetailsScreen: Updating follow-up lead via API');
@@ -447,13 +483,13 @@ class _DetailsScreenState extends State<DetailsScreen> {
             // Use followUpDate from lead object or fallback to contact map
             final followUpDateToUse =
                 lead.followUpDate ?? followUpDateFromContact;
-            
+
             // Get call duration from the current call duration (in seconds)
             // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
             // Backend needs duration 0 to create report entries
             final callDurationToSend =
                 _callDurationSeconds >= 0 ? _callDurationSeconds : null;
-            
+
             await repository.updateFollowUpLeadFromApi(
               id: leadId,
               callStatus: newCallStatus,
@@ -608,7 +644,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       : remarksController.text.trim(),
               // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
               // Backend needs duration 0 to create report entries
-              callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : null,
+              callDuration:
+                  _callDurationSeconds >= 0 ? _callDurationSeconds : null,
               followUpDate: markAsFollowUp ? callDate : null,
               clearFollowUpDate: !markAsFollowUp && lead.followUpDate != null,
             );
@@ -666,6 +703,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   remarksController.text.trim().isEmpty
                       ? null
                       : remarksController.text.trim(),
+              // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
+              // Backend needs duration 0 to create report entries
+              callDuration:
+                  _callDurationSeconds >= 0 ? _callDurationSeconds : null,
             );
 
             // Show success message
@@ -720,6 +761,21 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         : remarksController.text.trim(),
               );
               print('DetailsScreen: Lead moved to follow-up successfully');
+
+              // Remove the original lead from local repository to prevent duplicates
+              // Backend creates a new follow-up lead with a new ID, so we need to remove the original
+              try {
+                final repository = LeadRepository();
+                await repository.removeLead(leadId);
+                print(
+                  'DetailsScreen: Original lead removed from local repository to prevent duplicates',
+                );
+              } catch (e) {
+                print(
+                  'DetailsScreen: Error removing original lead from local repository: $e',
+                );
+                // Don't block navigation if removal fails - phone number matching in fetchFollowUpLeadsFromApi will handle it
+              }
             } else {
               // Regular update (may go directly to Reports if not follow-up)
               print('DetailsScreen: Calling apiService.updateLead with:');
@@ -746,7 +802,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 functionDate: null,
                 // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
                 // Backend needs duration 0 to create report entries
-                callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : null,
+                callDuration:
+                    _callDurationSeconds >= 0 ? _callDurationSeconds : null,
               );
               print('DetailsScreen: General lead updated successfully via API');
 
@@ -759,17 +816,24 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   phone: lead.phone,
                   brand: lead.brand,
                   location: lead.location,
-                  leadStatus: selectedLeadStatus ?? lead.leadStatus ?? 'No Status',
+                  leadStatus:
+                      selectedLeadStatus ?? lead.leadStatus ?? 'No Status',
                   callStatus: selectedCallStatus ?? 'Not Called',
-                  followUpDate: markAsFollowUp ? followUpDate : lead.followUpDate,
+                  followUpDate:
+                      markAsFollowUp ? followUpDate : lead.followUpDate,
                   reason: lead.reason,
                   category: lead.category,
-                  callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : lead.callDuration,
+                  callDuration:
+                      _callDurationSeconds >= 0
+                          ? _callDurationSeconds
+                          : lead.callDuration,
                   createdAt: lead.createdAt,
                   callCount: lead.callCount,
                 );
                 await repository.updateLead(updatedLead);
-                print('DetailsScreen: Local repository updated - lead will be removed from lead screen if no longer uncalled');
+                print(
+                  'DetailsScreen: Local repository updated - lead will be removed from lead screen if no longer uncalled',
+                );
               } catch (e) {
                 print('DetailsScreen: Error updating local repository: $e');
                 // Don't block navigation if local update fails
@@ -1005,22 +1069,28 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        screenTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: TextConstant.dmSansMedium,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 30, bottom: 10),
+                        child: Text(
+                          screenTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: TextConstant.dmSansMedium,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        widget.contact["storeName"] ?? "Zorucci Edappally",
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 14,
-                          fontFamily: TextConstant.dmSansRegular,
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          widget.contact["storeName"] ?? "Zorucci Edappally",
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 16,
+                            fontFamily: TextConstant.dmSansRegular,
+                          ),
                         ),
                       ),
                     ],
@@ -1066,50 +1136,109 @@ class _DetailsScreenState extends State<DetailsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  widget.contact["phone"] ?? "",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: ColorConstant.grey,
-                                    fontFamily: TextConstant.dmSansRegular,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      widget.contact["phone"] ?? "",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: ColorConstant.grey,
+                                        fontFamily: TextConstant.dmSansRegular,
+                                      ),
+                                    ),
+                                    // Call Duration Badge for follow-up leads
+                                    if (isFollowUpLead &&
+                                        (_callDurationSeconds > 0 ||
+                                            widget.contact["callDuration"] !=
+                                                null))
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 12,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue[50],
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.blue[200]!,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.timer,
+                                                size: 14,
+                                                color: Colors.blue[700],
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                FormatHelper.formatCallDurationWithUnits(
+                                                  _callDurationSeconds > 0
+                                                      ? _callDurationSeconds
+                                                      : (widget.contact["callDuration"]
+                                                              as int? ??
+                                                          0),
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.blue[700],
+                                                  fontFamily:
+                                                      TextConstant.dmSansMedium,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed:
-                                _isCallActive
-                                    ? null
-                                    : () async {
-                                      await _makePhoneCall(
-                                        widget.contact["phone"] ?? "",
-                                      );
-                                    },
-                            icon: Icon(
-                              _isCallActive
-                                  ? Icons.phone_disabled
-                                  : Icons.phone,
-                              size: 18,
-                            ),
-                            label: Text(
-                              _isCallActive ? "Calling..." : "Call Now",
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
+                          // Hide Call Now button for follow-up leads (shown at bottom instead)
+                          if (!isFollowUpLead)
+                            ElevatedButton.icon(
+                              onPressed:
                                   _isCallActive
-                                      ? Colors.grey[400]
-                                      : ColorConstant.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                                      ? null
+                                      : () async {
+                                        await _makePhoneCall(
+                                          widget.contact["phone"] ?? "",
+                                        );
+                                      },
+                              icon: Icon(
+                                _isCallActive
+                                    ? Icons.phone_disabled
+                                    : Icons.phone,
+                                size: 18,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                              label: Text(
+                                _isCallActive ? "Calling..." : "Call Now",
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    _isCallActive
+                                        ? Colors.grey[400]
+                                        : ColorConstant.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
 
@@ -1146,23 +1275,63 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       if (_isWaitingForDuration || _callDurationSeconds > 0)
                         const SizedBox(height: 24),
 
-                      // Call Status Dropdown
-                      _buildDropdown(
-                        label:
-                            _callDurationSeconds > 0
-                                ? "Call Status (Auto: Connected)"
-                                : "Call Status",
-                        value: selectedCallStatus,
-                        items: callStatusOptions,
-                        enabled: _hasCalled,
-                        onChanged: (value) {
-                          setState(() {
-                            selectedCallStatus = value;
-                            _isDirty = true;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                      // Status Dropdowns - Show as pills for follow-up leads
+                      if (isFollowUpLead) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatusPillDropdown(
+                                "Call Status",
+                                selectedCallStatus,
+                                callStatusOptions,
+                                Colors.green,
+                                _hasCalled,
+                                (value) {
+                                  setState(() {
+                                    selectedCallStatus = value;
+                                    _isDirty = true;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatusPillDropdown(
+                                "Lead Status",
+                                selectedLeadStatus,
+                                leadStatusOptions,
+                                Colors.purple,
+                                _hasCalled,
+                                (value) {
+                                  setState(() {
+                                    selectedLeadStatus = value;
+                                    _isDirty = true;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        // Call Status Dropdown
+                        _buildDropdown(
+                          label:
+                              _callDurationSeconds > 0
+                                  ? "Call Status (Auto: Connected)"
+                                  : "Call Status",
+                          value: selectedCallStatus,
+                          items: callStatusOptions,
+                          enabled: _hasCalled,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedCallStatus = value;
+                              _isDirty = true;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       // Reason Dropdown - Only for Loss of Sale and All Calls
                       if (widget.callTypeIndex == 0 ||
                           widget.callTypeIndex == 1) ...[
@@ -1246,85 +1415,86 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Mark As Follow Up
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: markAsFollowUp,
-                            onChanged:
-                                _hasCalled
-                                    ? (value) {
-                                      setState(() {
-                                        markAsFollowUp = value ?? false;
-                                        _isDirty = true;
-                                        if (markAsFollowUp &&
-                                            followUpDate == null) {
-                                          followUpDate = DateTime.now().add(
-                                            const Duration(days: 7),
-                                          );
-                                        }
-                                      });
-                                    }
-                                    : null,
-                            activeColor: ColorConstant.primaryColor,
-                          ),
-                          Text(
-                            "Mark As Follow Up",
-                            style: TextStyle(
-                              fontFamily: TextConstant.dmSansMedium,
-                              fontSize: 14,
-                              color: Colors.black,
-                            ),
-                          ),
-                          if (markAsFollowUp) ...[
-                            const Spacer(),
-                            GestureDetector(
-                              onTap:
+                      // Mark As Follow Up - Hide for follow-up leads (they're already follow-ups)
+                      if (!isFollowUpLead)
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: markAsFollowUp,
+                              onChanged:
                                   _hasCalled
-                                      ? () async {
-                                        DateTime? pickedDate =
-                                            await showDatePicker(
-                                              context: context,
-                                              initialDate:
-                                                  followUpDate ??
-                                                  DateTime.now(),
-                                              firstDate: DateTime.now(),
-                                              lastDate: DateTime(2101),
+                                      ? (value) {
+                                        setState(() {
+                                          markAsFollowUp = value ?? false;
+                                          _isDirty = true;
+                                          if (markAsFollowUp &&
+                                              followUpDate == null) {
+                                            followUpDate = DateTime.now().add(
+                                              const Duration(days: 7),
                                             );
-                                        if (pickedDate != null) {
-                                          setState(() {
-                                            followUpDate = pickedDate;
-                                            _isDirty = true;
-                                          });
-                                        }
+                                          }
+                                        });
                                       }
                                       : null,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: iconBgColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  followUpDate != null
-                                      ? "${followUpDate!.day} ${_getMonthName(followUpDate!.month)} ${followUpDate!.year}"
-                                      : "Select Date",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: iconColor,
-                                    fontFamily: TextConstant.dmSansMedium,
+                              activeColor: ColorConstant.primaryColor,
+                            ),
+                            Text(
+                              "Mark As Follow Up",
+                              style: TextStyle(
+                                fontFamily: TextConstant.dmSansMedium,
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
+                            ),
+                            if (markAsFollowUp) ...[
+                              const Spacer(),
+                              GestureDetector(
+                                onTap:
+                                    _hasCalled
+                                        ? () async {
+                                          DateTime? pickedDate =
+                                              await showDatePicker(
+                                                context: context,
+                                                initialDate:
+                                                    followUpDate ??
+                                                    DateTime.now(),
+                                                firstDate: DateTime.now(),
+                                                lastDate: DateTime(2101),
+                                              );
+                                          if (pickedDate != null) {
+                                            setState(() {
+                                              followUpDate = pickedDate;
+                                              _isDirty = true;
+                                            });
+                                          }
+                                        }
+                                        : null,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: iconBgColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    followUpDate != null
+                                        ? "${followUpDate!.day} ${_getMonthName(followUpDate!.month)} ${followUpDate!.year}"
+                                        : "Select Date",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: iconColor,
+                                      fontFamily: TextConstant.dmSansMedium,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
-                        ],
-                      ),
+                        ),
 
-                      const SizedBox(height: 16),
+                      if (!isFollowUpLead) const SizedBox(height: 16),
 
                       // Remarks
                       Text(
@@ -1368,66 +1538,143 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
                       const SizedBox(height: 32),
 
-                      // Action Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
+                      // Action Buttons - Different for follow-up leads
+                      if (isFollowUpLead) ...[
+                        // Save Follow Up button
+                        ElevatedButton(
+                          onPressed:
+                              (_hasCalled || _isDirty) && !_isSaving
+                                  ? () async {
+                                    await _saveFollowUp();
+                                  }
+                                  : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                (_hasCalled || _isDirty) && !_isSaving
+                                    ? ColorConstant.primaryColor
+                                    : Colors.grey[400],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            minimumSize: const Size(double.infinity, 0),
+                          ),
+                          child:
+                              _isSaving
+                                  ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : Text(
+                                    "Save Follow Up",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: TextConstant.dmSansMedium,
+                                    ),
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Call Now button
+                        ElevatedButton.icon(
+                          onPressed:
+                              _isCallActive
+                                  ? null
+                                  : () async {
+                                    await _makePhoneCall(
+                                      widget.contact["phone"] ?? "",
+                                    );
+                                  },
+                          icon: Icon(
+                            _isCallActive ? Icons.phone_disabled : Icons.phone,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _isCallActive ? "Calling..." : "Call Now",
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _isCallActive
+                                    ? Colors.grey[400]
+                                    : ColorConstant.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            minimumSize: const Size(double.infinity, 0),
+                          ),
+                        ),
+                      ] else ...[
+                        // Regular action buttons for non-follow-up leads
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  side: BorderSide(color: Colors.grey[300]!),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
-                                side: BorderSide(color: Colors.grey[300]!),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: Text(
-                                "Cancel",
-                                style: TextStyle(
-                                  color: Colors.grey[800],
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: TextConstant.dmSansMedium,
+                                child: Text(
+                                  "Cancel",
+                                  style: TextStyle(
+                                    color: Colors.grey[800],
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: TextConstant.dmSansMedium,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed:
-                                  _hasCalled
-                                      ? () async {
-                                        await _saveCallUpdate();
-                                      }
-                                      : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed:
                                     _hasCalled
-                                        ? ColorConstant.primaryColor
-                                        : Colors.grey[400],
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
+                                        ? () async {
+                                          await _saveCallUpdate();
+                                        }
+                                        : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      _hasCalled
+                                          ? ColorConstant.primaryColor
+                                          : Colors.grey[400],
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: Text(
-                                "Save Call Update",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: TextConstant.dmSansMedium,
+                                child: Text(
+                                  "Save Call Update",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: TextConstant.dmSansMedium,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
 
                       const SizedBox(height: 16),
                     ],
@@ -1584,6 +1831,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
   }
 
   Widget _buildDetailsSection() {
+    // Check if it's a follow-up lead
+    if (isFollowUpLead) {
+      return _buildFollowUpDetailsSection();
+    }
+
     // Check if it's a return call
     if (widget.contact["isRentout"] == true) {
       return Column(
@@ -1684,6 +1936,338 @@ class _DetailsScreenState extends State<DetailsScreen> {
     );
   }
 
+  Widget _buildFollowUpDetailsSection() {
+    // Get follow-up date from contact or lead
+    final followUpDateValue =
+        widget.contact["followUpDate"] as DateTime? ??
+        (widget.contact["followUpDate"] != null
+            ? DateTime.tryParse(widget.contact["followUpDate"].toString())
+            : null) ??
+        followUpDate;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Follow Up Date Section
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Follow Up Date",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+                fontFamily: TextConstant.dmSansRegular,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  followUpDateValue != null
+                      ? DateFormatter.formatDate(followUpDateValue)
+                      : "Not set",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: TextConstant.dmSansMedium,
+                  ),
+                ),
+                GestureDetector(
+                  onTap:
+                      _hasCalled
+                          ? () async {
+                            DateTime? pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: followUpDateValue ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime(2101),
+                            );
+                            if (pickedDate != null) {
+                              setState(() {
+                                followUpDate = pickedDate;
+                                _isDirty = true;
+                              });
+                            }
+                          }
+                          : null,
+                  child: Text(
+                    "Change Date",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color:
+                          _hasCalled
+                              ? ColorConstant.primaryColor
+                              : Colors.grey[400],
+                      fontFamily: TextConstant.dmSansMedium,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        // Three-column date layout
+        Row(
+          children: [
+            Expanded(
+              child: _buildDetailRow(
+                "Visit Date",
+                widget.contact["visitDate"] ??
+                    widget.contact["visit_date"] ??
+                    "Not available",
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildDetailRow(
+                "Function Date",
+                widget.contact["functionDate"] ??
+                    widget.contact["function_date"] ??
+                    "Not available",
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildDetailRow(
+                "Call Date",
+                widget.contact["callDate"] ??
+                    widget.contact["date"] ??
+                    widget.contact["created_at"] ??
+                    "Not available",
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Attended By
+        _buildDetailRow(
+          "Attended By",
+          widget.contact["attendedBy"] ??
+              widget.contact["attended_by"] ??
+              "Not available",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusPillDropdown(
+    String label,
+    String? value,
+    List<String> items,
+    Color color,
+    bool enabled,
+    Function(String?)? onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+            fontFamily: TextConstant.dmSansRegular,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withOpacity(0.4), width: 1),
+          ),
+          child: DropdownButton<String>(
+            value: value,
+            hint: Text(
+              "Select $label",
+              style: TextStyle(
+                color: enabled ? Colors.grey[400] : Colors.grey[300],
+                fontFamily: TextConstant.dmSansRegular,
+              ),
+            ),
+            isExpanded: true,
+            underline: const SizedBox(),
+            icon: Icon(
+              Icons.keyboard_arrow_down,
+              color:
+                  enabled
+                      ? Color.fromRGBO(
+                        (color.red * 0.7).round().clamp(0, 255),
+                        (color.green * 0.7).round().clamp(0, 255),
+                        (color.blue * 0.7).round().clamp(0, 255),
+                        1.0,
+                      )
+                      : Colors.grey[300],
+            ),
+            items:
+                items.map((String item) {
+                  final darkerColor = Color.fromRGBO(
+                    (color.red * 0.7).round().clamp(0, 255),
+                    (color.green * 0.7).round().clamp(0, 255),
+                    (color.blue * 0.7).round().clamp(0, 255),
+                    1.0,
+                  );
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(
+                      item,
+                      style: TextStyle(
+                        fontFamily: TextConstant.dmSansRegular,
+                        fontSize: 14,
+                        color: enabled ? darkerColor : Colors.grey[400],
+                      ),
+                    ),
+                  );
+                }).toList(),
+            onChanged: enabled ? onChanged : null,
+            style: TextStyle(
+              fontSize: 14,
+              color: Color.fromRGBO(
+                (color.red * 0.7).round().clamp(0, 255),
+                (color.green * 0.7).round().clamp(0, 255),
+                (color.blue * 0.7).round().clamp(0, 255),
+                1.0,
+              ),
+              fontFamily: TextConstant.dmSansMedium,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveFollowUp() async {
+    final leadId = widget.contact["id"] as String?;
+    if (leadId == null) return;
+
+    // Prevent duplicate saves
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final apiService = ApiService();
+
+      // Get follow-up date from state or contact
+      final followUpDateValue =
+          followUpDate ??
+          (widget.contact["followUpDate"] as DateTime?) ??
+          (widget.contact["followUpDate"] != null
+              ? DateTime.tryParse(widget.contact["followUpDate"].toString())
+              : null);
+
+      // Update follow-up lead with current form data
+      await apiService.postFollowUp(
+        id: leadId,
+        callStatus: selectedCallStatus ?? "Not called yet",
+        leadStatus: selectedLeadStatus ?? "No Status",
+        remarks:
+            remarksController.text.trim().isEmpty
+                ? null
+                : remarksController.text.trim(),
+        callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : null,
+        followUpDate: followUpDateValue,
+        clearFollowUpDate: followUpDateValue == null,
+      );
+
+      // Refresh follow-up controller
+      final followupController = Provider.of<FollowupController>(
+        context,
+        listen: false,
+      );
+      await followupController.fetchFollowUpLeads();
+
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _isDirty = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Follow-up saved successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving follow-up: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeFollowUp() async {
+    final leadId = widget.contact["id"] as String?;
+    if (leadId == null) return;
+
+    try {
+      final apiService = ApiService();
+
+      // Update follow-up lead with null follow-up date to remove it
+      await apiService.postFollowUp(
+        id: leadId,
+        callStatus: selectedCallStatus ?? "Not called yet",
+        leadStatus: selectedLeadStatus ?? "No Status",
+        remarks:
+            remarksController.text.trim().isEmpty
+                ? null
+                : remarksController.text.trim(),
+        callDuration: _callDurationSeconds >= 0 ? _callDurationSeconds : null,
+        followUpDate: null,
+        clearFollowUpDate: true,
+      );
+
+      // Refresh follow-up controller
+      final followupController = Provider.of<FollowupController>(
+        context,
+        listen: false,
+      );
+      await followupController.fetchFollowUpLeads();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Follow-up removed successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing follow-up: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildRatingSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1751,48 +2335,48 @@ Widget _callInfoBox({
   required String value,
 }) {
   return Container(
-    margin: const EdgeInsets.only(top: 24),
-    padding: const EdgeInsets.all(16),
+    // margin: const EdgeInsets.only(top: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     decoration: BoxDecoration(
       color: color.withOpacity(0.08),
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: color.withOpacity(0.4), width: 1.5),
     ),
     child: Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: color.withOpacity(0.2),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: color, size: 24),
+          child: Icon(icon, color: color, size: 18),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontFamily: TextConstant.dmSansRegular,
-                ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontFamily: TextConstant.dmSansRegular,
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  fontFamily: TextConstant.dmSansMedium,
-                ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontFamily: TextConstant.dmSansMedium,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     ),

@@ -134,7 +134,10 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   void _removeLeadFromActiveLists(String id) {
-    _repository.allLeads.removeWhere((lead) => lead.id == id);
+    // NOTE: allLeads returns an unmodifiable list, so we can't remove from it directly
+    // The updateLead method in repository already handles removal if lead is no longer uncalled
+    // This method is kept for backward compatibility but does nothing
+    // The actual removal is handled by LeadRepository.updateLead() which checks if lead should be moved to reports
   }
 
   @override
@@ -637,6 +640,7 @@ class LeadScreenController extends ChangeNotifier {
     bool? followUpFlag,
     DateTime? callDate,
     String? remarks,
+    int? callDuration,
   }) async {
     try {
       await _repository.updateBookingConfirmationLeadFromApi(
@@ -646,6 +650,7 @@ class LeadScreenController extends ChangeNotifier {
         followUpFlag: followUpFlag,
         callDate: callDate,
         remarks: remarks,
+        callDuration: callDuration,
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();

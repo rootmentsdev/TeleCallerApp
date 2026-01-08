@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/utils/format_helper.dart';
+import 'package:telecaller_app/utils/date_formatter.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -27,8 +27,9 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   void initState() {
     super.initState();
     // Initialize with contact data if available (check both formats)
-    _callDuration = widget.contact["callDuration"] as int? ??
-                    widget.contact["call_duration"] as int?;
+    _callDuration =
+        widget.contact["callDuration"] as int? ??
+        widget.contact["call_duration"] as int?;
     // Fetch latest call duration from backend if not already available
     // Note: Only fetch if duration is null (not if it's 0, as 0 is a valid duration for unanswered calls)
     if (_callDuration == null) {
@@ -51,16 +52,17 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
     try {
       final response = await _apiService.getReportById(leadId);
-      
+
       print('ReportDetailsScreen: Report response: $response');
-      
+
       // Extract call_duration from response - check multiple possible locations
-      final callDuration = response["call_duration"] as int? ?? 
-                          response["callDuration"] as int? ??
-                          response["data"]?["call_duration"] as int? ??
-                          response["data"]?["callDuration"] as int? ??
-                          response["report"]?["call_duration"] as int? ??
-                          response["report"]?["callDuration"] as int?;
+      final callDuration =
+          response["call_duration"] as int? ??
+          response["callDuration"] as int? ??
+          response["data"]?["call_duration"] as int? ??
+          response["data"]?["callDuration"] as int? ??
+          response["report"]?["call_duration"] as int? ??
+          response["report"]?["callDuration"] as int?;
 
       print('ReportDetailsScreen: Extracted call duration: $callDuration');
 
@@ -117,7 +119,12 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   }
 
   String _formatCallDuration(int? seconds) {
-    return FormatHelper.formatCallDurationWithUnits(seconds);
+    if (seconds == null || seconds <= 0) {
+      return "00:00 mins";
+    }
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return "${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')} mins";
   }
 
   @override
@@ -136,28 +143,41 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                   child: const Icon(Icons.arrow_back_ios, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Report Details",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: TextConstant.dmSansMedium,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          if (callTypeIndex == 2) // Return Calls - index 2
+                            // const Icon(
+                            //   Icons.message_outlined,
+                            //   color: Colors.white,
+                            //   size: 18,
+                            // ),
+                            if (callTypeIndex == 2) const SizedBox(width: 8),
+                          const Text(
+                            "Call Completed",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: TextConstant.dmSansMedium,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      screenSubtitle,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                        fontFamily: TextConstant.dmSansRegular,
+                      const SizedBox(height: 2),
+                      Text(
+                        screenSubtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -205,18 +225,19 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  // Call Duration Badge - Small Container
-                                  if (_callDuration != null && _callDuration! > 0 || _isLoadingDuration)
+                                  // Call Duration Badge - Light Blue Pill Container (matching image)
+                                  if (_callDuration != null ||
+                                      _isLoadingDuration)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
+                                        horizontal: 12,
+                                        vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.green[50],
-                                        borderRadius: BorderRadius.circular(16),
+                                        color: Colors.blue[50],
+                                        borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: Colors.green[300]!,
+                                          color: Colors.blue[200]!,
                                           width: 1,
                                         ),
                                       ),
@@ -225,33 +246,34 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                         children: [
                                           Icon(
                                             Icons.timer,
-                                            size: 12,
-                                            color: Colors.green[700],
+                                            size: 14,
+                                            color: Colors.blue[700],
                                           ),
-                                          const SizedBox(width: 4),
+                                          const SizedBox(width: 6),
                                           _isLoadingDuration
                                               ? SizedBox(
-                                                  width: 12,
-                                                  height: 12,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 1.5,
-                                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                                      Colors.green[700]!,
-                                                    ),
-                                                  ),
-                                                )
-                                              : (_callDuration != null && _callDuration! > 0
-                                                  ? Text(
-                                                      _formatCallDuration(_callDuration),
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: Colors.green[700],
-                                                        fontFamily:
-                                                            TextConstant.dmSansMedium,
-                                                        fontWeight: FontWeight.w600,
-                                                      ),
-                                                    )
-                                                  : const SizedBox.shrink()),
+                                                width: 12,
+                                                height: 12,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 1.5,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(Colors.blue[700]!),
+                                                ),
+                                              )
+                                              : Text(
+                                                _formatCallDuration(
+                                                  _callDuration ?? 0,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.blue[700],
+                                                  fontFamily:
+                                                      TextConstant.dmSansMedium,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
                                         ],
                                       ),
                                     ),
@@ -278,6 +300,23 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     );
   }
 
+  String _formatDateField(dynamic dateValue) {
+    if (dateValue == null ||
+        dateValue.toString().isEmpty ||
+        dateValue == "Not available") {
+      return "Not available";
+    }
+    try {
+      final date =
+          dateValue is DateTime
+              ? dateValue
+              : DateTime.parse(dateValue.toString());
+      return DateFormatter.formatDate(date);
+    } catch (e) {
+      return dateValue.toString();
+    }
+  }
+
   Widget _buildReadOnlyDetailsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,21 +327,31 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             Expanded(
               child: _buildDetailRow(
                 "Visit Date",
-                contact["visitDate"] ?? contact["date"] ?? "Not available",
+                _formatDateField(
+                  contact["visitDate"] ??
+                      contact["visit_date"] ??
+                      contact["date"],
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildDetailRow(
                 "Function Date",
-                contact["functionDate"] ?? "Not available",
+                _formatDateField(
+                  contact["functionDate"] ?? contact["function_date"],
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildDetailRow(
                 "Call Date",
-                contact["callDate"] ?? contact["date"] ?? "Not available",
+                _formatDateField(
+                  contact["callDate"] ??
+                      contact["date"] ??
+                      contact["created_at"],
+                ),
               ),
             ),
           ],
@@ -310,41 +359,73 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         const SizedBox(height: 16),
         _buildDetailRow(
           "Attended By",
-          contact["attendedBy"] ?? "Not available",
+          contact["attendedBy"] ?? contact["attended_by"] ?? "Not available",
         ),
         const SizedBox(height: 16),
+        // Reason Collected From Store
         _buildDetailRow(
-          "Call Status",
-          contact["callStatus"] ?? "Not available",
-        ),
-        const SizedBox(height: 16),
-        _buildDetailRow(
-          "Lead Status",
-          contact["leadStatus"] ?? "Not available",
-        ),
-        const SizedBox(height: 16),
-        _buildDetailRow(
-          "Reason",
-          contact["reasonFromStore"] ??
+          "Reason Collected From Store",
+          contact["reason_collected_from_store"] ??
+              contact["reasonFromStore"] ??
               contact["reason"] ??
               "No reason provided",
           isMultiline: true,
         ),
         const SizedBox(height: 16),
+        // Call Status and Lead Status as badges
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatusBadge(
+                "Call Status",
+                contact["callStatus"] ??
+                    contact["call_status"] ??
+                    "Not available",
+                Colors.green,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatusBadge(
+                "Lead Status",
+                contact["leadStatus"] ??
+                    contact["lead_status"] ??
+                    "Not available",
+                Colors.purple,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Rating (for Return Calls)
+        if (callTypeIndex == 2) // Return Calls
+          _buildRatingDisplay(),
+        if (callTypeIndex == 2) // Return Calls
+          const SizedBox(height: 16),
+        // Follow Up Date
+        if (contact["followUpDate"] != null ||
+            contact["follow_up_date"] != null ||
+            contact["followUp"] != null ||
+            contact["follow_up"] != null)
+          _buildDetailRow(
+            "Follow Up Date",
+            _formatDateField(
+              contact["followUpDate"] ??
+                  contact["follow_up_date"] ??
+                  contact["followUp"] ??
+                  contact["follow_up"],
+            ),
+          ),
+        if (contact["followUpDate"] != null ||
+            contact["follow_up_date"] != null ||
+            contact["followUp"] != null ||
+            contact["follow_up"] != null)
+          const SizedBox(height: 16),
+        // Remarks
         _buildDetailRow(
           "Remarks",
           contact["remarks"] ?? "No remarks",
           isMultiline: true,
-        ),
-        const SizedBox(height: 16),
-        // Call Duration field
-        _buildDetailRow(
-          "Call Duration",
-          _isLoadingDuration
-              ? "Loading..."
-              : (_callDuration != null
-                  ? _formatCallDuration(_callDuration)
-                  : "Not available"),
         ),
       ],
     );
@@ -377,6 +458,102 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             height: isMultiline ? 1.4 : 1.2,
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildStatusBadge(String label, String value, Color color) {
+    // Get darker shade of the color
+    final Color darkerColor = Color.fromRGBO(
+      (color.red * 0.7).round().clamp(0, 255),
+      (color.green * 0.7).round().clamp(0, 255),
+      (color.blue * 0.7).round().clamp(0, 255),
+      1.0,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xff171717),
+            fontFamily: TextConstant.dmSansRegular,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withOpacity(0.4), width: 1),
+          ),
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              color: darkerColor,
+              fontFamily: TextConstant.dmSansMedium,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingDisplay() {
+    // Get rating from contact data
+    final ratingValue = contact["rating"];
+    int rating = 0;
+
+    if (ratingValue != null) {
+      if (ratingValue is int) {
+        rating = ratingValue;
+      } else if (ratingValue is String) {
+        rating = int.tryParse(ratingValue) ?? 0;
+      } else if (ratingValue is double) {
+        rating = ratingValue.round();
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Rating",
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xff171717),
+            fontFamily: TextConstant.dmSansRegular,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: List.generate(5, (index) {
+            return Icon(
+              Icons.star,
+              size: 28,
+              color: index < rating ? Colors.amber : Colors.grey[300],
+            );
+          }),
+        ),
+        if (rating > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              "$rating out of 5",
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontFamily: TextConstant.dmSansRegular,
+              ),
+            ),
+          ),
       ],
     );
   }

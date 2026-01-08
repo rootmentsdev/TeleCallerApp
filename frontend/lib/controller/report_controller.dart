@@ -425,13 +425,19 @@ class ReportController extends ChangeNotifier {
             .toList();
 
     // For "All Calls" tab (index 0), also include newly created leads from local repository
+    // BUT ONLY if they have been called (completed calls)
     if (_selectedCallTypeIndex == 0) {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
       final localLeads = _repository.getLeadsByDate(selectedDate);
 
+      // Filter to only include leads that have been called
+      final calledLocalLeads = localLeads
+          .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+          .toList();
+
       // Add newly created leads that aren't already in the API reports
       final reportIds = filteredReports.map((r) => r["id"]).toSet();
-      for (final lead in localLeads) {
+      for (final lead in calledLocalLeads) {
         if (!reportIds.contains(lead.id)) {
           filteredReports.add({
             "id": lead.id,
@@ -479,6 +485,7 @@ class ReportController extends ChangeNotifier {
       case "lossofsale":
         return "loss";
       case "rentoutfeedback":
+      case "return": // Backend now uses "return" instead of "rentoutFeedback"
         return "hardout";
       case "bookingconfirmation":
         return "booking";
@@ -595,7 +602,7 @@ class ReportController extends ChangeNotifier {
         break;
 
       case 2:
-        leadType = "rentoutFeedback";
+        leadType = "return"; // Backend uses "return" not "rentoutFeedback"
         break;
 
       case 3:

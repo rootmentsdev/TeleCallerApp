@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
+import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/controller/lead_screen_controller.dart';
+import 'package:telecaller_app/controller/report_controller.dart';
 
 class ReturnLeadDetailsScreen extends StatefulWidget {
   final LeadModel lead;
@@ -20,6 +24,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   late Map<String, dynamic> returnData;
   bool _isLoading = true;
   String? _error;
+  String? _returnLeadId; // Store the return lead ID from backend
 
   String? selectedCallStatus;
   String? selectedLeadStatus;
@@ -27,6 +32,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   final TextEditingController remarksController = TextEditingController();
   bool _isDirty = false;
   bool _hasCalled = false; // Track if call has been made
+  bool _isSaving = false; // Track if save operation is in progress
 
   final List<String> callStatusOptions = [
     "Not called yet",
@@ -67,6 +73,18 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
           returnData = response;
           _isLoading = false;
 
+          // Get the return lead ID from backend response (may be different from lead.id)
+          // Try multiple possible ID fields
+          _returnLeadId =
+              returnData['id'] ??
+              returnData['_id'] ??
+              returnData['returnId'] ??
+              widget.lead.id; // Fallback to lead.id if not found
+
+          print(
+            'ReturnLeadDetailsScreen: Using return lead ID: $_returnLeadId (original lead ID: ${widget.lead.id})',
+          );
+
           // Initialize form fields from fetched data
           selectedCallStatus = returnData['callStatus'] ?? 'Not called yet';
           selectedLeadStatus = returnData['leadStatus'];
@@ -85,10 +103,25 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   }
 
   Future<void> _saveChanges() async {
+    // Prevent duplicate saves
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
     try {
+      // Use the return lead ID from backend if available, otherwise use lead.id
+      final returnId = _returnLeadId ?? widget.lead.id;
+      print(
+        'ReturnLeadDetailsScreen: Saving changes with return lead ID: $returnId',
+      );
+
       final apiService = ApiService();
       await apiService.updateReturn(
-        id: widget.lead.id,
+        id: returnId,
         callStatus: selectedCallStatus,
         leadStatus: selectedLeadStatus,
         rating: rating > 0 ? rating : null,
@@ -96,7 +129,27 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
             remarksController.text.trim().isEmpty
                 ? null
                 : remarksController.text.trim(),
+        // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
+        // Backend needs duration 0 to create report entries
+        callDuration: widget.lead.callDuration ?? 0,
       );
+
+      // Remove the lead from local repository to prevent it from showing in leads screen
+      // Backend has moved it to Reports collection
+      // Remove by both ID and phone number to handle cases where backend might return it with different ID
+      try {
+        final repository = LeadRepository();
+        await repository.removeLead(widget.lead.id);
+        await repository.removeLeadByPhone(widget.lead.phone);
+        print(
+          'ReturnLeadDetailsScreen: Removed lead from local repository (by ID and phone: ${widget.lead.phone})',
+        );
+      } catch (e) {
+        print(
+          'ReturnLeadDetailsScreen: Error removing lead from repository: $e',
+        );
+        // Don't block navigation if removal fails
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -107,14 +160,43 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
           ),
         );
 
+        // Refresh leads and reports screens
+        try {
+          final leadController = Provider.of<LeadScreenController>(
+            context,
+            listen: false,
+          );
+          await leadController.fetchAllLeadsFromApi();
+          print('ReturnLeadDetailsScreen: Refreshed leads screen');
+        } catch (e) {
+          print('ReturnLeadDetailsScreen: Error refreshing leads: $e');
+        }
+
+        try {
+          final reportController = Provider.of<ReportController>(
+            context,
+            listen: false,
+          );
+          await reportController.fetchReportsWithCurrentFilters();
+          print('ReturnLeadDetailsScreen: Refreshed reports screen');
+        } catch (e) {
+          print('ReturnLeadDetailsScreen: Error refreshing reports: $e');
+        }
+
         await Future.delayed(const Duration(milliseconds: 500));
 
         if (mounted) {
+          setState(() {
+            _isSaving = false;
+          });
           Navigator.pop(context);
         }
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error saving changes: ${e.toString()}'),
@@ -172,23 +254,30 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  // mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      "Return Lead",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: TextConstant.dmSansMedium,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 30, bottom: 10),
+                      child: const Text(
+                        "Return Lead",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: TextConstant.dmSansMedium,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      widget.lead.location ?? "Store",
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 14,
-                        fontFamily: TextConstant.dmSansRegular,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        widget.lead.location ?? "Store",
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 16,
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
                       ),
                     ),
                   ],
@@ -306,34 +395,6 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                               TextConstant.dmSansRegular,
                                         ),
                                       ),
-                                      if (widget.lead.callDuration != null &&
-                                          widget.lead.callDuration! > 0)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 8,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.timer,
-                                                size: 16,
-                                                color: Colors.green,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Duration: ${FormatHelper.formatCallDurationWithUnits(widget.lead.callDuration!)}',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.green,
-                                                  fontWeight: FontWeight.w500,
-                                                  fontFamily:
-                                                      TextConstant
-                                                          .dmSansRegular,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
                                     ],
                                   ),
                                 ),
@@ -361,6 +422,20 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                               "Refund Status",
                               returnData['refundStatus'] ?? "N/A",
                             ),
+                            const SizedBox(height: 24),
+
+                            // Call Duration Container
+                            if (returnData['callDuration'] != null ||
+                                returnData['call_duration'] != null ||
+                                widget.lead.callDuration != null)
+                              _buildCallDurationContainer(
+                                duration:
+                                    returnData['callDuration'] as int? ??
+                                    returnData['call_duration'] as int? ??
+                                    widget.lead.callDuration ??
+                                    0,
+                              ),
+
                             const SizedBox(height: 24),
 
                             // Call Status and Lead Status
@@ -540,14 +615,14 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                 Expanded(
                                   child: ElevatedButton(
                                     onPressed:
-                                        _hasCalled && _isDirty
+                                        _hasCalled && _isDirty && !_isSaving
                                             ? () async {
                                               await _saveChanges();
                                             }
                                             : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor:
-                                          _hasCalled && _isDirty
+                                          _hasCalled && _isDirty && !_isSaving
                                               ? ColorConstant.primaryColor
                                               : Colors.grey[300],
                                       padding: const EdgeInsets.symmetric(
@@ -557,18 +632,32 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
-                                    child: Text(
-                                      "Save Changes",
-                                      style: TextStyle(
-                                        color:
-                                            _hasCalled && _isDirty
-                                                ? Colors.white
-                                                : Colors.grey[600],
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: TextConstant.dmSansMedium,
-                                      ),
-                                    ),
+                                    child:
+                                        _isSaving
+                                            ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(Colors.white),
+                                              ),
+                                            )
+                                            : Text(
+                                              "Save Changes",
+                                              style: TextStyle(
+                                                color:
+                                                    _hasCalled && _isDirty
+                                                        ? Colors.white
+                                                        : Colors.grey[600],
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily:
+                                                    TextConstant.dmSansMedium,
+                                              ),
+                                            ),
                                   ),
                                 ),
                               ],
@@ -674,6 +763,58 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCallDurationContainer({required int duration}) {
+    final bool hasDuration = duration > 0;
+    final Color containerColor = hasDuration ? Colors.green : Colors.orange;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: containerColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: containerColor.withOpacity(0.4), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: containerColor.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.timer, color: containerColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Call Duration',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: containerColor,
+                    fontFamily: TextConstant.dmSansRegular,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  FormatHelper.formatCallDurationWithUnits(duration),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: containerColor,
+                    fontFamily: TextConstant.dmSansMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

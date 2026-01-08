@@ -59,9 +59,11 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     }
 
     // Set default values
-    _selectedCallStatus =
-        LeadConstants
-            .callStatusConnected; // Default to Connected since call was made
+    // Only set to "Connected" if call duration was provided (meaning a call was made)
+    // Otherwise, default to "Not Called" so the lead appears in the leads screen
+    _selectedCallStatus = _callDuration != null && _callDuration! > 0
+        ? LeadConstants.callStatusConnected
+        : LeadConstants.callStatusNotCalled;
     _selectedLeadStatus = LeadConstants.leadStatusNewLead;
 
     // Set default location from header controller

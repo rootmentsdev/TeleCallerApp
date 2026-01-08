@@ -81,32 +81,28 @@ class FollowupController extends ChangeNotifier {
       'FollowupController: getCurrentLeads called (tab=$_selectedTabIndex) - total follow-up leads available=${allFollowUpLeads.length}',
     );
     // Filter by follow-up date relative to selected date
-    // This is UI-level filtering for tab display, not data filtering
+    // IMPORTANT: Normalize all dates to UTC midnight for accurate date-only comparison
+    // Backend returns dates in UTC, so we normalize both API dates and filter dates to UTC
+    final selectedDateUtc = DateTime.utc(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
+
     switch (_selectedTabIndex) {
       case 0:
         // Today: follow-up date equals selected date
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
-              final followUpLocal = lead.followUpDate!.toLocal();
-              final followUpDate = DateTime(
-                followUpLocal.year,
-                followUpLocal.month,
-                followUpLocal.day,
+              // Normalize follow-up date to UTC midnight for date-only comparison
+              final followUpUtc = DateTime.utc(
+                lead.followUpDate!.year,
+                lead.followUpDate!.month,
+                lead.followUpDate!.day,
               );
-              final todayLocal = DateTime(
-                selectedDate.toLocal().year,
-                selectedDate.toLocal().month,
-                selectedDate.toLocal().day,
-              );
-              final isToday = followUpDate.isAtSameMomentAs(todayLocal);
-              if (!isToday) {
-                // Debug: log classification for investigation
-                // ignore: avoid_print
-                print(
-                  'FollowupController: Lead ${lead.id} followUpDate=${lead.followUpDate} (local=$followUpLocal) isToday=$isToday todayLocal=$todayLocal',
-                );
-              }
+              // Compare normalized UTC dates
+              final isToday = followUpUtc.compareTo(selectedDateUtc) == 0;
               return isToday;
             }).toList();
         break;
@@ -115,25 +111,14 @@ class FollowupController extends ChangeNotifier {
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
-              final followUpLocal = lead.followUpDate!.toLocal();
-              final followUpDate = DateTime(
-                followUpLocal.year,
-                followUpLocal.month,
-                followUpLocal.day,
+              // Normalize follow-up date to UTC midnight for date-only comparison
+              final followUpUtc = DateTime.utc(
+                lead.followUpDate!.year,
+                lead.followUpDate!.month,
+                lead.followUpDate!.day,
               );
-              final todayLocal = DateTime(
-                selectedDate.toLocal().year,
-                selectedDate.toLocal().month,
-                selectedDate.toLocal().day,
-              );
-              final isUpcoming = followUpDate.isAfter(todayLocal);
-              if (!isUpcoming) {
-                // Debug: log classification for investigation
-                // ignore: avoid_print
-                print(
-                  'FollowupController: Lead ${lead.id} followUpDate=${lead.followUpDate} (local=$followUpLocal) isUpcoming=$isUpcoming todayLocal=$todayLocal',
-                );
-              }
+              // Compare normalized UTC dates - upcoming means followUpDate > selectedDate
+              final isUpcoming = followUpUtc.compareTo(selectedDateUtc) > 0;
               return isUpcoming;
             }).toList();
         break;
@@ -142,25 +127,14 @@ class FollowupController extends ChangeNotifier {
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
-              final followUpLocal = lead.followUpDate!.toLocal();
-              final followUpDate = DateTime(
-                followUpLocal.year,
-                followUpLocal.month,
-                followUpLocal.day,
+              // Normalize follow-up date to UTC midnight for date-only comparison
+              final followUpUtc = DateTime.utc(
+                lead.followUpDate!.year,
+                lead.followUpDate!.month,
+                lead.followUpDate!.day,
               );
-              final todayLocal = DateTime(
-                selectedDate.toLocal().year,
-                selectedDate.toLocal().month,
-                selectedDate.toLocal().day,
-              );
-              final isOverdue = followUpDate.isBefore(todayLocal);
-              if (!isOverdue) {
-                // Debug: log classification for investigation
-                // ignore: avoid_print
-                print(
-                  'FollowupController: Lead ${lead.id} followUpDate=${lead.followUpDate} (local=$followUpLocal) isOverdue=$isOverdue todayLocal=$todayLocal',
-                );
-              }
+              // Compare normalized UTC dates - overdue means followUpDate < selectedDate
+              final isOverdue = followUpUtc.compareTo(selectedDateUtc) < 0;
               return isOverdue;
             }).toList();
         break;
@@ -172,9 +146,26 @@ class FollowupController extends ChangeNotifier {
                 .toList();
     }
 
-    // Sort by followUpDate ascending (earliest first), compare local dates
+    // Sort by followUpDate ascending (earliest first)
+    // Normalize to UTC for consistent sorting regardless of timezone
     currentLeads.sort(
-      (a, b) => a.followUpDate!.toLocal().compareTo(b.followUpDate!.toLocal()),
+      (a, b) {
+        if (a.followUpDate == null && b.followUpDate == null) return 0;
+        if (a.followUpDate == null) return 1;
+        if (b.followUpDate == null) return -1;
+        
+        final aUtc = DateTime.utc(
+          a.followUpDate!.year,
+          a.followUpDate!.month,
+          a.followUpDate!.day,
+        );
+        final bUtc = DateTime.utc(
+          b.followUpDate!.year,
+          b.followUpDate!.month,
+          b.followUpDate!.day,
+        );
+        return aUtc.compareTo(bUtc);
+      },
     );
 
     // Debug: show first and last followUpDate after sorting if any
