@@ -220,7 +220,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
                         
                         // PRIORITY 2: Try by phone number if we have it
                         if (duration == 0 && number != null && number != "Unknown") {
-                            duration = getDurationFromCallLog(context, number)
+                        duration = getDurationFromCallLog(context, number)
                             if (duration > 0) {
                                 Log.d(TAG, "✅ Got duration by phone number: ${duration}s for $number (attempt ${retryCount + 1})")
                                 break
@@ -229,7 +229,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
                         
                         retryCount++
                     }
-                    
+
                     // CRITICAL: NEVER use calculated duration - it includes dialing time and is INACCURATE
                     // We ONLY want answered call time (from when customer answered to call ended)
                     // Call log DURATION field provides exactly this - answered time only
@@ -266,7 +266,7 @@ class CallTrackingReceiver : BroadcastReceiver() {
                         "phoneNumber" to (number ?: "Unknown"),
                         "duration" to duration,
                         "callType" to (if (outgoingSnapshot) "outgoing" else "incoming")
-                    )
+                )
                 )
                 Log.d(TAG, "✅ Call end event sent for session: $sessionIdSnapshot")
                 

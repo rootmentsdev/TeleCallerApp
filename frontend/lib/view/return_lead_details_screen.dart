@@ -29,6 +29,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   String? selectedCallStatus;
   String? selectedLeadStatus;
   int rating = 0;
+  bool markAsStarred = false;
   final TextEditingController remarksController = TextEditingController();
   bool _isDirty = false;
   bool _hasCalled = false; // Track if call has been made
@@ -517,6 +518,35 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                       ),
                                     );
                                   }),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Mark As Starred Call
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: markAsStarred,
+                                  onChanged:
+                                      _hasCalled
+                                          ? (value) {
+                                            setState(() {
+                                              markAsStarred = value ?? false;
+                                              _isDirty = true;
+                                            });
+                                          }
+                                          : null,
+                                  activeColor: ColorConstant.primaryColor,
+                                ),
+                                Text(
+                                  "Mark As Starred Call",
+                                  style: TextStyle(
+                                    fontFamily: TextConstant.dmSansMedium,
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                  ),
                                 ),
                               ],
                             ),

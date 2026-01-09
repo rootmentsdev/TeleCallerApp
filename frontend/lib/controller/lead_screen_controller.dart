@@ -46,12 +46,12 @@ class LeadScreenController extends ChangeNotifier {
     // Get current store and date filters
     final store = _headerController?.selectedStore;
     final storeParam = (store == null || store == 'All Stores') ? null : store;
-    
+
     // Use date range if available, otherwise use single date
     String? dateFrom;
     String? dateTo;
     DateTime? singleDate;
-    
+
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
@@ -247,7 +247,7 @@ class LeadScreenController extends ChangeNotifier {
       DateTime? date;
       DateTime? dateStart;
       DateTime? dateEnd;
-      
+
       if (_headerController?.isRangeMode == true &&
           _headerController?.dateRangeStart != null &&
           _headerController?.dateRangeEnd != null) {
@@ -265,25 +265,35 @@ class LeadScreenController extends ChangeNotifier {
       List<LeadModel> leads;
       if (dateStart != null && dateEnd != null) {
         // Filter by date range
-        final start = dateStart!;
-        final end = dateEnd!;
-        leads = allLeads.where((lead) {
-          final leadDate = lead.createdAt;
-          final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
-          final normalizedStart = DateTime.utc(start.year, start.month, start.day);
-          final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-          return normalizedLeadDate.compareTo(normalizedStart) >= 0 && 
-                 normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-        }).toList();
+        final start = dateStart;
+        final end = dateEnd;
+        leads =
+            allLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
       } else if (date != null) {
         // Filter by single date
         final selectedDate = date;
-        leads = allLeads.where((lead) {
-          final leadDate = lead.createdAt;
-          return leadDate.year == selectedDate.year &&
-              leadDate.month == selectedDate.month &&
-              leadDate.day == selectedDate.day;
-        }).toList();
+        leads =
+            allLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
       } else {
         leads = allLeads;
       }
@@ -309,6 +319,85 @@ class LeadScreenController extends ChangeNotifier {
               .toList();
 
       // STEP 5: exclude leads with follow-up dates (they appear in Follow-up Screen)
+      leads = leads.where((lead) => lead.followUpDate == null).toList();
+
+      return leads.length;
+    }
+
+    // Helper function to count started calls (leads with callDuration > 0)
+    int getStartedCallsCount() {
+      // Use date range if available, otherwise use single date
+      DateTime? date;
+      DateTime? dateStart;
+      DateTime? dateEnd;
+
+      if (_headerController?.isRangeMode == true &&
+          _headerController?.dateRangeStart != null &&
+          _headerController?.dateRangeEnd != null) {
+        dateStart = _headerController!.dateRangeStart;
+        dateEnd = _headerController!.dateRangeEnd;
+      } else {
+        date = _headerController?.selectedDate ?? DateTime.now();
+      }
+
+      // STEP 1: Get ALL leads first
+      List<LeadModel> allLeads = _repository.allLeads;
+
+      // STEP 2: Filter by date FIRST
+      List<LeadModel> leads;
+      if (dateStart != null && dateEnd != null) {
+        // Filter by date range
+        final start = dateStart;
+        final end = dateEnd;
+        leads =
+            allLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
+      } else if (date != null) {
+        // Filter by single date
+        final selectedDate = date;
+        leads =
+            allLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
+      } else {
+        leads = allLeads;
+      }
+
+      // STEP 3: Filter by store using shared helper from repository
+      final storeFilter = _headerController?.selectedStore;
+      if (storeFilter != null && storeFilter != "All Stores") {
+        leads =
+            leads
+                .where((lead) => _repository.matchesStore(lead, storeFilter))
+                .toList();
+      }
+
+      // STEP 4: Filter for started calls (callDuration > 0)
+      leads =
+          leads
+              .where(
+                (lead) => lead.callDuration != null && lead.callDuration! > 0,
+              )
+              .toList();
+
+      // STEP 5: Exclude leads with follow-up dates (they appear in Follow-up Screen)
       leads = leads.where((lead) => lead.followUpDate == null).toList();
 
       return leads.length;
@@ -352,6 +441,13 @@ class LeadScreenController extends ChangeNotifier {
         "iconColor": const Color(0xff56BE6B),
         "icon": Icons.flag_outlined,
       },
+      {
+        "title": "Started\nCalls",
+        "count": getStartedCallsCount().toString(),
+        "bgColor": const Color(0xFFE3F2FD),
+        "iconColor": const Color(0xFF2196F3),
+        "icon": Icons.phone_callback_outlined,
+      },
     ];
   }
 
@@ -362,12 +458,12 @@ class LeadScreenController extends ChangeNotifier {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
 
     final store = _headerController?.selectedStore;
-    
+
     // Use date range if available, otherwise use single date
     DateTime? date;
     DateTime? dateStart;
     DateTime? dateEnd;
-    
+
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
@@ -377,50 +473,34 @@ class LeadScreenController extends ChangeNotifier {
       date = _headerController?.selectedDate ?? DateTime.now();
     }
 
-    // Get leads filtered by category, store, and date
-    List<LeadModel> filteredLeads = _repository.getLeadsByCategory(
-      category,
-      date: date,
-      dateStart: dateStart,
-      dateEnd: dateEnd,
-    );
+    // Handle "Started Calls" tab (index 4) separately
+    List<LeadModel> filteredLeads;
+    if (_selectedCallTypeIndex == 4) {
+      // For Started Calls, get all leads first
+      filteredLeads = _repository.allLeads;
 
-    // Debug: Print initial lead count
-    print(
-      'LeadScreenController: getFilteredLeads - Initial leads count: ${filteredLeads.length}, category: $category, store: $store',
-    );
-
-    // Filter by store using shared helper from repository
-    if (store != null && store != 'All Stores') {
-      filteredLeads =
-          filteredLeads
-              .where((lead) => _repository.matchesStore(lead, store))
-              .toList();
-
-      // Debug: Print after store filter
-      print(
-        'LeadScreenController: After store filter: ${filteredLeads.length} leads',
-      );
-    }
-
-    // Filter by date - but for All Calls, Loss of Sale, Return, and Booking Confirmation, show all leads (date filter is handled by API)
-    // For other categories, filter by selected date or date range
-    if (_selectedCallTypeIndex != 0 &&
-        _selectedCallTypeIndex != 1 &&
-        _selectedCallTypeIndex != 2 &&
-        _selectedCallTypeIndex != 3) {
+      // Filter by date
       if (dateStart != null && dateEnd != null) {
         // Filter by date range
-        final start = dateStart!;
-        final end = dateEnd!;
-        filteredLeads = filteredLeads.where((lead) {
-          final leadDate = lead.createdAt;
-          final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
-          final normalizedStart = DateTime.utc(start.year, start.month, start.day);
-          final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-          return normalizedLeadDate.compareTo(normalizedStart) >= 0 && 
-                 normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-        }).toList();
+        final start = dateStart;
+        final end = dateEnd;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
       } else if (date != null) {
         // Filter by single date
         final selectedDate = date;
@@ -432,19 +512,164 @@ class LeadScreenController extends ChangeNotifier {
                   leadDate.day == selectedDate.day;
             }).toList();
       }
-    }
 
-    // Filter out leads that have been called (only show uncalled leads)
-    // EXCEPT for "All Calls" tab (index 0) which should show all leads
-    if (_selectedCallTypeIndex != 0) {
-      final beforeCallStatusFilter = filteredLeads.length;
+      // Filter by store
+      if (store != null && store != 'All Stores') {
+        filteredLeads =
+            filteredLeads
+                .where((lead) => _repository.matchesStore(lead, store))
+                .toList();
+      }
+
+      // Filter for started calls (callDuration > 0)
       filteredLeads =
           filteredLeads
-              .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
+              .where(
+                (lead) => lead.callDuration != null && lead.callDuration! > 0,
+              )
               .toList();
+
       print(
-        'LeadScreenController: After call status filter: ${filteredLeads.length} leads (was $beforeCallStatusFilter)',
+        'LeadScreenController: getFilteredLeads - Started Calls count: ${filteredLeads.length}, store: $store',
       );
+    } else if (_selectedCallTypeIndex == 5) {
+      // For Starred Calls, get all leads first
+      filteredLeads = _repository.allLeads;
+
+      // Filter by date
+      if (dateStart != null && dateEnd != null) {
+        // Filter by date range
+        final start = dateStart;
+        final end = dateEnd;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
+      } else if (date != null) {
+        // Filter by single date
+        final selectedDate = date;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
+      }
+
+      // Filter by store
+      if (store != null && store != 'All Stores') {
+        filteredLeads =
+            filteredLeads
+                .where((lead) => _repository.matchesStore(lead, store))
+                .toList();
+      }
+
+      // Filter for starred calls (isMarked = true)
+      filteredLeads =
+          filteredLeads.where((lead) => lead.isMarked == true).toList();
+
+      print(
+        'LeadScreenController: getFilteredLeads - Starred Calls count: ${filteredLeads.length}, store: $store',
+      );
+    } else {
+      // For other tabs, use category filtering
+      filteredLeads = _repository.getLeadsByCategory(
+        category,
+        date: date,
+        dateStart: dateStart,
+        dateEnd: dateEnd,
+      );
+
+      // Debug: Print initial lead count
+      print(
+        'LeadScreenController: getFilteredLeads - Initial leads count: ${filteredLeads.length}, category: $category, store: $store',
+      );
+
+      // Filter by store using shared helper from repository
+      if (store != null && store != 'All Stores') {
+        filteredLeads =
+            filteredLeads
+                .where((lead) => _repository.matchesStore(lead, store))
+                .toList();
+
+        // Debug: Print after store filter
+        print(
+          'LeadScreenController: After store filter: ${filteredLeads.length} leads',
+        );
+      }
+
+      // Filter by date - but for All Calls, Loss of Sale, Return, and Booking Confirmation, show all leads (date filter is handled by API)
+      // For other categories, filter by selected date or date range
+      if (_selectedCallTypeIndex != 0 &&
+          _selectedCallTypeIndex != 1 &&
+          _selectedCallTypeIndex != 2 &&
+          _selectedCallTypeIndex != 3) {
+        if (dateStart != null && dateEnd != null) {
+          // Filter by date range
+          final start = dateStart;
+          final end = dateEnd;
+          filteredLeads =
+              filteredLeads.where((lead) {
+                final leadDate = lead.createdAt;
+                final normalizedLeadDate = DateTime.utc(
+                  leadDate.year,
+                  leadDate.month,
+                  leadDate.day,
+                );
+                final normalizedStart = DateTime.utc(
+                  start.year,
+                  start.month,
+                  start.day,
+                );
+                final normalizedEnd = DateTime.utc(
+                  end.year,
+                  end.month,
+                  end.day,
+                );
+                return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                    normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+              }).toList();
+        } else if (date != null) {
+          // Filter by single date
+          final selectedDate = date;
+          filteredLeads =
+              filteredLeads.where((lead) {
+                final leadDate = lead.createdAt;
+                return leadDate.year == selectedDate.year &&
+                    leadDate.month == selectedDate.month &&
+                    leadDate.day == selectedDate.day;
+              }).toList();
+        }
+      }
+
+      // Filter out leads that have been called (only show uncalled leads)
+      // EXCEPT for "All Calls" tab (index 0) which should show all leads
+      if (_selectedCallTypeIndex != 0) {
+        final beforeCallStatusFilter = filteredLeads.length;
+        filteredLeads =
+            filteredLeads
+                .where(
+                  (lead) => LeadConstants.isUncalledStatus(lead.callStatus),
+                )
+                .toList();
+        print(
+          'LeadScreenController: After call status filter: ${filteredLeads.length} leads (was $beforeCallStatusFilter)',
+        );
+      }
     }
 
     // Filter by follow-up status - exclude leads with follow-up dates from all tabs
@@ -497,6 +722,10 @@ class LeadScreenController extends ChangeNotifier {
         return "Return Calls";
       case 3:
         return "Booking Confirmation";
+      case 4:
+        return "Started Calls";
+      case 5:
+        return "Starred Calls";
       default:
         return "All Calls";
     }
@@ -530,6 +759,8 @@ class LeadScreenController extends ChangeNotifier {
         return LeadConstants.categoryRentOut;
       case 3:
         return LeadConstants.categoryBookingConfirmation;
+      case 4:
+        return null; // Started Calls (not category-based)
       default:
         return null;
     }

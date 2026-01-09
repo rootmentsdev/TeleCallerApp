@@ -5,7 +5,7 @@ import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/view/return_lead_details_screen.dart';
-import 'package:telecaller_app/view/reports_screens/just_dial_details_screen.dart';
+
 
 /// Helper class for navigation logic
 class NavigationHelper {

@@ -115,13 +115,6 @@ class HomeController extends ChangeNotifier {
         "icon": Icons.trending_down,
       },
       {
-        "title": "Return",
-        "count": count(LeadConstants.categoryRentOut).toString(),
-        "bgColor": const Color(0xFFFFF7CC),
-        "iconColor": const Color(0xFFFFCC00),
-        "icon": Icons.message_outlined,
-      },
-      {
         "title": "Booking\nConfirmation",
         "count": count(LeadConstants.categoryBookingConfirmation).toString(),
         "bgColor": const Color(0xFFD4F5DA),

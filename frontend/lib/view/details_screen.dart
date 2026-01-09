@@ -36,6 +36,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
   final TextEditingController customReasonController = TextEditingController();
   String? selectedLeadStatus;
   bool markAsFollowUp = false;
+  bool markAsStarred = false;
   DateTime? followUpDate;
   int rating = 0;
   final TextEditingController remarksController = TextEditingController();
@@ -1491,6 +1492,36 @@ class _DetailsScreenState extends State<DetailsScreen> {
                                 ),
                               ),
                             ],
+                          ],
+                        ),
+
+                      if (!isFollowUpLead) const SizedBox(height: 16),
+
+                      // Mark As Starred Call
+                      if (!isFollowUpLead)
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: markAsStarred,
+                              onChanged:
+                                  _hasCalled
+                                      ? (value) {
+                                        setState(() {
+                                          markAsStarred = value ?? false;
+                                          _isDirty = true;
+                                        });
+                                      }
+                                      : null,
+                              activeColor: ColorConstant.primaryColor,
+                            ),
+                            Text(
+                              "Mark As Starred Call",
+                              style: TextStyle(
+                                fontFamily: TextConstant.dmSansMedium,
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
+                            ),
                           ],
                         ),
 

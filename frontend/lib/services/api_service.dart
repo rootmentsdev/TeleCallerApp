@@ -359,8 +359,8 @@ class ApiService {
                 errorData['error'] ??
                 errorData['msg'] ??
                 errorMessage;
-          }
-        } catch (e) {
+      }
+    } catch (e) {
           print('ApiService: Could not parse error response: $e');
         }
         throw Exception(errorMessage);
@@ -1053,7 +1053,7 @@ class ApiService {
         // If followUpDate is provided without flag, set flag to true
         requestBody['follow_up_flag'] = true;
         requestBody['follow_up_date'] = followUpDate.toIso8601String();
-      }
+        }
 
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();

@@ -95,9 +95,36 @@ class LeadRepository extends ChangeNotifier {
               )
               .toList(),
         );
-        // Notify listeners that leads have been loaded from persistence
-        notifyListeners();
       }
+
+      // Always add dummy starred lead for demonstration if not already present
+      final dummyExists = _leads.any((lead) => lead.id == 'dummy_starred_001');
+      if (!dummyExists) {
+        _leads.add(
+          LeadModel(
+            id: 'dummy_starred_001',
+            name: 'Abhishek Kumar',
+            phone: '+91 9876543210',
+            brand: 'Suitor Guy',
+            location: 'Edappally',
+            leadStatus: 'Qualified',
+            callStatus: 'Connected',
+            reason:
+                'No clear non-confirm because he wanted to get approval from his family.',
+            category: null,
+            callDuration: 0,
+            callCount: 0,
+            createdAt: DateTime.now(),
+            source: 'Walk-in',
+            leadType: 'General',
+            isMarked: true,
+          ),
+        );
+        await _saveLeads();
+      }
+
+      // Notify listeners that leads have been loaded from persistence
+      notifyListeners();
     } catch (e) {
       // If loading fails, start with empty list
       _leads.clear();
@@ -149,7 +176,9 @@ class LeadRepository extends ChangeNotifier {
     _leads.removeWhere((lead) => lead.phone == phoneNumber);
     final remainingCount = _leads.length;
     if (removedCount != remainingCount) {
-      print('LeadRepository: Removed ${removedCount - remainingCount} lead(s) with phone number: $phoneNumber');
+      print(
+        'LeadRepository: Removed ${removedCount - remainingCount} lead(s) with phone number: $phoneNumber',
+      );
       await _saveLeads();
       notifyListeners();
     }
@@ -195,7 +224,12 @@ class LeadRepository extends ChangeNotifier {
 
   // ========== Filtered Queries ==========
 
-  List<LeadModel> getLeadsByCategory(String? category, {DateTime? date, DateTime? dateStart, DateTime? dateEnd}) {
+  List<LeadModel> getLeadsByCategory(
+    String? category, {
+    DateTime? date,
+    DateTime? dateStart,
+    DateTime? dateEnd,
+  }) {
     List<LeadModel> filtered = _leads;
 
     // Apply date filter if provided
@@ -290,13 +324,17 @@ class LeadRepository extends ChangeNotifier {
     // Normalize dates to start of day for comparison
     final start = DateTime.utc(startDate.year, startDate.month, startDate.day);
     final end = DateTime.utc(endDate.year, endDate.month, endDate.day);
-    
+
     return _leads.where((lead) {
       final leadDate = lead.createdAt;
-      final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
+      final normalizedLeadDate = DateTime.utc(
+        leadDate.year,
+        leadDate.month,
+        leadDate.day,
+      );
       // Check if lead date is within range (inclusive)
-      return normalizedLeadDate.compareTo(start) >= 0 && 
-             normalizedLeadDate.compareTo(end) <= 0;
+      return normalizedLeadDate.compareTo(start) >= 0 &&
+          normalizedLeadDate.compareTo(end) <= 0;
     }).toList();
   }
 
@@ -1186,9 +1224,10 @@ class LeadRepository extends ChangeNotifier {
 
       // Debug: Log current state before fetch
       final leadsBeforeFetch = _leads.length;
-      final followUpLeadsBeforeFetch = _leads
-          .where((lead) => lead.category == LeadConstants.categoryFollowUp)
-          .length;
+      final followUpLeadsBeforeFetch =
+          _leads
+              .where((lead) => lead.category == LeadConstants.categoryFollowUp)
+              .length;
       print(
         'LeadRepository: Before fetch - Total leads: $leadsBeforeFetch, Follow-up leads: $followUpLeadsBeforeFetch',
       );
@@ -1204,9 +1243,10 @@ class LeadRepository extends ChangeNotifier {
           }
           // Also extract phone number to match leads that were moved to follow-up
           // (backend creates new lead with new ID, but same phone number)
-          final phone = leadData['phone_number']?.toString() ?? 
-                       leadData['phone']?.toString() ?? 
-                       leadData['phoneNumber']?.toString();
+          final phone =
+              leadData['phone_number']?.toString() ??
+              leadData['phone']?.toString() ??
+              leadData['phoneNumber']?.toString();
           if (phone != null && phone.isNotEmpty) {
             apiPhoneNumbers.add(phone.trim());
           }
@@ -1231,7 +1271,8 @@ class LeadRepository extends ChangeNotifier {
         (lead) =>
             lead.category == LeadConstants.categoryFollowUp ||
             apiLeadIds.contains(lead.id) ||
-            (lead.phone.isNotEmpty && apiPhoneNumbers.contains(lead.phone.trim())),
+            (lead.phone.isNotEmpty &&
+                apiPhoneNumbers.contains(lead.phone.trim())),
       );
       final actuallyRemoved = removedCount - _leads.length;
       print(
@@ -1274,9 +1315,10 @@ class LeadRepository extends ChangeNotifier {
 
       // Debug: Log final state after fetch
       final leadsAfterFetch = _leads.length;
-      final followUpLeadsAfterFetch = _leads
-          .where((lead) => lead.category == LeadConstants.categoryFollowUp)
-          .length;
+      final followUpLeadsAfterFetch =
+          _leads
+              .where((lead) => lead.category == LeadConstants.categoryFollowUp)
+              .length;
       print(
         'LeadRepository: After fetch - Total leads: $leadsAfterFetch, Follow-up leads: $followUpLeadsAfterFetch',
       );
@@ -1426,23 +1468,21 @@ class LeadRepository extends ChangeNotifier {
         // Store called leads and follow-up leads before clearing
         // Exclude called return leads and booking confirmation leads (moved to reports)
         final preservedLeads =
-            _leads
-                .where(
-                  (lead) {
-                    final isReturnLead = lead.category == LeadConstants.categoryRentOut;
-                    final isBookingConfirmationLead = lead.category == LeadConstants.categoryBookingConfirmation;
-                    final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+            _leads.where((lead) {
+              final isReturnLead =
+                  lead.category == LeadConstants.categoryRentOut;
+              final isBookingConfirmationLead =
+                  lead.category == LeadConstants.categoryBookingConfirmation;
+              final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
 
-                    // Don't preserve called return leads or booking confirmation leads
-                    if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
-                      return false;
-                    }
+              // Don't preserve called return leads or booking confirmation leads
+              if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
+                return false;
+              }
 
-                    // Preserve other called leads and follow-up leads
-                    return isCalled || lead.needsFollowUp;
-                  },
-                )
-                .toList();
+              // Preserve other called leads and follow-up leads
+              return isCalled || lead.needsFollowUp;
+            }).toList();
 
         print(
           'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh (excluding called return/booking confirmation leads)',
@@ -1465,12 +1505,15 @@ class LeadRepository extends ChangeNotifier {
             // Skip return leads and booking confirmation leads that have been called
             // These leads have been moved to reports and should not appear in the leads list
             final isReturnLead = lead.category == LeadConstants.categoryRentOut;
-            final isBookingConfirmationLead = lead.category == LeadConstants.categoryBookingConfirmation;
+            final isBookingConfirmationLead =
+                lead.category == LeadConstants.categoryBookingConfirmation;
             final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
 
             if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
               skippedCalledCount++;
-              print('LeadRepository: Skipping called ${lead.category} lead: ${lead.name} (${lead.phone}) - moved to reports');
+              print(
+                'LeadRepository: Skipping called ${lead.category} lead: ${lead.name} (${lead.phone}) - moved to reports',
+              );
               continue;
             }
 
@@ -1493,7 +1536,9 @@ class LeadRepository extends ChangeNotifier {
       }
 
       if (skippedCalledCount > 0) {
-        print('LeadRepository: Skipped $skippedCalledCount called return/booking confirmation leads (moved to reports)');
+        print(
+          'LeadRepository: Skipped $skippedCalledCount called return/booking confirmation leads (moved to reports)',
+        );
       }
 
       if (failedCount > 0) {
