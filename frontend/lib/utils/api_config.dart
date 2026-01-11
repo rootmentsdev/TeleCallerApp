@@ -29,6 +29,8 @@ class ApiConfig {
     String? functionTo,
     String? visitFrom,
     String? visitTo,
+    int? page,
+    int? limit,
   }) {
     String url = "$leadsEndpoint?leadType=$lossOfSale";
 
@@ -48,6 +50,17 @@ class ApiConfig {
 
     if (visitFrom != null && visitTo != null) {
       url += "&visitDateFrom=$visitFrom&visitDateTo=$visitTo";
+    }
+
+    // Add pagination parameters
+    if (page != null) {
+      url += "&page=$page";
+    }
+    if (limit != null) {
+      url += "&limit=$limit";
+    } else {
+      // Default to high limit to get all records
+      url += "&limit=1000";
     }
 
     return url;

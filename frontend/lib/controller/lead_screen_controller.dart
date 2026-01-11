@@ -46,12 +46,12 @@ class LeadScreenController extends ChangeNotifier {
     // Get current store and date filters
     final store = _headerController?.selectedStore;
     final storeParam = (store == null || store == 'All Stores') ? null : store;
-    
+
     // Use date range if available, otherwise use single date
     String? dateFrom;
     String? dateTo;
     DateTime? singleDate;
-    
+
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
@@ -247,7 +247,7 @@ class LeadScreenController extends ChangeNotifier {
       DateTime? date;
       DateTime? dateStart;
       DateTime? dateEnd;
-      
+
       if (_headerController?.isRangeMode == true &&
           _headerController?.dateRangeStart != null &&
           _headerController?.dateRangeEnd != null) {
@@ -265,25 +265,35 @@ class LeadScreenController extends ChangeNotifier {
       List<LeadModel> leads;
       if (dateStart != null && dateEnd != null) {
         // Filter by date range
-        final start = dateStart!;
-        final end = dateEnd!;
-        leads = allLeads.where((lead) {
-          final leadDate = lead.createdAt;
-          final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
-          final normalizedStart = DateTime.utc(start.year, start.month, start.day);
-          final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-          return normalizedLeadDate.compareTo(normalizedStart) >= 0 && 
-                 normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-        }).toList();
+        final start = dateStart;
+        final end = dateEnd;
+        leads =
+            allLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
       } else if (date != null) {
         // Filter by single date
         final selectedDate = date;
-        leads = allLeads.where((lead) {
-          final leadDate = lead.createdAt;
-          return leadDate.year == selectedDate.year &&
-              leadDate.month == selectedDate.month &&
-              leadDate.day == selectedDate.day;
-        }).toList();
+        leads =
+            allLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
       } else {
         leads = allLeads;
       }
@@ -362,12 +372,12 @@ class LeadScreenController extends ChangeNotifier {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
 
     final store = _headerController?.selectedStore;
-    
+
     // Use date range if available, otherwise use single date
     DateTime? date;
     DateTime? dateStart;
     DateTime? dateEnd;
-    
+
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
@@ -378,12 +388,19 @@ class LeadScreenController extends ChangeNotifier {
     }
 
     // Get leads filtered by category, store, and date
-    List<LeadModel> filteredLeads = _repository.getLeadsByCategory(
-      category,
-      date: date,
-      dateStart: dateStart,
-      dateEnd: dateEnd,
-    );
+    List<LeadModel> filteredLeads;
+    if (dateStart != null && dateEnd != null) {
+      // Use date range filtering
+      filteredLeads = _repository.getLeadsByDateRange(dateStart, dateEnd);
+      // Apply category filter
+      if (category != null) {
+        filteredLeads =
+            filteredLeads.where((lead) => lead.category == category).toList();
+      }
+    } else {
+      // Use single date filtering
+      filteredLeads = _repository.getLeadsByCategory(category, date: date);
+    }
 
     // Debug: Print initial lead count
     print(
@@ -411,16 +428,25 @@ class LeadScreenController extends ChangeNotifier {
         _selectedCallTypeIndex != 3) {
       if (dateStart != null && dateEnd != null) {
         // Filter by date range
-        final start = dateStart!;
-        final end = dateEnd!;
-        filteredLeads = filteredLeads.where((lead) {
-          final leadDate = lead.createdAt;
-          final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
-          final normalizedStart = DateTime.utc(start.year, start.month, start.day);
-          final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-          return normalizedLeadDate.compareTo(normalizedStart) >= 0 && 
-                 normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-        }).toList();
+        final start = dateStart;
+        final end = dateEnd;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
       } else if (date != null) {
         // Filter by single date
         final selectedDate = date;

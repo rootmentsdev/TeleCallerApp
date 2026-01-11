@@ -149,7 +149,9 @@ class LeadRepository extends ChangeNotifier {
     _leads.removeWhere((lead) => lead.phone == phoneNumber);
     final remainingCount = _leads.length;
     if (removedCount != remainingCount) {
-      print('LeadRepository: Removed ${removedCount - remainingCount} lead(s) with phone number: $phoneNumber');
+      print(
+        'LeadRepository: Removed ${removedCount - remainingCount} lead(s) with phone number: $phoneNumber',
+      );
       await _saveLeads();
       notifyListeners();
     }
@@ -195,15 +197,11 @@ class LeadRepository extends ChangeNotifier {
 
   // ========== Filtered Queries ==========
 
-  List<LeadModel> getLeadsByCategory(String? category, {DateTime? date, DateTime? dateStart, DateTime? dateEnd}) {
+  List<LeadModel> getLeadsByCategory(String? category, {DateTime? date}) {
     List<LeadModel> filtered = _leads;
 
     // Apply date filter if provided
-    if (dateStart != null && dateEnd != null) {
-      // Use date range filter
-      filtered = getLeadsByDateRange(dateStart, dateEnd);
-    } else if (date != null) {
-      // Use single date filter
+    if (date != null) {
       filtered =
           filtered.where((lead) {
             final leadDate = lead.createdAt;
@@ -220,20 +218,95 @@ class LeadRepository extends ChangeNotifier {
 
   /// Helper method to check if a lead matches a store filter
   /// Handles case-insensitive matching, extracts locations from "Brand - Location" formats,
-  /// and supports partial matching
+  /// and supports partial matching with brand-aware normalization
   bool matchesStore(LeadModel lead, String store) {
     if (store.isEmpty || store == 'All Stores') {
       return true;
     }
 
-    // Extract location from "Brand - Location" format, or use as-is if already a location
-    final location =
-        store.contains(' - ')
-            ? StoreLocations.resolveSelection(store).location
-            : store;
+    // Extract brand and location from "Brand - Location" format, or use as-is if already a location
+    String? filterBrand;
+    String location;
+    if (store.contains(' - ')) {
+      final parts = store.split(' - ');
+      if (parts.length >= 2) {
+        filterBrand = parts[0].trim();
+        location = parts[1].trim();
+      } else {
+        location = store;
+      }
+    } else {
+      location = store;
+    }
 
-    // Case-insensitive matching
-    final leadLocation = lead.location ?? '';
+    // Normalize the filter location
+    location = StoreLocations.normalizeStoreName(location);
+
+    // Get lead brand and location
+    String? leadBrand = lead.brand;
+    String leadLocation = lead.location ?? '';
+
+    // Extract brand from lead location if it's in "Brand - Location" format
+    if (leadLocation.contains(' - ')) {
+      final parts = leadLocation.split(' - ');
+      if (parts.length >= 2) {
+        if (leadBrand == null || leadBrand.isEmpty) {
+          leadBrand = parts[0].trim();
+        }
+        leadLocation = parts[1].trim();
+      }
+    }
+
+    // Normalize lead location
+    leadLocation = StoreLocations.normalizeStoreName(leadLocation);
+
+    // Brand-aware normalization: "Kottakkal" -> "Kottakal" for Suitor Guy stores only
+    final isFilterSuitor =
+        filterBrand != null && filterBrand.toLowerCase().contains('suitor');
+    final isLeadSuitor =
+        leadBrand != null && leadBrand.toLowerCase().contains('suitor');
+
+    if (isFilterSuitor && isLeadSuitor) {
+      // Both are Suitor Guy - normalize "Kottakkal" to "Kottakal"
+      if (leadLocation.toLowerCase() == 'kottakkal') {
+        leadLocation = 'Kottakal';
+      }
+      if (location.toLowerCase() == 'kottakkal') {
+        location = 'Kottakal';
+      }
+    }
+
+    // Check brand match if both have brands
+    if (filterBrand != null && leadBrand != null) {
+      final normalizedFilterBrand = filterBrand.toLowerCase().trim();
+      final normalizedLeadBrand = leadBrand.toLowerCase().trim();
+
+      // Brand must match (handle variations like "Suitor Guy" vs "Suitor")
+      final isFilterSuitorCheck = normalizedFilterBrand.contains('suitor');
+      final isLeadSuitorCheck = normalizedLeadBrand.contains('suitor');
+      final isFilterZorucci =
+          normalizedFilterBrand.contains('zorucci') ||
+          normalizedFilterBrand.contains('zurocci');
+      final isLeadZorucci =
+          normalizedLeadBrand.contains('zorucci') ||
+          normalizedLeadBrand.contains('zurocci');
+
+      // Brand mismatch check
+      if (isFilterSuitorCheck && !isLeadSuitorCheck) {
+        return false; // Filter is Suitor but lead is not
+      }
+      if (isLeadSuitorCheck && !isFilterSuitorCheck) {
+        return false; // Lead is Suitor but filter is not
+      }
+      if (isFilterZorucci && !isLeadZorucci) {
+        return false; // Filter is Zorucci but lead is not
+      }
+      if (isLeadZorucci && !isFilterZorucci) {
+        return false; // Lead is Zorucci but filter is not
+      }
+    }
+
+    // Case-insensitive location matching
     final normalizedLeadLocation = leadLocation.toLowerCase().trim();
     final normalizedFilterLocation = location.toLowerCase().trim();
 
@@ -290,13 +363,17 @@ class LeadRepository extends ChangeNotifier {
     // Normalize dates to start of day for comparison
     final start = DateTime.utc(startDate.year, startDate.month, startDate.day);
     final end = DateTime.utc(endDate.year, endDate.month, endDate.day);
-    
+
     return _leads.where((lead) {
       final leadDate = lead.createdAt;
-      final normalizedLeadDate = DateTime.utc(leadDate.year, leadDate.month, leadDate.day);
+      final normalizedLeadDate = DateTime.utc(
+        leadDate.year,
+        leadDate.month,
+        leadDate.day,
+      );
       // Check if lead date is within range (inclusive)
-      return normalizedLeadDate.compareTo(start) >= 0 && 
-             normalizedLeadDate.compareTo(end) <= 0;
+      return normalizedLeadDate.compareTo(start) >= 0 &&
+          normalizedLeadDate.compareTo(end) <= 0;
     }).toList();
   }
 
@@ -576,6 +653,8 @@ class LeadRepository extends ChangeNotifier {
     String? functionTo,
     String? visitFrom,
     String? visitTo,
+    int? page,
+    int? limit,
   }) async {
     try {
       await ensureInitialized();
@@ -588,6 +667,8 @@ class LeadRepository extends ChangeNotifier {
         functionTo: functionTo,
         visitFrom: visitFrom,
         visitTo: visitTo,
+        page: page,
+        limit: limit,
       );
 
       // Parse response - handle different response formats
@@ -770,11 +851,39 @@ class LeadRepository extends ChangeNotifier {
           leadData['contactNumber']?.toString() ??
           leadData['contact']?.toString() ??
           '';
-      final brand = leadData['brand']?.toString();
-      // Backend uses 'store' field directly (e.g., "Zurocci - Perinthalmanna")
-      final location =
-          leadData['store']?.toString() ?? // Backend field name
-          leadData['location']?.toString();
+      // Extract brand and location from store field if available
+      String? brand;
+      String? location;
+      final storeField =
+          leadData['store']?.toString() ?? leadData['location']?.toString();
+
+      if (storeField != null && storeField.isNotEmpty) {
+        if (storeField.contains(' - ')) {
+          // Extract brand and location from "Brand - Location" format
+          final parts = storeField.split(' - ');
+          if (parts.length >= 2) {
+            brand = parts[0].trim();
+            location = parts[1].trim();
+            // Normalize store name with brand context
+            // Special case: "Kottakkal" -> "Kottakal" for Suitor Guy only
+            if (brand.toLowerCase().contains('suitor') &&
+                location.toLowerCase() == 'kottakkal') {
+              location = 'Kottakal';
+            } else {
+              location = StoreLocations.normalizeStoreName(location);
+            }
+          } else {
+            location = StoreLocations.normalizeStoreName(storeField.trim());
+          }
+        } else {
+          location = StoreLocations.normalizeStoreName(storeField.trim());
+        }
+      }
+
+      // Fallback to brand field if not extracted from store
+      if (brand == null || brand.isEmpty) {
+        brand = leadData['brand']?.toString();
+      }
       final leadStatus =
           leadData['lead_status']?.toString() ?? // Backend field name
           leadData['leadStatus']?.toString();
@@ -1186,9 +1295,10 @@ class LeadRepository extends ChangeNotifier {
 
       // Debug: Log current state before fetch
       final leadsBeforeFetch = _leads.length;
-      final followUpLeadsBeforeFetch = _leads
-          .where((lead) => lead.category == LeadConstants.categoryFollowUp)
-          .length;
+      final followUpLeadsBeforeFetch =
+          _leads
+              .where((lead) => lead.category == LeadConstants.categoryFollowUp)
+              .length;
       print(
         'LeadRepository: Before fetch - Total leads: $leadsBeforeFetch, Follow-up leads: $followUpLeadsBeforeFetch',
       );
@@ -1204,9 +1314,10 @@ class LeadRepository extends ChangeNotifier {
           }
           // Also extract phone number to match leads that were moved to follow-up
           // (backend creates new lead with new ID, but same phone number)
-          final phone = leadData['phone_number']?.toString() ?? 
-                       leadData['phone']?.toString() ?? 
-                       leadData['phoneNumber']?.toString();
+          final phone =
+              leadData['phone_number']?.toString() ??
+              leadData['phone']?.toString() ??
+              leadData['phoneNumber']?.toString();
           if (phone != null && phone.isNotEmpty) {
             apiPhoneNumbers.add(phone.trim());
           }
@@ -1231,7 +1342,8 @@ class LeadRepository extends ChangeNotifier {
         (lead) =>
             lead.category == LeadConstants.categoryFollowUp ||
             apiLeadIds.contains(lead.id) ||
-            (lead.phone.isNotEmpty && apiPhoneNumbers.contains(lead.phone.trim())),
+            (lead.phone.isNotEmpty &&
+                apiPhoneNumbers.contains(lead.phone.trim())),
       );
       final actuallyRemoved = removedCount - _leads.length;
       print(
@@ -1274,9 +1386,10 @@ class LeadRepository extends ChangeNotifier {
 
       // Debug: Log final state after fetch
       final leadsAfterFetch = _leads.length;
-      final followUpLeadsAfterFetch = _leads
-          .where((lead) => lead.category == LeadConstants.categoryFollowUp)
-          .length;
+      final followUpLeadsAfterFetch =
+          _leads
+              .where((lead) => lead.category == LeadConstants.categoryFollowUp)
+              .length;
       print(
         'LeadRepository: After fetch - Total leads: $leadsAfterFetch, Follow-up leads: $followUpLeadsAfterFetch',
       );
@@ -1426,23 +1539,21 @@ class LeadRepository extends ChangeNotifier {
         // Store called leads and follow-up leads before clearing
         // Exclude called return leads and booking confirmation leads (moved to reports)
         final preservedLeads =
-            _leads
-                .where(
-                  (lead) {
-                    final isReturnLead = lead.category == LeadConstants.categoryRentOut;
-                    final isBookingConfirmationLead = lead.category == LeadConstants.categoryBookingConfirmation;
-                    final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+            _leads.where((lead) {
+              final isReturnLead =
+                  lead.category == LeadConstants.categoryRentOut;
+              final isBookingConfirmationLead =
+                  lead.category == LeadConstants.categoryBookingConfirmation;
+              final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
 
-                    // Don't preserve called return leads or booking confirmation leads
-                    if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
-                      return false;
-                    }
+              // Don't preserve called return leads or booking confirmation leads
+              if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
+                return false;
+              }
 
-                    // Preserve other called leads and follow-up leads
-                    return isCalled || lead.needsFollowUp;
-                  },
-                )
-                .toList();
+              // Preserve other called leads and follow-up leads
+              return isCalled || lead.needsFollowUp;
+            }).toList();
 
         print(
           'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh (excluding called return/booking confirmation leads)',
@@ -1465,12 +1576,15 @@ class LeadRepository extends ChangeNotifier {
             // Skip return leads and booking confirmation leads that have been called
             // These leads have been moved to reports and should not appear in the leads list
             final isReturnLead = lead.category == LeadConstants.categoryRentOut;
-            final isBookingConfirmationLead = lead.category == LeadConstants.categoryBookingConfirmation;
+            final isBookingConfirmationLead =
+                lead.category == LeadConstants.categoryBookingConfirmation;
             final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
 
             if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
               skippedCalledCount++;
-              print('LeadRepository: Skipping called ${lead.category} lead: ${lead.name} (${lead.phone}) - moved to reports');
+              print(
+                'LeadRepository: Skipping called ${lead.category} lead: ${lead.name} (${lead.phone}) - moved to reports',
+              );
               continue;
             }
 
@@ -1493,7 +1607,9 @@ class LeadRepository extends ChangeNotifier {
       }
 
       if (skippedCalledCount > 0) {
-        print('LeadRepository: Skipped $skippedCalledCount called return/booking confirmation leads (moved to reports)');
+        print(
+          'LeadRepository: Skipped $skippedCalledCount called return/booking confirmation leads (moved to reports)',
+        );
       }
 
       if (failedCount > 0) {

@@ -11,13 +11,17 @@ class StoreLocations {
   StoreLocations._(); // Prevent instantiation
 
   /// Store name normalization mapping (backend names -> frontend names)
+  /// Handles case variations and spelling differences between backend and frontend
   static const Map<String, String> storeNameNormalization = {
+    // Calicut -> Kozhikode
     'Calicut': 'Kozhikode',
     'calicut': 'Kozhikode',
     'CALICUT': 'Kozhikode',
+    // Cochin -> Edappally
     'Cochin': 'Edappally',
     'cochin': 'Edappally',
     'COCHIN': 'Edappally',
+    // MG Road variations
     'mg road': 'MG Road',
     'MG road': 'MG Road',
     'mg Road': 'MG Road',
@@ -25,6 +29,77 @@ class StoreLocations {
     'mg_road': 'MG Road',
     'MG-Road': 'MG Road',
     'mg-road': 'MG Road',
+    'M.G. Road': 'MG Road',
+    'm.g. road': 'MG Road',
+    // Vatakara -> Vadakara
+    'Vatakara': 'Vadakara',
+    'vatakara': 'Vadakara',
+    'VATAKARA': 'Vadakara',
+    // Trivandrum variations
+    'trivandrum': 'Trivandrum',
+    'TRIVANDRUM': 'Trivandrum',
+    'Thiruvananthapuram': 'Trivandrum',
+    'thiruvananthapuram': 'Trivandrum',
+    // Kottayam variations
+    'kottayam': 'Kottayam',
+    'KOTTAYAM': 'Kottayam',
+    // Edappally variations
+    'edappally': 'Edappally',
+    'EDAPPALLY': 'Edappally',
+    'Edapally': 'Edappally',
+    'edapally': 'Edappally',
+    // Perumbavoor variations
+    'perumbavoor': 'Perumbavoor',
+    'PERUMBAVOOR': 'Perumbavoor',
+    'Perumbavur': 'Perumbavoor',
+    'perumbavur': 'Perumbavoor',
+    // Thrissur variations
+    'thrissur': 'Thrissur',
+    'THRISSUR': 'Thrissur',
+    'Trichur': 'Thrissur',
+    'trichur': 'Thrissur',
+    // Palakkad variations
+    'palakkad': 'Palakkad',
+    'PALAKKAD': 'Palakkad',
+    'Palghat': 'Palakkad',
+    'palghat': 'Palakkad',
+    // Chavakkad variations
+    'chavakkad': 'Chavakkad',
+    'CHAVAKKAD': 'Chavakkad',
+    'Chavakad': 'Chavakkad',
+    'chavakad': 'Chavakkad',
+    // Edappal variations
+    'edappal': 'Edappal',
+    'EDAPPAL': 'Edappal',
+    'Edapal': 'Edappal',
+    'edapal': 'Edappal',
+    // Perinthalmanna variations
+    'perinthalmanna': 'Perinthalmanna',
+    'PERINTHALMANNA': 'Perinthalmanna',
+    // Manjeri variations
+    'manjeri': 'Manjeri',
+    'MANJERI': 'Manjeri',
+    // Kottakal variations (Suitor Guy - note: different from Zorucci's Kottakkal)
+    'kottakal': 'Kottakal',
+    'KOTTAKAL': 'Kottakal',
+    // Kozhikode variations
+    'kozhikode': 'Kozhikode',
+    'KOZHIKODE': 'Kozhikode',
+    // Vadakara variations
+    'vadakara': 'Vadakara',
+    'VADAKARA': 'Vadakara',
+    // Kannur variations
+    'kannur': 'Kannur',
+    'KANNUR': 'Kannur',
+    'Cannanore': 'Kannur',
+    'cannanore': 'Kannur',
+    // Kalpetta variations
+    'kalpetta': 'Kalpetta',
+    'KALPETTA': 'Kalpetta',
+    // Kottakkal variations (Zorucci - different from Kottakal)
+    'Kottakkal': 'Kottakkal',
+    'kottakkal': 'Kottakkal',
+    'KOTTAKKAL': 'Kottakkal',
   };
 
   /// Store lists by brand

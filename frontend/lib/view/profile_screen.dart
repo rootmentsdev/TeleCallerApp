@@ -48,10 +48,26 @@ class ProfileScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 110),
-                const CircleAvatar(
-                  radius: 48,
-                  backgroundImage: AssetImage(
-                    'assets/images/Screenshot 2025-11-27 174648.png',
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF1A4D6D),
+                        const Color(0xFF0D2A3D),
+                      ],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.phone,
+                      size: 48,
+                      color: Color(0xFF7DD3FC),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 26),

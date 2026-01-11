@@ -7,6 +7,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
+import 'package:telecaller_app/view/profile_screen.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -105,6 +106,14 @@ class _ReportScreenState extends State<ReportScreen> {
                 showFilters: true,
                 onNotificationTap: () {
                   // Handle notification tap
+                },
+                onProfileTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  );
                 },
               ),
               // Title and Back Button

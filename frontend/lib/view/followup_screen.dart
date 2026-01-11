@@ -6,6 +6,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
+import 'package:telecaller_app/view/profile_screen.dart';
 
 class FollowupScreen extends StatefulWidget {
   const FollowupScreen({super.key});
@@ -55,6 +56,14 @@ class _FollowupScreenState extends State<FollowupScreen> {
             showFilters: true,
             onNotificationTap: () {
               // Handle notification tap
+            },
+            onProfileTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
+                ),
+              );
             },
           ),
           Expanded(

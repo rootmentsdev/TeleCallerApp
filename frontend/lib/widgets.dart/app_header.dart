@@ -54,7 +54,7 @@ class AppHeader extends StatelessWidget {
                         CircleAvatar(
                           maxRadius: 20,
                           backgroundImage: const AssetImage(
-                            'assets/images/Screenshot 2025-11-27 174648.png',
+                            'assets/images/profile_icon.jpg',
                           ),
                         ),
                         Padding(

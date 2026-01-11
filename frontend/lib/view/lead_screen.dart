@@ -6,6 +6,7 @@ import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/navigation_helper.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/widgets.dart/call_summary_card.dart';
+import 'package:telecaller_app/view/profile_screen.dart';
 
 class LeadScreen extends StatefulWidget {
   const LeadScreen({super.key});
@@ -193,7 +194,17 @@ class _LeadScreenState extends State<LeadScreen> {
           backgroundColor: Colors.white,
           body: Column(
             children: [
-              AppHeader(onNotificationTap: () {},),
+              AppHeader(
+                onNotificationTap: () {},
+                onProfileTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  );
+                },
+              ),
 
               // ================= Summary Cards =================
               Padding(

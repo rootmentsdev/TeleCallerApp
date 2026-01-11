@@ -402,9 +402,10 @@ class ReportController extends ChangeNotifier {
       }
 
       // Filter to only include leads that have been called
-      final calledLocalLeads = localLeads
-          .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
-          .toList();
+      final calledLocalLeads =
+          localLeads
+              .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+              .toList();
 
       // Add newly created leads that aren't already in the API reports
       final reportIds = filteredReports.map((r) => r["id"]).toSet();
@@ -538,7 +539,11 @@ class ReportController extends ChangeNotifier {
     } catch (e, s) {
       _isLoadingReports = false;
       _reportsError = e.toString();
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchReports failed');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchReports failed',
+      );
       notifyListeners();
       rethrow;
     }
@@ -557,7 +562,7 @@ class ReportController extends ChangeNotifier {
     // Use date range if available, otherwise use single selected date
     String dateFromStr;
     String dateToStr;
-    
+
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
