@@ -40,14 +40,11 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   void _onHeaderChanged() {
-    // When header (store/date) changes, refresh data from API for current filters
     notifyListeners();
 
-    // Get current store and date filters
     final store = _headerController?.selectedStore;
     final storeParam = (store == null || store == 'All Stores') ? null : store;
 
-    // Use date range if available, otherwise use single date
     String? dateFrom;
     String? dateTo;
     DateTime? singleDate;
@@ -61,124 +58,63 @@ class LeadScreenController extends ChangeNotifier {
       singleDate = _headerController?.selectedDate ?? DateTime.now();
     }
 
-    // Fetch all lead types with store and date filters when header changes
-    // This ensures all tabs show filtered data
-    if (storeParam != null) {
-      // Fetch all leads (for "All Calls" tab)
-      // GET /api/pages/leads?store=Suitor Guy - Edappally&enquiryDateFrom=2024-12-08&enquiryDateTo=2024-12-08
+    _fetchLeadsForCurrentFilters(storeParam, dateFrom, dateTo, singleDate);
+  }
+
+  void _fetchLeadsForCurrentFilters(
+    String? store,
+    String? dateFrom,
+    String? dateTo,
+    DateTime? singleDate,
+  ) {
+    if (store != null) {
       if (dateFrom != null && dateTo != null) {
         fetchAllLeadsFromApi(
-          store: storeParam,
+          store: store,
           dateFrom: dateFrom,
           dateTo: dateTo,
           dateField: 'createdAt',
-        ).catchError((e) {
-          print(
-            'LeadScreenController: Error fetching all leads on header change: $e',
-          );
-        });
+        ).catchError((_) {});
       } else {
-        fetchAllLeadsFromApi(store: storeParam, date: singleDate).catchError((
-          e,
-        ) {
-          print(
-            'LeadScreenController: Error fetching all leads on header change: $e',
-          );
-        });
+        fetchAllLeadsFromApi(store: store, date: singleDate).catchError((_) {});
       }
 
-      // Fetch Loss of Sale leads with store filter
-      // GET /api/pages/leads?leadType=lossOfSale&store=Suitor Guy - Edappally
-      fetchLossOfSaleLeadsFromApi(store: storeParam).catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Loss of Sale leads on header change: $e',
-        );
-      });
-
-      // Fetch Return leads with store filter
-      // GET /api/pages/leads?leadType=return&store=Suitor Guy - Edappally
-      fetchReturnLeadsFromApi(store: storeParam).catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Return leads on header change: $e',
-        );
-      });
-
-      // Fetch Booking Confirmation leads with store filter
-      // GET /api/pages/leads?leadType=bookingConfirmation&store=Suitor Guy - Edappally
-      fetchBookingConfirmationLeadsFromApi(store: storeParam).catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Booking Confirmation leads on header change: $e',
-        );
-      });
+      fetchLossOfSaleLeadsFromApi(store: store).catchError((_) {});
+      fetchReturnLeadsFromApi(store: store).catchError((_) {});
+      fetchBookingConfirmationLeadsFromApi(store: store).catchError((_) {});
     } else {
-      // If "All Stores" is selected, fetch without store filter but with date filter
       if (dateFrom != null && dateTo != null) {
-        print(
-          'LeadScreenController: Fetching leads for "All Stores" with date range: $dateFrom to $dateTo',
-        );
         fetchAllLeadsFromApi(
           dateFrom: dateFrom,
           dateTo: dateTo,
           dateField: 'createdAt',
-        ).catchError((e) {
-          print(
-            'LeadScreenController: Error fetching all leads (no store filter): $e',
-          );
-        });
+        ).catchError((_) {});
       } else {
-        print(
-          'LeadScreenController: Fetching leads for "All Stores" with date: ${_formatDateForApi(singleDate!)}',
-        );
-        fetchAllLeadsFromApi(date: singleDate).catchError((e) {
-          print(
-            'LeadScreenController: Error fetching all leads (no store filter): $e',
-          );
-        });
+        fetchAllLeadsFromApi(date: singleDate).catchError((_) {});
       }
-      // Note: Category-specific API calls don't support date filters,
-      // so they will fetch leads from all dates. The date filtering
-      // is handled locally in getUncalledLeadsCount() and getFilteredLeads()
-      fetchLossOfSaleLeadsFromApi().catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Loss of Sale leads (no store filter): $e',
-        );
-      });
-      fetchReturnLeadsFromApi().catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Return leads (no store filter): $e',
-        );
-      });
-      fetchBookingConfirmationLeadsFromApi().catchError((e) {
-        print(
-          'LeadScreenController: Error fetching Booking Confirmation leads (no store filter): $e',
-        );
-      });
+
+      fetchLossOfSaleLeadsFromApi().catchError((_) {});
+      fetchReturnLeadsFromApi().catchError((_) {});
+      fetchBookingConfirmationLeadsFromApi().catchError((_) {});
     }
   }
 
   void _onRepositoryChanged() {
-    // If repository has a last-added lead id, focus on it (show only new lead)
     final lastAdded = _repository.lastAddedLeadId;
     if (lastAdded != null) {
       _showOnlyNewLead = true;
       _focusedNewLeadId = lastAdded;
-      // Auto-clear after showing the new lead once (after a short delay)
       Future.delayed(const Duration(seconds: 2), () {
         if (_focusedNewLeadId == lastAdded) {
           clearShowOnlyNewLead();
         }
       });
     }
-
-    // Forward repository changes to listeners of this controller
     notifyListeners();
   }
 
   void _removeLeadFromActiveLists(String id) {
-    // NOTE: allLeads returns an unmodifiable list, so we can't remove from it directly
-    // The updateLead method in repository already handles removal if lead is no longer uncalled
-    // This method is kept for backward compatibility but does nothing
-    // The actual removal is handled by LeadRepository.updateLead() which checks if lead should be moved to reports
+    // Removal is handled by LeadRepository.updateLead()
   }
 
   @override
@@ -204,46 +140,8 @@ class LeadScreenController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get call summary data (filtered by store and date)
-  // Only count leads that haven't been called yet
   List<Map<String, dynamic>> getCallSummary() {
-    // Note: store and date filters are handled in getUncalledLeadsCount
-
-    // Helper function to count uncalled leads
-    // int getUncalledLeadsCount({String? category}) {
-    //   List<LeadModel> leads =
-    //       category != null
-    //           ? _repository.getLeadsByCategory(category)
-    //           : _repository.allLeads;
-
-    //   // Filter by store - extract location from "Brand - Location" format
-    //   if (storeFilter != null) {
-    //     final location = StoreLocations.resolveSelection(storeFilter).location;
-    //     leads = leads.where((lead) => lead.location == location).toList();
-    //   }
-
-    //   // Filter by date - but for Loss of Sale, count all leads (date filter is handled by API)
-    //   // For other categories, filter by selected date
-    //   if (category != LeadConstants.categoryLossOfSales) {
-    //     leads =
-    //         leads.where((lead) {
-    //           final leadDate = lead.createdAt;
-    //           return leadDate.year == date.year &&
-    //               leadDate.month == date.month &&
-    //               leadDate.day == date.day;
-    //         }).toList();
-    //   }
-
-    //   // Filter out leads that have been called
-    //   leads =
-    //       leads
-    //           .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-    //           .toList();
-
-    //   return leads.length;
-    // }
     int getUncalledLeadsCount({String? category}) {
-      // Use date range if available, otherwise use single date
       DateTime? date;
       DateTime? dateStart;
       DateTime? dateEnd;
@@ -257,18 +155,13 @@ class LeadScreenController extends ChangeNotifier {
         date = _headerController?.selectedDate ?? DateTime.now();
       }
 
-      // STEP 1: Get ALL leads first (don't filter by category/date yet)
-      // This ensures we have the full dataset before filtering
-      List<LeadModel> allLeads = _repository.allLeads;
+      List<LeadModel> leads = _repository.allLeads;
 
-      // STEP 2: Filter by date FIRST (critical for "All Stores" with date filter)
-      List<LeadModel> leads;
       if (dateStart != null && dateEnd != null) {
-        // Filter by date range
         final start = dateStart;
         final end = dateEnd;
         leads =
-            allLeads.where((lead) {
+            leads.where((lead) {
               final leadDate = lead.createdAt;
               final normalizedLeadDate = DateTime.utc(
                 leadDate.year,
@@ -285,25 +178,20 @@ class LeadScreenController extends ChangeNotifier {
                   normalizedLeadDate.compareTo(normalizedEnd) <= 0;
             }).toList();
       } else if (date != null) {
-        // Filter by single date
         final selectedDate = date;
         leads =
-            allLeads.where((lead) {
+            leads.where((lead) {
               final leadDate = lead.createdAt;
               return leadDate.year == selectedDate.year &&
                   leadDate.month == selectedDate.month &&
                   leadDate.day == selectedDate.day;
             }).toList();
-      } else {
-        leads = allLeads;
       }
 
-      // STEP 3: Filter by category if specified
       if (category != null) {
         leads = leads.where((lead) => lead.category == category).toList();
       }
 
-      // STEP 4: Filter by store using shared helper from repository
       final storeFilter = _headerController?.selectedStore;
       if (storeFilter != null && storeFilter != "All Stores") {
         leads =
@@ -312,14 +200,77 @@ class LeadScreenController extends ChangeNotifier {
                 .toList();
       }
 
-      // STEP 5: count only uncalled
       leads =
           leads
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
               .toList();
 
-      // STEP 5: exclude leads with follow-up dates (they appear in Follow-up Screen)
-      leads = leads.where((lead) => lead.followUpDate == null).toList();
+      leads =
+          leads
+              .where(
+                (lead) =>
+                    lead.followUpDate == null ||
+                    lead.category != LeadConstants.categoryFollowUp,
+              )
+              .toList();
+
+      return leads.length;
+    }
+
+    int getStarredLeadsCount() {
+      DateTime? date;
+      DateTime? dateStart;
+      DateTime? dateEnd;
+
+      if (_headerController?.isRangeMode == true &&
+          _headerController?.dateRangeStart != null &&
+          _headerController?.dateRangeEnd != null) {
+        dateStart = _headerController!.dateRangeStart;
+        dateEnd = _headerController!.dateRangeEnd;
+      } else {
+        date = _headerController?.selectedDate ?? DateTime.now();
+      }
+
+      List<LeadModel> leads = _repository.allLeads;
+
+      if (dateStart != null && dateEnd != null) {
+        final start = dateStart;
+        final end = dateEnd;
+        leads =
+            leads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
+      } else if (date != null) {
+        final selectedDate = date;
+        leads =
+            leads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
+      }
+
+      final storeFilter = _headerController?.selectedStore;
+      if (storeFilter != null && storeFilter != "All Stores") {
+        leads =
+            leads
+                .where((lead) => _repository.matchesStore(lead, storeFilter))
+                .toList();
+      }
 
       return leads.length;
     }
@@ -362,18 +313,21 @@ class LeadScreenController extends ChangeNotifier {
         "iconColor": const Color(0xff56BE6B),
         "icon": Icons.flag_outlined,
       },
+      {
+        "title": "Starred",
+        "count": getStarredLeadsCount().toString(),
+        "bgColor": const Color(0xFFFFF4E6),
+        "iconColor": const Color(0xFFFFB800),
+        "icon": Icons.star,
+        "isStarred": true,
+      },
     ];
   }
 
-  // Get filtered leads based on selected call type
-  // For "All Calls" tab (index 0), show all leads regardless of call status
-  // For other tabs, only show leads that haven't been called yet
   List<LeadDisplayModel> getFilteredLeads() {
     String? category = _getCategoryForIndex(_selectedCallTypeIndex);
-
     final store = _headerController?.selectedStore;
 
-    // Use date range if available, otherwise use single date
     DateTime? date;
     DateTime? dateStart;
     DateTime? dateEnd;
@@ -387,116 +341,40 @@ class LeadScreenController extends ChangeNotifier {
       date = _headerController?.selectedDate ?? DateTime.now();
     }
 
-    // Get leads filtered by category, store, and date
     List<LeadModel> filteredLeads;
     if (dateStart != null && dateEnd != null) {
-      // Use date range filtering
       filteredLeads = _repository.getLeadsByDateRange(dateStart, dateEnd);
-      // Apply category filter
       if (category != null) {
         filteredLeads =
             filteredLeads.where((lead) => lead.category == category).toList();
       }
     } else {
-      // Use single date filtering
       filteredLeads = _repository.getLeadsByCategory(category, date: date);
     }
 
-    // Debug: Print initial lead count
-    print(
-      'LeadScreenController: getFilteredLeads - Initial leads count: ${filteredLeads.length}, category: $category, store: $store',
-    );
-
-    // Filter by store using shared helper from repository
     if (store != null && store != 'All Stores') {
       filteredLeads =
           filteredLeads
               .where((lead) => _repository.matchesStore(lead, store))
               .toList();
-
-      // Debug: Print after store filter
-      print(
-        'LeadScreenController: After store filter: ${filteredLeads.length} leads',
-      );
     }
 
-    // Filter by date - but for All Calls, Loss of Sale, Return, and Booking Confirmation, show all leads (date filter is handled by API)
-    // For other categories, filter by selected date or date range
-    if (_selectedCallTypeIndex != 0 &&
-        _selectedCallTypeIndex != 1 &&
-        _selectedCallTypeIndex != 2 &&
-        _selectedCallTypeIndex != 3) {
-      if (dateStart != null && dateEnd != null) {
-        // Filter by date range
-        final start = dateStart;
-        final end = dateEnd;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.createdAt;
-              final normalizedLeadDate = DateTime.utc(
-                leadDate.year,
-                leadDate.month,
-                leadDate.day,
-              );
-              final normalizedStart = DateTime.utc(
-                start.year,
-                start.month,
-                start.day,
-              );
-              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-            }).toList();
-      } else if (date != null) {
-        // Filter by single date
-        final selectedDate = date;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.createdAt;
-              return leadDate.year == selectedDate.year &&
-                  leadDate.month == selectedDate.month &&
-                  leadDate.day == selectedDate.day;
-            }).toList();
-      }
-    }
-
-    // Filter out leads that have been called (only show uncalled leads)
-    // EXCEPT for "All Calls" tab (index 0) which should show all leads
     if (_selectedCallTypeIndex != 0) {
-      final beforeCallStatusFilter = filteredLeads.length;
       filteredLeads =
           filteredLeads
               .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
               .toList();
-      print(
-        'LeadScreenController: After call status filter: ${filteredLeads.length} leads (was $beforeCallStatusFilter)',
-      );
     }
 
-    // Filter by follow-up status - exclude leads with follow-up dates from all tabs
-    // (Follow-up leads are managed in the separate FollowUp screen)
-    final beforeFollowUpFilter = filteredLeads.length;
     filteredLeads =
         filteredLeads.where((lead) => lead.followUpDate == null).toList();
-    print(
-      'LeadScreenController: After follow-up filter: ${filteredLeads.length} leads (was $beforeFollowUpFilter, removed ${beforeFollowUpFilter - filteredLeads.length} follow-up leads)',
-    );
 
-    // Debug: Print final count
-    print(
-      'LeadScreenController: Final filtered leads count: ${filteredLeads.length}',
-    );
-
-    // Convert to display models
-    // If we're showing only the newly added lead, return only that one (if present)
-    // But only for "All Calls" tab - other tabs should show all leads
     if (_showOnlyNewLead &&
         _focusedNewLeadId != null &&
         _selectedCallTypeIndex == 0) {
       final matches =
           filteredLeads.where((l) => l.id == _focusedNewLeadId).toList();
       if (matches.isNotEmpty) {
-        // Auto-clear after showing once
         Future.delayed(const Duration(milliseconds: 100), () {
           if (_focusedNewLeadId == matches.first.id) {
             clearShowOnlyNewLead();
@@ -504,7 +382,6 @@ class LeadScreenController extends ChangeNotifier {
         });
         return [LeadDisplayModel.fromLead(matches.first)];
       }
-      // If not found in filtered list, clear the flag and show all leads
       clearShowOnlyNewLead();
     }
 
@@ -528,21 +405,33 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Get count of follow-up leads for the selected date and store
   int getFollowUpLeadsCount() {
-    final date = _headerController?.selectedDate ?? DateTime.now();
+    DateTime? date;
+    DateTime? dateStart;
+    DateTime? dateEnd;
+
+    if (_headerController?.isRangeMode == true &&
+        _headerController?.dateRangeStart != null &&
+        _headerController?.dateRangeEnd != null) {
+      dateStart = _headerController!.dateRangeStart;
+      dateEnd = _headerController!.dateRangeEnd;
+    } else {
+      date = _headerController?.selectedDate ?? DateTime.now();
+    }
+
+    List<LeadModel> leads;
+    if (dateStart != null && dateEnd != null) {
+      leads = _repository.getLeadsByDateRange(dateStart, dateEnd);
+    } else {
+      leads = _repository.getLeadsByDate(date!);
+    }
+
     final store = _headerController?.selectedStore;
-
-    // Get all leads for the selected date
-    List<LeadModel> leads = _repository.getLeadsByDate(date);
-
-    // Filter by store if specified using shared helper
     if (store != null && store != 'All Stores') {
       leads =
           leads.where((lead) => _repository.matchesStore(lead, store)).toList();
     }
 
-    // Count only leads with follow-up dates
     return leads.where((lead) => lead.followUpDate != null).length;
   }
 
@@ -565,29 +454,11 @@ class LeadScreenController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetch Loss of Sale leads from API
-  Future<void> fetchLossOfSaleLeadsFromApi({
-    String? store,
-    String? enquiryFrom,
-    String? enquiryTo,
-    String? functionFrom,
-    String? functionTo,
-    String? visitFrom,
-    String? visitTo,
-  }) async {
+  Future<void> fetchLossOfSaleLeadsFromApi({String? store}) async {
     try {
-      await _repository.fetchLossOfSaleLeadsFromApi(
-        store: store,
-        enquiryFrom: enquiryFrom,
-        enquiryTo: enquiryTo,
-        functionFrom: functionFrom,
-        functionTo: functionTo,
-        visitFrom: visitFrom,
-        visitTo: visitTo,
-      );
+      await _repository.fetchLossOfSaleLeadsFromApi(store: store);
       notifyListeners();
     } catch (e, s) {
-      print('LeadScreenController: Error fetching Loss of Sale leads: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -597,15 +468,11 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Fetch Booking Confirmation leads from API
   Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
     try {
       await _repository.fetchBookingConfirmationLeadsFromApi(store: store);
       notifyListeners();
     } catch (e, s) {
-      print(
-        'LeadScreenController: Error fetching Booking Confirmation leads: $e',
-      );
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -615,13 +482,11 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Fetch Return leads from API
   Future<void> fetchReturnLeadsFromApi({String? store}) async {
     try {
       await _repository.fetchReturnLeadsFromApi(store: store);
       notifyListeners();
     } catch (e, s) {
-      print('LeadScreenController: Error fetching Return leads: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -631,13 +496,6 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Format date to YYYY-MM-DD format for API
-  String _formatDateForApi(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
-  /// Fetch all leads from API with store and date filters
-  /// Uses endpoint: /api/pages/leads?store=Suitor Guy - Edappal&createdAt=2025-12-04
   Future<void> fetchAllLeadsFromApi({
     String? store,
     int? page,
@@ -654,11 +512,8 @@ class LeadScreenController extends ChangeNotifier {
     String? createdAt,
   }) async {
     try {
-      // If date is provided, use it for createdAt filtering (primary date filter)
       String? finalCreatedAt = createdAt;
-
       if (date != null && createdAt == null) {
-        // Use the provided date for createdAt filter (format: YYYY-MM-DD)
         finalCreatedAt = _formatDateForApi(date);
       }
 
@@ -678,7 +533,6 @@ class LeadScreenController extends ChangeNotifier {
       );
       notifyListeners();
     } catch (e, s) {
-      print('LeadScreenController: Error fetching all leads: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -688,7 +542,10 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Update Loss of Sale lead via API
+  String _formatDateForApi(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
   Future<void> updateLossOfSaleLead({
     required String id,
     String? callStatus,
@@ -706,12 +563,9 @@ class LeadScreenController extends ChangeNotifier {
         reasonCollectedFromStore: reasonCollectedFromStore,
         remarks: remarks,
       );
-
       _removeLeadFromActiveLists(id);
-
       notifyListeners();
     } catch (e, s) {
-      print('LeadScreenController: Error updating Loss of Sale lead: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -721,7 +575,6 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Update Return lead via API
   Future<void> updateReturnLead({
     required String id,
     String? callStatus,
@@ -750,7 +603,6 @@ class LeadScreenController extends ChangeNotifier {
       _removeLeadFromActiveLists(id);
       notifyListeners();
     } catch (e, s) {
-      print('LeadScreenController: Error updating Return lead: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -760,7 +612,6 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  /// Update Booking Confirmation lead via API
   Future<void> updateBookingConfirmationLead({
     required String id,
     String? callStatus,
@@ -783,9 +634,6 @@ class LeadScreenController extends ChangeNotifier {
       _removeLeadFromActiveLists(id);
       notifyListeners();
     } catch (e, s) {
-      print(
-        'LeadScreenController: Error updating Booking Confirmation lead: $e',
-      );
       FirebaseCrashlytics.instance.recordError(
         e,
         s,

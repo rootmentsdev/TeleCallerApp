@@ -11,6 +11,7 @@ class CallSummaryCard extends StatelessWidget {
   final bool isSelected;
   final BuildContext? context;
   final String? callType;
+  final bool isStarred;
 
   const CallSummaryCard({
     super.key,
@@ -23,6 +24,7 @@ class CallSummaryCard extends StatelessWidget {
     this.isSelected = false,
     this.context,
     this.callType,
+    this.isStarred = false,
   });
 
   @override
@@ -61,9 +63,38 @@ class CallSummaryCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: bgColor,
+                  border:
+                      isSelected
+                          ? Border.all(color: iconColor, width: 2)
+                          : null,
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
+              if (isStarred)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    height: 20,
+                    width: 20,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withValues(alpha: 0.4),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.star,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ),
+                ),
               Positioned(
                 bottom: -6,
                 right: -6,

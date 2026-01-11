@@ -15,12 +15,14 @@ import 'package:telecaller_app/view/bottomnavigation_bar.dart';
 import 'package:telecaller_app/view/login_screen.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/services/notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NotificationService().initialize();
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
   PlatformDispatcher.instance.onError = (error, stack) {
@@ -35,7 +37,7 @@ Future<void> main() async {
       (route) => false,
     );
   };
-  
+
   runApp(const MyApp());
 }
 

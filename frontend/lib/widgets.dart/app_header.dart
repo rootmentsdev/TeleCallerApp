@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
+import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/store_location.dart';
@@ -94,14 +95,73 @@ class AppHeader extends StatelessWidget {
                   const Spacer(),
                   InkWell(
                     onTap: onNotificationTap,
-                    child: Container(
-                      height: 20,
-                      width: 20,
-                      decoration: const BoxDecoration(shape: BoxShape.circle),
-                      child: const Icon(
-                        Icons.notifications_none,
-                        color: Colors.white,
-                      ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white10,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_none,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        // Notification badge
+                        Consumer<FollowupController>(
+                          builder: (context, followupController, _) {
+                            final todayFollowUps =
+                                followupController.getCurrentLeads().where((
+                                  lead,
+                                ) {
+                                  if (lead.followUpDate == null) return false;
+                                  final today = DateTime.now();
+                                  final todayUtc = DateTime.utc(
+                                    today.year,
+                                    today.month,
+                                    today.day,
+                                  );
+                                  final followUpUtc = DateTime.utc(
+                                    lead.followUpDate!.year,
+                                    lead.followUpDate!.month,
+                                    lead.followUpDate!.day,
+                                  );
+                                  return followUpUtc.compareTo(todayUtc) == 0;
+                                }).length;
+
+                            if (todayFollowUps > 0) {
+                              return Positioned(
+                                top: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 20,
+                                  width: 20,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.red,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      todayFollowUps > 9
+                                          ? '9+'
+                                          : '$todayFollowUps',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],

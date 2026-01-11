@@ -16,6 +16,14 @@ class LeadScreen extends StatefulWidget {
 }
 
 class _LeadScreenState extends State<LeadScreen> {
+  // Tab indices constants
+  static const int _tabIndexLossOfSale = 1;
+  static const int _tabIndexReturn = 2;
+  static const int _tabIndexBookingConfirmation = 3;
+
+  // Initialization delay to allow UI to settle
+  static const Duration _initializationDelay = Duration(milliseconds: 500);
+
   bool _isLoadingLossOfSale = false;
   bool _isLoadingBookingConfirmation = false;
   bool _isLoadingReturn = false;
@@ -37,25 +45,23 @@ class _LeadScreenState extends State<LeadScreen> {
       leadController.init(headerController);
       leadController.refresh();
 
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(_initializationDelay, () {
         // Fetch all leads with store and date filters for "All Calls" tab
-        final store = headerController.selectedStore;
-        final storeParam =
-            (store == null || store == 'All Stores') ? null : store;
+        final storeParam = _getStoreParam(headerController.selectedStore);
         final selectedDate = headerController.selectedDate;
 
         if (storeParam != null) {
           leadController
               .fetchAllLeadsFromApi(store: storeParam, date: selectedDate)
               .catchError((e) {
-                print('LeadScreen: Error fetching all leads: $e');
-              });
-        } else {
-          leadController.fetchAllLeadsFromApi(date: selectedDate).catchError((
-            e,
-          ) {
-            print('LeadScreen: Error fetching all leads: $e');
+            debugPrint('Error fetching all leads: $e');
           });
+        } else {
+          leadController.fetchAllLeadsFromApi(date: selectedDate).catchError(
+            (e) {
+              debugPrint('Error fetching all leads: $e');
+            },
+          );
         }
 
         // Fetch category-specific leads
@@ -64,6 +70,11 @@ class _LeadScreenState extends State<LeadScreen> {
         _fetchReturnLeads(leadController, headerController);
       });
     });
+  }
+
+  /// Helper method to normalize store parameter (null if "All Stores")
+  String? _getStoreParam(String? store) {
+    return (store == null || store == 'All Stores') ? null : store;
   }
 
   // ====================== FETCH FUNCTIONS ======================
@@ -77,15 +88,15 @@ class _LeadScreenState extends State<LeadScreen> {
     setState(() => _isLoadingLossOfSale = true);
 
     try {
-      final store = headerController.selectedStore;
-      final storeParam =
-          (store == null || store == 'All Stores') ? null : store;
-
+      final storeParam = _getStoreParam(headerController.selectedStore);
       await controller.fetchLossOfSaleLeadsFromApi(store: storeParam);
 
-      if (mounted) controller.refresh();
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
     } catch (e) {
-      if (mounted && controller.selectedCallTypeIndex == 1) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexLossOfSale) {
         _showError("Failed to load Loss of Sale leads", e);
       }
     } finally {
@@ -102,15 +113,16 @@ class _LeadScreenState extends State<LeadScreen> {
     setState(() => _isLoadingBookingConfirmation = true);
 
     try {
-      final store = headerController.selectedStore;
-      final storeParam =
-          (store == null || store == 'All Stores') ? null : store;
-
+      final storeParam = _getStoreParam(headerController.selectedStore);
       await controller.fetchBookingConfirmationLeadsFromApi(store: storeParam);
 
-      if (mounted) setState(() {});
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
     } catch (e) {
-      if (mounted && controller.selectedCallTypeIndex == 3) {
+      if (mounted &&
+          controller.selectedCallTypeIndex == _tabIndexBookingConfirmation) {
         _showError("Failed to load Booking Confirmation leads", e);
       }
     } finally {
@@ -127,15 +139,15 @@ class _LeadScreenState extends State<LeadScreen> {
     setState(() => _isLoadingReturn = true);
 
     try {
-      final store = headerController.selectedStore;
-      final storeParam =
-          (store == null || store == 'All Stores') ? null : store;
-
+      final storeParam = _getStoreParam(headerController.selectedStore);
       await controller.fetchReturnLeadsFromApi(store: storeParam);
 
-      if (mounted) setState(() {});
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
     } catch (e) {
-      if (mounted && controller.selectedCallTypeIndex == 2) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexReturn) {
         _showError("Failed to load Return leads", e);
       }
     } finally {
@@ -171,13 +183,54 @@ class _LeadScreenState extends State<LeadScreen> {
 
       leadController.refresh();
 
-      if (!_isLoadingLossOfSale)
+      if (!_isLoadingLossOfSale) {
         _fetchLossOfSaleLeads(leadController, headerController);
-      if (!_isLoadingBookingConfirmation)
+      }
+      if (!_isLoadingBookingConfirmation) {
         _fetchBookingConfirmationLeads(leadController, headerController);
-      if (!_isLoadingReturn)
+      }
+      if (!_isLoadingReturn) {
         _fetchReturnLeads(leadController, headerController);
+      }
     });
+  }
+
+  /// Helper method to check if a category is currently loading
+  bool _isLoadingCategory(int selectedIndex) {
+    return (_isLoadingLossOfSale && selectedIndex == _tabIndexLossOfSale) ||
+        (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
+        (_isLoadingBookingConfirmation &&
+            selectedIndex == _tabIndexBookingConfirmation);
+  }
+
+  /// Build lead count badge with safe type casting
+  Widget _buildLeadCountBadge(Map<String, dynamic> summaryItem, int count) {
+    final bgColor = summaryItem["bgColor"];
+    final iconColor = summaryItem["iconColor"];
+
+    if (bgColor is! Color || iconColor is! Color) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        "$count Leads",
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: iconColor,
+          fontFamily: TextConstant.dmSansMedium,
+        ),
+      ),
+    );
   }
 
   // ============================ UI =============================
@@ -230,6 +283,7 @@ class _LeadScreenState extends State<LeadScreen> {
                             callType: item["callType"],
                             isSelected:
                                 controller.selectedCallTypeIndex == index,
+                            isStarred: item["isStarred"] ?? false,
                             onTap: () async {
                               controller.setSelectedCallTypeIndex(index);
                               final headerController =
@@ -238,18 +292,17 @@ class _LeadScreenState extends State<LeadScreen> {
                                     listen: false,
                                   );
 
-                              if (index == 1) {
+                              if (index == _tabIndexLossOfSale) {
                                 await _fetchLossOfSaleLeads(
                                   controller,
                                   headerController,
                                 );
-                              } else if (index == 2) {
-                                // FIXED for Return
+                              } else if (index == _tabIndexReturn) {
                                 await _fetchReturnLeads(
                                   controller,
                                   headerController,
                                 );
-                              } else if (index == 3) {
+                              } else if (index == _tabIndexBookingConfirmation) {
                                 await _fetchBookingConfirmationLeads(
                                   controller,
                                   headerController,
@@ -281,31 +334,12 @@ class _LeadScreenState extends State<LeadScreen> {
                         fontFamily: TextConstant.dmSansMedium,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                    if (controller.selectedCallTypeIndex >= 0 &&
+                        controller.selectedCallTypeIndex < callSummary.length)
+                      _buildLeadCountBadge(
+                        callSummary[controller.selectedCallTypeIndex],
+                        filteredLeads.length,
                       ),
-                      decoration: BoxDecoration(
-                        color:
-                            callSummary[controller
-                                    .selectedCallTypeIndex]["bgColor"]
-                                as Color,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        "${filteredLeads.length} Leads",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color:
-                              callSummary[controller
-                                      .selectedCallTypeIndex]["iconColor"]
-                                  as Color,
-                          fontFamily: TextConstant.dmSansMedium,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -319,26 +353,23 @@ class _LeadScreenState extends State<LeadScreen> {
                       listen: false,
                     );
 
-                    if (controller.selectedCallTypeIndex == 1) {
+                    if (controller.selectedCallTypeIndex ==
+                        _tabIndexLossOfSale) {
                       await _fetchLossOfSaleLeads(controller, headerController);
-                    } else if (controller.selectedCallTypeIndex == 2) {
+                    } else if (controller.selectedCallTypeIndex ==
+                        _tabIndexReturn) {
                       await _fetchReturnLeads(controller, headerController);
-                    } else if (controller.selectedCallTypeIndex == 3) {
+                    } else if (controller.selectedCallTypeIndex ==
+                        _tabIndexBookingConfirmation) {
                       await _fetchBookingConfirmationLeads(
                         controller,
                         headerController,
                       );
                     }
                   },
-                  child:
-                      (_isLoadingLossOfSale &&
-                                  controller.selectedCallTypeIndex == 1) ||
-                              (_isLoadingReturn &&
-                                  controller.selectedCallTypeIndex == 2) ||
-                              (_isLoadingBookingConfirmation &&
-                                  controller.selectedCallTypeIndex == 3)
-                          ? const Center(child: CircularProgressIndicator())
-                          : filteredLeads.isEmpty
+                  child: _isLoadingCategory(controller.selectedCallTypeIndex)
+                      ? const Center(child: CircularProgressIndicator())
+                      : filteredLeads.isEmpty
                           ? _buildEmptyList(controller)
                           : _buildLeadList(filteredLeads),
                 ),
@@ -374,11 +405,14 @@ class _LeadScreenState extends State<LeadScreen> {
                     listen: false,
                   );
 
-                  if (controller.selectedCallTypeIndex == 1) {
+                  if (controller.selectedCallTypeIndex ==
+                      _tabIndexLossOfSale) {
                     _fetchLossOfSaleLeads(controller, headerController);
-                  } else if (controller.selectedCallTypeIndex == 2) {
+                  } else if (controller.selectedCallTypeIndex ==
+                      _tabIndexReturn) {
                     _fetchReturnLeads(controller, headerController);
-                  } else if (controller.selectedCallTypeIndex == 3) {
+                  } else if (controller.selectedCallTypeIndex ==
+                      _tabIndexBookingConfirmation) {
                     _fetchBookingConfirmationLeads(
                       controller,
                       headerController,
@@ -426,6 +460,39 @@ class LeadListItem extends StatelessWidget {
 
   const LeadListItem({super.key, required this.lead, this.onTap});
 
+  /// Build lead icon with safe type casting
+  Widget _buildLeadIcon(Map<String, dynamic> lead) {
+    final bgColor = lead["bgColor"];
+    final icon = lead["icon"];
+    final iconColor = lead["iconColor"];
+
+    if (bgColor is! Color || icon is! IconData || iconColor is! Color) {
+      return Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.person, size: 24, color: Colors.grey),
+      );
+    }
+
+    return Container(
+      height: 48,
+      width: 48,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        icon,
+        color: iconColor,
+        size: 24,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -439,7 +506,7 @@ class LeadListItem extends StatelessWidget {
           border: Border.all(color: Colors.grey[200]!),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -450,19 +517,7 @@ class LeadListItem extends StatelessWidget {
             horizontal: 12,
             vertical: 8,
           ),
-          leading: Container(
-            height: 48,
-            width: 48,
-            decoration: BoxDecoration(
-              color: lead["bgColor"] as Color,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              lead["icon"] as IconData,
-              color: lead["iconColor"] as Color,
-              size: 24,
-            ),
-          ),
+          leading: _buildLeadIcon(lead),
           title: Text(
             lead["name"] as String,
             style: const TextStyle(

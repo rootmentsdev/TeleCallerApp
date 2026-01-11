@@ -14,6 +14,7 @@ import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/services/notification_service.dart';
 
 class DetailsScreen extends StatefulWidget {
   final Map<String, dynamic> contact;
@@ -36,6 +37,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
   final TextEditingController customReasonController = TextEditingController();
   String? selectedLeadStatus;
   bool markAsFollowUp = false;
+  bool makeStarred = false;
   DateTime? followUpDate;
   int rating = 0;
   final TextEditingController remarksController = TextEditingController();
@@ -179,6 +181,10 @@ class _DetailsScreenState extends State<DetailsScreen> {
     // Add listeners to track changes for dirty flag
     remarksController.addListener(_markDirty);
     customReasonController.addListener(_markDirty);
+
+    // Initialize starred status from existing contact if available
+    final isStarred = widget.contact["isStarred"] as bool? ?? false;
+    makeStarred = isStarred;
 
     // Initialize call duration from existing contact if available
     final existingDuration = widget.contact["callDuration"] as int?;
@@ -440,12 +446,13 @@ class _DetailsScreenState extends State<DetailsScreen> {
           createdAt: lead.createdAt,
           callDuration: _callDurationSeconds > 0 ? _callDurationSeconds : null,
           callCount: lead.callCount, // Preserve call count
+          isStarred: makeStarred,
         );
 
         // Update locally first
         await repository.updateLead(updatedLead);
         print(
-          'DetailsScreen: Lead updated locally with duration=$_callDurationSeconds',
+          'DetailsScreen: Lead updated locally with duration=$_callDurationSeconds, isStarred=$makeStarred',
         );
 
         // If this is a follow-up lead (has followUpDate), update via follow-up endpoint
@@ -1095,6 +1102,23 @@ class _DetailsScreenState extends State<DetailsScreen> {
                       ),
                     ],
                   ),
+                  // Star icon positioned on the right
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          makeStarred = !makeStarred;
+                          _isDirty = true;
+                        });
+                      },
+                      child: Icon(
+                        makeStarred ? Icons.star : Icons.star_outline,
+                        color: makeStarred ? Colors.amber : Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1495,6 +1519,36 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         ),
 
                       if (!isFollowUpLead) const SizedBox(height: 16),
+
+                      // Make Starred
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: makeStarred,
+                            onChanged: (value) {
+                              setState(() {
+                                makeStarred = value ?? false;
+                                _isDirty = true;
+                              });
+                            },
+                            activeColor: Colors.amber,
+                          ),
+                          Text(
+                            "Make Starred",
+                            style: TextStyle(
+                              fontFamily: TextConstant.dmSansMedium,
+                              fontSize: 14,
+                              color: Colors.black,
+                            ),
+                          ),
+                          if (makeStarred) ...[
+                            const SizedBox(width: 8),
+                            Icon(Icons.star, color: Colors.amber, size: 18),
+                          ],
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
 
                       // Remarks
                       Text(
@@ -2181,6 +2235,16 @@ class _DetailsScreenState extends State<DetailsScreen> {
         followUpDate: followUpDateValue,
         clearFollowUpDate: followUpDateValue == null,
       );
+
+      // Schedule notification for follow-up date if set
+      if (followUpDateValue != null) {
+        final leadName = widget.contact["name"] as String? ?? "Lead";
+        await NotificationService().scheduleFollowUpNotification(
+          id: leadId.hashCode,
+          leadName: leadName,
+          followUpDate: followUpDateValue,
+        );
+      }
 
       // Refresh follow-up controller
       final followupController = Provider.of<FollowupController>(

@@ -3,6 +3,7 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
+import 'package:telecaller_app/services/notification_service.dart';
 
 /// Controller for Followup Screen
 class FollowupController extends ChangeNotifier {
@@ -148,25 +149,23 @@ class FollowupController extends ChangeNotifier {
 
     // Sort by followUpDate ascending (earliest first)
     // Normalize to UTC for consistent sorting regardless of timezone
-    currentLeads.sort(
-      (a, b) {
-        if (a.followUpDate == null && b.followUpDate == null) return 0;
-        if (a.followUpDate == null) return 1;
-        if (b.followUpDate == null) return -1;
-        
-        final aUtc = DateTime.utc(
-          a.followUpDate!.year,
-          a.followUpDate!.month,
-          a.followUpDate!.day,
-        );
-        final bUtc = DateTime.utc(
-          b.followUpDate!.year,
-          b.followUpDate!.month,
-          b.followUpDate!.day,
-        );
-        return aUtc.compareTo(bUtc);
-      },
-    );
+    currentLeads.sort((a, b) {
+      if (a.followUpDate == null && b.followUpDate == null) return 0;
+      if (a.followUpDate == null) return 1;
+      if (b.followUpDate == null) return -1;
+
+      final aUtc = DateTime.utc(
+        a.followUpDate!.year,
+        a.followUpDate!.month,
+        a.followUpDate!.day,
+      );
+      final bUtc = DateTime.utc(
+        b.followUpDate!.year,
+        b.followUpDate!.month,
+        b.followUpDate!.day,
+      );
+      return aUtc.compareTo(bUtc);
+    });
 
     // Debug: show first and last followUpDate after sorting if any
     if (currentLeads.isNotEmpty) {
@@ -235,7 +234,8 @@ class FollowupController extends ChangeNotifier {
       "iconBgColor": categoryStyle["iconBgColor"],
       "borderColor": categoryStyle["borderColor"],
       "reason": lead.reason ?? "No reason provided.",
-      "followUpDate": lead.followUpDate, // REQUIRED: Needed to identify follow-up leads
+      "followUpDate":
+          lead.followUpDate, // REQUIRED: Needed to identify follow-up leads
       "callStatus": lead.callStatus, // Needed for initial status display
       "leadStatus": lead.leadStatus, // Needed for initial status display
       "category": lead.category, // Needed for category-specific updates
@@ -325,6 +325,13 @@ class FollowupController extends ChangeNotifier {
         'FollowupController: Fetch completed - total follow-up leads in repository: ${_repository.followUpLeads.length}',
       );
 
+      // Check and show notifications for today's follow-ups
+      print(
+        'FollowupController: About to call _checkAndShowFollowUpNotifications',
+      );
+      await _checkAndShowFollowUpNotifications();
+      print('FollowupController: _checkAndShowFollowUpNotifications completed');
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -332,6 +339,76 @@ class FollowupController extends ChangeNotifier {
       _error = e.toString();
       print('FollowupController: Error fetching follow-up leads: $e');
       notifyListeners();
+    }
+  }
+
+  /// Check for today's and upcoming follow-ups and show notifications
+  Future<void> _checkAndShowFollowUpNotifications() async {
+    try {
+      print('FollowupController: Starting notification check...');
+      final today = DateTime.now();
+      final todayUtc = DateTime.utc(today.year, today.month, today.day);
+      final tomorrowUtc = todayUtc.add(const Duration(days: 1));
+
+      print('FollowupController: Today UTC: $todayUtc');
+      print(
+        'FollowupController: Total follow-up leads: ${_repository.followUpLeads.length}',
+      );
+
+      // Get today's follow-ups
+      final todayFollowUps =
+          _repository.followUpLeads.where((lead) {
+            if (lead.followUpDate == null) return false;
+            final followUpUtc = DateTime.utc(
+              lead.followUpDate!.year,
+              lead.followUpDate!.month,
+              lead.followUpDate!.day,
+            );
+            return followUpUtc.compareTo(todayUtc) == 0;
+          }).length;
+
+      print('FollowupController: Today follow-ups count: $todayFollowUps');
+
+      // Get upcoming follow-ups (next 7 days)
+      final upcomingFollowUps =
+          _repository.followUpLeads.where((lead) {
+            if (lead.followUpDate == null) return false;
+            final followUpUtc = DateTime.utc(
+              lead.followUpDate!.year,
+              lead.followUpDate!.month,
+              lead.followUpDate!.day,
+            );
+            final sevenDaysFromNow = todayUtc.add(const Duration(days: 7));
+            return followUpUtc.isAfter(todayUtc) &&
+                followUpUtc.isBefore(sevenDaysFromNow);
+          }).length;
+
+      print(
+        'FollowupController: Upcoming follow-ups count: $upcomingFollowUps',
+      );
+
+      // Show notifications if there are follow-ups
+      if (todayFollowUps > 0) {
+        print(
+          'FollowupController: Showing today notification for $todayFollowUps leads',
+        );
+        await NotificationService().showTodayFollowUpNotification(
+          todayFollowUps,
+        );
+      }
+
+      if (upcomingFollowUps > 0) {
+        print(
+          'FollowupController: Showing upcoming notification for $upcomingFollowUps leads',
+        );
+        await NotificationService().showUpcomingFollowUpNotification(
+          upcomingFollowUps,
+        );
+      }
+
+      print('FollowupController: Notification check completed');
+    } catch (e) {
+      print('FollowupController: Error checking follow-up notifications: $e');
     }
   }
 }

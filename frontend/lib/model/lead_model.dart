@@ -14,6 +14,7 @@ class LeadModel {
   final int callCount; // Number of calls made to this lead
   final String? source; // Source of lead (Walk-in, Call, etc.)
   final String? leadType; // Type of lead
+  final bool isStarred; // Whether the lead is starred/favorite
 
   LeadModel({
     required this.id,
@@ -31,6 +32,7 @@ class LeadModel {
     DateTime? createdAt,
     this.source,
     this.leadType,
+    this.isStarred = false,
   }) : createdAt = createdAt ?? DateTime.now();
 
   // Convert to Map for local storage (camelCase)
@@ -51,6 +53,7 @@ class LeadModel {
       'callCount': callCount,
       'source': source,
       'leadType': leadType,
+      'isStarred': isStarred,
     };
   }
 
@@ -96,6 +99,7 @@ class LeadModel {
               : DateTime.now(),
       source: map['source'],
       leadType: map['leadType'],
+      isStarred: map['isStarred'] ?? false,
     );
   }
 
@@ -123,6 +127,7 @@ class LeadModel {
               : DateTime.now(),
       source: json['source'],
       leadType: json['lead_type'],
+      isStarred: json['is_starred'] ?? json['isStarred'] ?? false,
     );
   }
 
