@@ -231,7 +231,7 @@ class LeadScreenController extends ChangeNotifier {
         date = _headerController?.selectedDate ?? DateTime.now();
       }
 
-      List<LeadModel> leads = _repository.allLeads;
+      List<LeadModel> leads = _repository.starredCallsLeads;
 
       if (dateStart != null && dateEnd != null) {
         final start = dateStart;
@@ -316,9 +316,9 @@ class LeadScreenController extends ChangeNotifier {
       {
         "title": "Starred",
         "count": getStarredLeadsCount().toString(),
-        "bgColor": const Color(0xFFFFF4E6),
-        "iconColor": const Color(0xFFFFB800),
-        "icon": Icons.star,
+        "bgColor": const Color(0xFFE3F2FD),
+        "iconColor": const Color(0xFF1976D2),
+        "icon": Icons.star_rounded,
         "isStarred": true,
       },
     ];
@@ -342,14 +342,64 @@ class LeadScreenController extends ChangeNotifier {
     }
 
     List<LeadModel> filteredLeads;
-    if (dateStart != null && dateEnd != null) {
-      filteredLeads = _repository.getLeadsByDateRange(dateStart, dateEnd);
-      if (category != null) {
+
+    // Handle starred calls separately
+    if (_selectedCallTypeIndex == 4) {
+      filteredLeads = _repository.starredCallsLeads;
+
+      // Apply date filter
+      if (dateStart != null && dateEnd != null) {
+        final start = dateStart;
+        final end = dateEnd;
         filteredLeads =
-            filteredLeads.where((lead) => lead.category == category).toList();
+            filteredLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
+      } else if (date != null) {
+        final selectedDate = date;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
       }
     } else {
-      filteredLeads = _repository.getLeadsByCategory(category, date: date);
+      if (dateStart != null && dateEnd != null) {
+        filteredLeads = _repository.getLeadsByDateRange(dateStart, dateEnd);
+        if (category != null) {
+          filteredLeads =
+              filteredLeads.where((lead) => lead.category == category).toList();
+        }
+      } else {
+        filteredLeads = _repository.getLeadsByCategory(category, date: date);
+      }
+
+      if (_selectedCallTypeIndex != 0) {
+        filteredLeads =
+            filteredLeads
+                .where(
+                  (lead) => LeadConstants.isUncalledStatus(lead.callStatus),
+                )
+                .toList();
+      }
+
+      filteredLeads =
+          filteredLeads.where((lead) => lead.followUpDate == null).toList();
     }
 
     if (store != null && store != 'All Stores') {
@@ -358,16 +408,6 @@ class LeadScreenController extends ChangeNotifier {
               .where((lead) => _repository.matchesStore(lead, store))
               .toList();
     }
-
-    if (_selectedCallTypeIndex != 0) {
-      filteredLeads =
-          filteredLeads
-              .where((lead) => LeadConstants.isUncalledStatus(lead.callStatus))
-              .toList();
-    }
-
-    filteredLeads =
-        filteredLeads.where((lead) => lead.followUpDate == null).toList();
 
     if (_showOnlyNewLead &&
         _focusedNewLeadId != null &&
@@ -400,6 +440,8 @@ class LeadScreenController extends ChangeNotifier {
         return "Return Calls";
       case 3:
         return "Booking Confirmation";
+      case 4:
+        return "Starred Calls";
       default:
         return "All Calls";
     }
@@ -638,6 +680,20 @@ class LeadScreenController extends ChangeNotifier {
         e,
         s,
         reason: 'updateBookingConfirmationLead failed',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> fetchStarredCallsFromApi({String? store}) async {
+    try {
+      await _repository.fetchStarredCallsFromApi(store: store);
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchStarredCallsFromApi failed',
       );
       rethrow;
     }

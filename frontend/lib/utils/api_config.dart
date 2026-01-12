@@ -9,6 +9,8 @@ class ApiConfig {
   static const String reportsEndpoint = "$baseUrl/api/reports";
   // Follow-ups endpoint (fetch follow-up leads)
   static const String followUpsEndpoint = "$baseUrl/api/pages/follow-ups";
+  // Starred calls endpoint
+  static const String starredCallsEndpoint = "$baseUrl/api/pages/starred-calls";
 
   // Lead types
   static const String lossOfSale = "lossOfSale";
@@ -330,5 +332,36 @@ class ApiConfig {
     }
 
     return url;
+  }
+
+  /// Starred calls endpoint helper
+  static String getStarredCalls({String? store, int? page, int? limit}) {
+    String url = starredCallsEndpoint;
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    } else {
+      queryParams.add("limit=1000");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+
+    return url;
+  }
+
+  /// Get a single starred call by ID
+  static String getStarredCallById(String id) {
+    return "$starredCallsEndpoint/$id";
   }
 }

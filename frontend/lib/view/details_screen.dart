@@ -811,6 +811,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 // Backend needs duration 0 to create report entries
                 callDuration:
                     _callDurationSeconds >= 0 ? _callDurationSeconds : null,
+                isStarred: makeStarred,
               );
               print('DetailsScreen: General lead updated successfully via API');
 

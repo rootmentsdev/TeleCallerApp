@@ -70,31 +70,6 @@ class CallSummaryCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
-              if (isStarred)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    height: 20,
-                    width: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.amber,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.amber.withValues(alpha: 0.4),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.star,
-                      color: Colors.white,
-                      size: 12,
-                    ),
-                  ),
-                ),
               Positioned(
                 bottom: -6,
                 right: -6,

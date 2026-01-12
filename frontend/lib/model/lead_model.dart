@@ -72,6 +72,7 @@ class LeadModel {
       'function_date': followUpDate?.toIso8601String() ?? '',
       'booking_number': '',
       'security_amount': 0,
+      'mark_as_issue': isStarred,
     };
   }
 
@@ -103,31 +104,107 @@ class LeadModel {
     );
   }
 
-  // Create from API response (snake_case)
+  // Create from API response (handles both snake_case and camelCase)
   factory LeadModel.fromApiJson(Map<String, dynamic> json) {
+    // Handle both snake_case and camelCase field names
+    final id = json['_id'] ?? json['id'] ?? '';
+    final name = json['lead_name'] ?? 
+                 json['name'] ?? 
+                 json['customerName'] ?? 
+                 json['customer_name'] ?? 
+                 '';
+    final phone = json['phone_number'] ?? 
+                  json['phone'] ?? 
+                  json['phoneNumber'] ?? 
+                  '';
+    
+    // Parse store field to extract brand and location
+    String? brand;
+    String? location;
+    final storeField = json['store']?.toString() ?? json['store_location']?.toString();
+    
+    if (storeField != null && storeField.isNotEmpty) {
+      if (storeField.contains(' - ')) {
+        // Extract brand and location from "Brand - Location" format
+        final parts = storeField.split(' - ');
+        if (parts.length >= 2) {
+          brand = parts[0].trim();
+          location = parts[1].trim();
+        } else {
+          location = storeField.trim();
+        }
+      } else {
+        location = storeField.trim();
+      }
+    } else {
+      // Fallback to direct brand/location fields
+      brand = json['brand'];
+      location = json['location'];
+    }
+    
+    // Handle both snake_case and camelCase for status fields
+    final leadStatus = json['lead_status'] ?? json['leadStatus'];
+    final callStatus = json['call_status'] ?? json['callStatus'];
+    
+    // Handle follow-up date (both formats)
+    DateTime? followUpDate;
+    final followUpDateValue = json['follow_up_date'] ?? 
+                              json['followUpDate'] ?? 
+                              json['follow_upDate'];
+    if (followUpDateValue != null) {
+      try {
+        followUpDate = DateTime.parse(followUpDateValue.toString());
+      } catch (e) {
+        // If parsing fails, leave as null
+      }
+    }
+    
+    // Handle remarks/reason
+    final reason = json['remarks'] ?? json['reason'];
+    
+    // Handle call duration (both formats)
+    final callDuration = json['call_duration'] ?? json['callDuration'];
+    
+    // Handle call count
+    final callCount = json['call_count'] ?? json['callCount'] ?? 0;
+    
+    // Handle createdAt (both formats)
+    DateTime createdAt = DateTime.now();
+    final createdAtValue = json['created_at'] ?? json['createdAt'];
+    if (createdAtValue != null) {
+      try {
+        createdAt = DateTime.parse(createdAtValue.toString());
+      } catch (e) {
+        // If parsing fails, use current time
+      }
+    }
+    
+    // Handle lead type (both formats)
+    final leadType = json['lead_type'] ?? json['leadType'];
+    
+    // Handle isStarred (multiple possible field names)
+    final isStarred = json['mark_as_issue'] ??
+                     json['is_starred'] ??
+                     json['isStarred'] ??
+                     false;
+    
     return LeadModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      name: json['lead_name'] ?? json['name'] ?? '',
-      phone: json['phone_number'] ?? json['phone'] ?? '',
-      brand: json['brand'],
-      location: json['location'],
-      leadStatus: json['lead_status'],
-      callStatus: json['call_status'],
-      followUpDate:
-          json['follow_up_date'] != null
-              ? DateTime.parse(json['follow_up_date'])
-              : null,
-      reason: json['remarks'] ?? json['reason'],
+      id: id,
+      name: name,
+      phone: phone,
+      brand: brand,
+      location: location,
+      leadStatus: leadStatus,
+      callStatus: callStatus,
+      followUpDate: followUpDate,
+      reason: reason,
       category: json['category'],
-      callDuration: json['call_duration'],
-      callCount: json['call_count'] ?? json['callCount'] ?? 0,
-      createdAt:
-          json['created_at'] != null
-              ? DateTime.parse(json['created_at'])
-              : DateTime.now(),
+      callDuration: callDuration != null ? (callDuration is int ? callDuration : int.tryParse(callDuration.toString())) : null,
+      callCount: callCount is int ? callCount : (int.tryParse(callCount.toString()) ?? 0),
+      createdAt: createdAt,
       source: json['source'],
-      leadType: json['lead_type'],
-      isStarred: json['is_starred'] ?? json['isStarred'] ?? false,
+      leadType: leadType,
+      isStarred: isStarred,
     );
   }
 

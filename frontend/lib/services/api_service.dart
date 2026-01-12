@@ -283,7 +283,7 @@ class ApiService {
         'call_status': callStatus ?? 'Not Called',
         'lead_status': leadStatus ?? 'No Status',
       };
-      
+
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();
       }
@@ -299,7 +299,7 @@ class ApiService {
       if (callDuration != null) {
         requestBody['call_duration'] = callDuration;
       }
-      
+
       // Handle follow-up flag and date
       if (followUpFlag != null) {
         requestBody['follow_up_flag'] = followUpFlag;
@@ -363,8 +363,8 @@ class ApiService {
                 errorData['error'] ??
                 errorData['msg'] ??
                 errorMessage;
-      }
-    } catch (e) {
+          }
+        } catch (e) {
           print('ApiService: Could not parse error response: $e');
         }
         throw Exception(errorMessage);
@@ -743,6 +743,7 @@ class ApiService {
         'phone_number': phoneNumber,
         'store_location': store,
         'source': source,
+        'lead_type': leadType,
         'lead_status': 'No Status',
         'call_status': 'Not Called',
         'follow_up_flag': followUpFlag,
@@ -883,6 +884,7 @@ class ApiService {
     String? bookingNumber,
     int securityAmount = 0,
     int? callDuration, // Call duration in seconds
+    bool isStarred = false, // Whether the lead is starred
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/leads/$id');
 
@@ -939,13 +941,16 @@ class ApiService {
       if (securityAmount > 0) {
         requestBody['security_amount'] = securityAmount;
       }
-      
+
       // Add call_duration if provided (backend expects number in seconds)
       // IMPORTANT: Include duration even if 0, as 0 is a valid duration for unanswered calls
       // Backend needs duration 0 to create report entries
       if (callDuration != null) {
         requestBody['call_duration'] = callDuration;
       }
+
+      // Add mark_as_issue flag (backend field for starred/important leads)
+      requestBody['mark_as_issue'] = isStarred;
 
       final requestBodyJson = json.encode(requestBody);
 
@@ -1057,7 +1062,7 @@ class ApiService {
         // If followUpDate is provided without flag, set flag to true
         requestBody['follow_up_flag'] = true;
         requestBody['follow_up_date'] = followUpDate.toIso8601String();
-        }
+      }
 
       if (callDate != null) {
         requestBody['call_date'] = callDate.toIso8601String();
@@ -1173,7 +1178,7 @@ class ApiService {
         'call_status': callStatus ?? 'Not Called',
         'lead_status': leadStatus ?? 'No Status',
       };
-      
+
       if (followUpFlag != null) {
         requestBody['follow_up_flag'] = followUpFlag;
         // When follow_up_flag is true, send follow_up_date (required by backend)
@@ -1815,5 +1820,107 @@ class ApiService {
     }
 
     return false;
+  }
+
+  /// Get all starred calls from backend
+  /// Matches backend GET /api/pages/starred-calls
+  Future<Map<String, dynamic>> getStarredCalls({
+    String? store,
+    int? page,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      ApiConfig.getStarredCalls(store: store, page: page, limit: limit),
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching starred calls');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print(
+        'ApiService: Starred calls response status: ${response.statusCode}',
+      );
+      print('ApiService: Starred calls response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+
+        // Handle both Map and List responses
+        if (decodedResponse is Map<String, dynamic>) {
+          return decodedResponse;
+        } else if (decodedResponse is List) {
+          return {'data': decodedResponse};
+        } else {
+          throw Exception('Unexpected response format from server');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load starred calls: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: Error fetching starred calls: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getStarredCalls failed',
+      );
+      rethrow;
+    }
+  }
+
+  /// Get a single starred call by ID
+  /// Matches backend GET /api/pages/starred-calls/:id
+  Future<Map<String, dynamic>> getStarredCallById(String id) async {
+    final url = Uri.parse(ApiConfig.getStarredCallById(id));
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching starred call by ID: $id');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print('ApiService: Starred call response status: ${response.statusCode}');
+      print('ApiService: Starred call response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'data': decodedResponse};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Starred call not found');
+      } else {
+        throw Exception(
+          'Failed to load starred call: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: Error fetching starred call: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getStarredCallById failed',
+      );
+      rethrow;
+    }
   }
 }

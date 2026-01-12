@@ -20,6 +20,7 @@ class _LeadScreenState extends State<LeadScreen> {
   static const int _tabIndexLossOfSale = 1;
   static const int _tabIndexReturn = 2;
   static const int _tabIndexBookingConfirmation = 3;
+  static const int _tabIndexStarred = 4;
 
   // Initialization delay to allow UI to settle
   static const Duration _initializationDelay = Duration(milliseconds: 500);
@@ -27,6 +28,7 @@ class _LeadScreenState extends State<LeadScreen> {
   bool _isLoadingLossOfSale = false;
   bool _isLoadingBookingConfirmation = false;
   bool _isLoadingReturn = false;
+  bool _isLoadingStarred = false;
 
   @override
   void initState() {
@@ -54,20 +56,21 @@ class _LeadScreenState extends State<LeadScreen> {
           leadController
               .fetchAllLeadsFromApi(store: storeParam, date: selectedDate)
               .catchError((e) {
+                debugPrint('Error fetching all leads: $e');
+              });
+        } else {
+          leadController.fetchAllLeadsFromApi(date: selectedDate).catchError((
+            e,
+          ) {
             debugPrint('Error fetching all leads: $e');
           });
-        } else {
-          leadController.fetchAllLeadsFromApi(date: selectedDate).catchError(
-            (e) {
-              debugPrint('Error fetching all leads: $e');
-            },
-          );
         }
 
         // Fetch category-specific leads
         _fetchLossOfSaleLeads(leadController, headerController);
         _fetchBookingConfirmationLeads(leadController, headerController);
         _fetchReturnLeads(leadController, headerController);
+        _fetchStarredCalls(leadController, headerController);
       });
     });
   }
@@ -155,6 +158,31 @@ class _LeadScreenState extends State<LeadScreen> {
     }
   }
 
+  Future<void> _fetchStarredCalls(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingStarred) return;
+
+    setState(() => _isLoadingStarred = true);
+
+    try {
+      final storeParam = _getStoreParam(headerController.selectedStore);
+      await controller.fetchStarredCallsFromApi(store: storeParam);
+
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexStarred) {
+        _showError("Failed to load Starred calls", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingStarred = false);
+    }
+  }
+
   void _showError(String title, dynamic e) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -192,6 +220,9 @@ class _LeadScreenState extends State<LeadScreen> {
       if (!_isLoadingReturn) {
         _fetchReturnLeads(leadController, headerController);
       }
+      if (!_isLoadingStarred) {
+        _fetchStarredCalls(leadController, headerController);
+      }
     });
   }
 
@@ -200,7 +231,8 @@ class _LeadScreenState extends State<LeadScreen> {
     return (_isLoadingLossOfSale && selectedIndex == _tabIndexLossOfSale) ||
         (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
         (_isLoadingBookingConfirmation &&
-            selectedIndex == _tabIndexBookingConfirmation);
+            selectedIndex == _tabIndexBookingConfirmation) ||
+        (_isLoadingStarred && selectedIndex == _tabIndexStarred);
   }
 
   /// Build lead count badge with safe type casting
@@ -213,10 +245,7 @@ class _LeadScreenState extends State<LeadScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
@@ -302,8 +331,14 @@ class _LeadScreenState extends State<LeadScreen> {
                                   controller,
                                   headerController,
                                 );
-                              } else if (index == _tabIndexBookingConfirmation) {
+                              } else if (index ==
+                                  _tabIndexBookingConfirmation) {
                                 await _fetchBookingConfirmationLeads(
+                                  controller,
+                                  headerController,
+                                );
+                              } else if (index == _tabIndexStarred) {
+                                await _fetchStarredCalls(
                                   controller,
                                   headerController,
                                 );
@@ -365,11 +400,15 @@ class _LeadScreenState extends State<LeadScreen> {
                         controller,
                         headerController,
                       );
+                    } else if (controller.selectedCallTypeIndex ==
+                        _tabIndexStarred) {
+                      await _fetchStarredCalls(controller, headerController);
                     }
                   },
-                  child: _isLoadingCategory(controller.selectedCallTypeIndex)
-                      ? const Center(child: CircularProgressIndicator())
-                      : filteredLeads.isEmpty
+                  child:
+                      _isLoadingCategory(controller.selectedCallTypeIndex)
+                          ? const Center(child: CircularProgressIndicator())
+                          : filteredLeads.isEmpty
                           ? _buildEmptyList(controller)
                           : _buildLeadList(filteredLeads),
                 ),
@@ -405,8 +444,7 @@ class _LeadScreenState extends State<LeadScreen> {
                     listen: false,
                   );
 
-                  if (controller.selectedCallTypeIndex ==
-                      _tabIndexLossOfSale) {
+                  if (controller.selectedCallTypeIndex == _tabIndexLossOfSale) {
                     _fetchLossOfSaleLeads(controller, headerController);
                   } else if (controller.selectedCallTypeIndex ==
                       _tabIndexReturn) {
@@ -417,6 +455,9 @@ class _LeadScreenState extends State<LeadScreen> {
                       controller,
                       headerController,
                     );
+                  } else if (controller.selectedCallTypeIndex ==
+                      _tabIndexStarred) {
+                    _fetchStarredCalls(controller, headerController);
                   }
                 },
                 child: const Text('Tap to refresh'),
@@ -485,11 +526,7 @@ class LeadListItem extends StatelessWidget {
         color: bgColor,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(
-        icon,
-        color: iconColor,
-        size: 24,
-      ),
+      child: Icon(icon, color: iconColor, size: 24),
     );
   }
 
