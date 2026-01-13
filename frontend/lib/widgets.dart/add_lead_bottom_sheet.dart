@@ -327,8 +327,18 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
 
               const SizedBox(height: 20),
 
-              // Follow-up Date
-              _buildFollowUpDateField(),
+              // Remarks
+              _buildIconTextField(
+                controller: _remarksController,
+                label: 'Remarks (Optional)',
+                icon: Icons.note_outlined,
+                keyboardType: TextInputType.multiline,
+              ),
+
+              const SizedBox(height: 20),
+
+              // Mark As Follow Up Checkbox and Date Picker
+              _buildFollowUpSection(),
 
               const SizedBox(height: 24),
 
@@ -495,45 +505,99 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     );
   }
 
-  Widget _buildFollowUpDateField() {
-    return InkWell(
-      onTap: _selectFollowUpDate,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildFollowUpSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Mark As Follow Up Checkbox
+        Row(
           children: [
-            Text(
-              _followUpDate != null
-                  ? 'Follow-Ups Date (Optional)\n${_formatDate(_followUpDate!)}'
-                  : 'Follow-Ups Date (Optional)',
+            Checkbox(
+              value: _markAsFollowUp,
+              onChanged: (value) {
+                setState(() {
+                  _markAsFollowUp = value ?? false;
+                  if (_markAsFollowUp && _followUpDate == null) {
+                    // Set default follow-up date to 7 days from now
+                    _followUpDate = DateTime.now().add(const Duration(days: 7));
+                  } else if (!_markAsFollowUp) {
+                    // Clear follow-up date when unchecked
+                    _followUpDate = null;
+                  }
+                });
+              },
+              activeColor: const Color(0xFF003D7A),
+            ),
+            const Text(
+              "Mark As Follow Up",
               style: TextStyle(
                 fontSize: 14,
-                color:
-                    _followUpDate != null
-                        ? const Color(0xFF333333)
-                        : const Color(0xFF999999),
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF333333),
               ),
-            ),
-            const Icon(
-              Icons.calendar_today,
-              color: Color(0xFF666666),
-              size: 20,
             ),
           ],
         ),
-      ),
+
+        // Follow-up Date Picker (shown when checkbox is checked)
+        if (_markAsFollowUp) ...[
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: _selectFollowUpDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFF003D7A)),
+                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFF003D7A).withOpacity(0.05),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Follow Up Date',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF666666),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _followUpDate != null
+                            ? _formatDate(_followUpDate!)
+                            : 'Select Date',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _followUpDate != null
+                              ? const Color(0xFF333333)
+                              : const Color(0xFF999999),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Icon(
+                    Icons.calendar_today,
+                    color: const Color(0xFF003D7A),
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
   Future<void> _selectFollowUpDate() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: _followUpDate ?? DateTime.now().add(const Duration(days: 1)),
+      initialDate: _followUpDate ?? DateTime.now().add(const Duration(days: 7)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );

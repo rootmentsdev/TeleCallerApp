@@ -400,6 +400,15 @@ class LeadScreenController extends ChangeNotifier {
 
       filteredLeads =
           filteredLeads.where((lead) => lead.followUpDate == null).toList();
+
+      // Exclude starred leads from "All Calls" tab - starred leads should only appear in "Starred" tab
+      // The backend "All Calls" endpoint doesn't include starred calls, so we should exclude them here too
+      if (_selectedCallTypeIndex == 0) {
+        // Filter out starred leads from All Calls
+        filteredLeads = filteredLeads
+            .where((lead) => !lead.isStarred)
+            .toList();
+      }
     }
 
     if (store != null && store != 'All Stores') {

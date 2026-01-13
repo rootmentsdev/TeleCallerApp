@@ -54,17 +54,7 @@ class LeadRepository extends ChangeNotifier {
 
   List<LeadModel> get starredCallsLeads {
     // Return all leads marked as starred (isStarred = true)
-    final starredLeads =
-        _leads.where((lead) => lead.isStarred == true).toList();
-    print(
-      'LeadRepository: starredCallsLeads getter - total leads: ${_leads.length}, starred leads: ${starredLeads.length}',
-    );
-    if (starredLeads.isNotEmpty) {
-      print(
-        'LeadRepository: Sample starred lead - id: ${starredLeads.first.id}, name: ${starredLeads.first.name}, isStarred: ${starredLeads.first.isStarred}',
-      );
-    }
-    return starredLeads;
+    return _leads.where((lead) => lead.isStarred == true).toList();
   }
 
   List<LeadModel> get todayFollowUps {
@@ -1549,30 +1539,11 @@ class LeadRepository extends ChangeNotifier {
 
       // If page is specified, we might want to merge/update existing leads
       // Otherwise, replace all leads with fresh data from API
-      // IMPORTANT: Lead screen should only show leads fetched from backend
       // BUT: Preserve called leads and follow-up leads so they remain available for reports screen
       // EXCEPT: Don't preserve called return leads or booking confirmation leads (they've been moved to reports)
       if (page == null || page == 1) {
-        // Get all API lead IDs to identify which leads came from backend
-        final apiLeadIds =
-            leadsData
-                .map((leadData) {
-                  if (leadData is Map<String, dynamic>) {
-                    return leadData['_id']?.toString() ??
-                        leadData['id']?.toString() ??
-                        '';
-                  }
-                  return '';
-                })
-                .where((id) => id.isNotEmpty)
-                .toSet();
-
         // Store called leads and follow-up leads before clearing
         // Exclude called return leads and booking confirmation leads (moved to reports)
-        // Only preserve leads that are either:
-        // 1. Called (needed for reports screen)
-        // 2. Have follow-up dates (needed for follow-up screen)
-        // Do NOT preserve local-only uncalled leads (they should only come from backend)
         final preservedLeads =
             _leads.where((lead) {
               final isReturnLead =
@@ -1587,28 +1558,12 @@ class LeadRepository extends ChangeNotifier {
               }
 
               // Preserve other called leads and follow-up leads
-              // These are needed for reports and follow-up screens
               return isCalled || lead.needsFollowUp;
             }).toList();
-
-        int localOnlyUncalledCount =
-            _leads.where((lead) {
-              final isUncalled = LeadConstants.isUncalledStatus(
-                lead.callStatus,
-              );
-              final notInApi = !apiLeadIds.contains(lead.id);
-              final notFollowUp = !lead.needsFollowUp;
-              return isUncalled && notInApi && notFollowUp;
-            }).length;
 
         print(
           'LeadRepository: Preserving ${preservedLeads.length} called/follow-up leads before refresh (excluding called return/booking confirmation leads)',
         );
-        if (localOnlyUncalledCount > 0) {
-          print(
-            'LeadRepository: Removing $localOnlyUncalledCount local-only uncalled leads (lead screen shows only backend leads)',
-          );
-        }
 
         _leads.clear();
 
@@ -1800,110 +1755,22 @@ class LeadRepository extends ChangeNotifier {
       int successCount = 0;
       int failureCount = 0;
 
-      for (var starredCallData in leadsData) {
+      for (var leadData in leadsData) {
         try {
-          // Starred calls have a nested structure: the actual lead data is in "leadSnapshot"
-          // Merge leadSnapshot with top-level fields, prioritizing leadSnapshot data
-          Map<String, dynamic> leadData;
-
-          if (starredCallData is Map<String, dynamic>) {
-            if (starredCallData.containsKey('leadSnapshot') &&
-                starredCallData['leadSnapshot'] is Map<String, dynamic>) {
-              // Use leadSnapshot as base and merge top-level fields
-              final leadSnapshot =
-                  starredCallData['leadSnapshot'] as Map<String, dynamic>;
-              leadData = Map<String, dynamic>.from(leadSnapshot);
-
-              // Merge top-level fields (they might have updated values)
-              // But prioritize leadSnapshot fields for detailed data
-              // Use sourceLeadId or leadSnapshot _id as the lead ID (not the starred call _id)
-              if (starredCallData.containsKey('sourceLeadId')) {
-                leadData['_id'] = starredCallData['sourceLeadId'];
-              } else if (leadData.containsKey('_id')) {
-                // Keep the leadSnapshot _id
-                // leadData['_id'] is already set from leadSnapshot
-              }
-              if (starredCallData.containsKey('name') &&
-                  !leadData.containsKey('name')) {
-                leadData['name'] = starredCallData['name'];
-              }
-              if (starredCallData.containsKey('phone') &&
-                  !leadData.containsKey('phone')) {
-                leadData['phone'] = starredCallData['phone'];
-              }
-              if (starredCallData.containsKey('store') &&
-                  !leadData.containsKey('store')) {
-                leadData['store'] = starredCallData['store'];
-              }
-              if (starredCallData.containsKey('leadType') &&
-                  !leadData.containsKey('leadType')) {
-                leadData['leadType'] = starredCallData['leadType'];
-              }
-
-              // Merge remarks if available at top level
-              if (starredCallData.containsKey('remarks')) {
-                leadData['remarks'] = starredCallData['remarks'];
-              }
-
-              // Ensure isStarred is set to true
-              leadData['isStarred'] = true;
-              leadData['mark_as_issue'] = true;
-            } else {
-              // No leadSnapshot, use the starred call data directly
-              leadData = Map<String, dynamic>.from(starredCallData);
-              // Ensure isStarred is set to true
-              leadData['isStarred'] = true;
-              leadData['mark_as_issue'] = true;
-            }
-          } else {
-            leadData = {'_id': '', 'name': '', 'phone': ''};
-          }
-
           final lead = LeadModel.fromApiJson(leadData);
 
-          // Ensure the lead is marked as starred
-          final starredLead = LeadModel(
-            id: lead.id,
-            name: lead.name,
-            phone: lead.phone,
-            brand: lead.brand,
-            location: lead.location,
-            leadStatus: lead.leadStatus,
-            callStatus: lead.callStatus,
-            followUpDate: lead.followUpDate,
-            reason: lead.reason,
-            category: lead.category,
-            callDuration: lead.callDuration,
-            callCount: lead.callCount,
-            createdAt: lead.createdAt,
-            source: lead.source,
-            leadType: lead.leadType,
-            isStarred: true, // Always mark as starred
-          );
-
-          print(
-            'LeadRepository: Parsed starred lead - id: ${starredLead.id}, name: ${starredLead.name}, isStarred: ${starredLead.isStarred}',
-          );
-
           // Check if lead already exists in repository
-          final existingIndex = _leads.indexWhere(
-            (l) => l.id == starredLead.id,
-          );
+          final existingIndex = _leads.indexWhere((l) => l.id == lead.id);
           if (existingIndex >= 0) {
             // Update existing lead
-            _leads[existingIndex] = starredLead;
-            print(
-              'LeadRepository: Updated existing lead ${starredLead.id} with starred status',
-            );
+            _leads[existingIndex] = lead;
           } else {
             // Add new lead
-            _leads.add(starredLead);
-            print('LeadRepository: Added new starred lead ${starredLead.id}');
+            _leads.add(lead);
           }
           successCount++;
-        } catch (e, stackTrace) {
+        } catch (e) {
           print('LeadRepository: Failed to parse starred call: $e');
-          print('LeadRepository: Stack trace: $stackTrace');
           failureCount++;
         }
       }

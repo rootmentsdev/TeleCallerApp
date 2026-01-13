@@ -39,6 +39,7 @@ dependencies:
   url_launcher: ^6.3.1
   shared_preferences: ^2.2.2
   http: ^0.13.6
+  share_plus: ^10.1.2
   # Call tracking dependencies
   permission_handler: ^11.3.1
   firebase_crashlytics: ^5.0.6
