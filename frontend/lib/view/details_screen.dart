@@ -1521,7 +1521,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
                       if (!isFollowUpLead) const SizedBox(height: 16),
 
-                      // Make Starred
+                      // Mark as Issue
                       Row(
                         children: [
                           Checkbox(
@@ -1535,7 +1535,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                             activeColor: Colors.amber,
                           ),
                           Text(
-                            "Make Starred",
+                            "Mark as Issue",
                             style: TextStyle(
                               fontFamily: TextConstant.dmSansMedium,
                               fontSize: 14,

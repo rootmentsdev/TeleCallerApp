@@ -210,7 +210,7 @@ class LeadRepository extends ChangeNotifier {
     if (date != null) {
       filtered =
           filtered.where((lead) {
-            final leadDate = lead.createdAt;
+            final leadDate = lead.getEffectiveDate();
             return leadDate.year == date.year &&
                 leadDate.month == date.month &&
                 leadDate.day == date.day;
@@ -357,7 +357,7 @@ class LeadRepository extends ChangeNotifier {
   List<LeadModel> getLeadsByDate(DateTime date) {
     // Filter leads by selected date only
     return _leads.where((lead) {
-      final leadDate = lead.createdAt;
+      final leadDate = lead.getEffectiveDate();
       return leadDate.year == date.year &&
           leadDate.month == date.month &&
           leadDate.day == date.day;
@@ -371,7 +371,7 @@ class LeadRepository extends ChangeNotifier {
     final end = DateTime.utc(endDate.year, endDate.month, endDate.day);
 
     return _leads.where((lead) {
-      final leadDate = lead.createdAt;
+      final leadDate = lead.getEffectiveDate();
       final normalizedLeadDate = DateTime.utc(
         leadDate.year,
         leadDate.month,
@@ -398,7 +398,7 @@ class LeadRepository extends ChangeNotifier {
 
     // Apply date filter to show only selected date
     return baseList.where((lead) {
-      final leadDate = lead.createdAt;
+      final leadDate = lead.getEffectiveDate();
       return leadDate.year == date.year &&
           leadDate.month == date.month &&
           leadDate.day == date.day;
@@ -411,7 +411,7 @@ class LeadRepository extends ChangeNotifier {
     if (date != null) {
       filtered =
           filtered.where((lead) {
-            final leadDate = lead.createdAt;
+            final leadDate = lead.getEffectiveDate();
             return leadDate.year == date.year &&
                 leadDate.month == date.month &&
                 leadDate.day == date.day;
@@ -436,7 +436,7 @@ class LeadRepository extends ChangeNotifier {
     if (date != null) {
       filtered =
           filtered.where((lead) {
-            final leadDate = lead.createdAt;
+            final leadDate = lead.getEffectiveDate();
             return leadDate.year == date.year &&
                 leadDate.month == date.month &&
                 leadDate.day == date.day;
@@ -461,7 +461,7 @@ class LeadRepository extends ChangeNotifier {
     if (date != null) {
       filtered =
           filtered.where((lead) {
-            final leadDate = lead.createdAt;
+            final leadDate = lead.getEffectiveDate();
             return leadDate.year == date.year &&
                 leadDate.month == date.month &&
                 leadDate.day == date.day;
@@ -489,7 +489,7 @@ class LeadRepository extends ChangeNotifier {
     if (date != null) {
       filtered =
           filtered.where((lead) {
-            final leadDate = lead.createdAt;
+            final leadDate = lead.getEffectiveDate();
             return leadDate.year == date.year &&
                 leadDate.month == date.month &&
                 leadDate.day == date.day;
@@ -529,7 +529,7 @@ class LeadRepository extends ChangeNotifier {
 
   /// Fetch Booking Confirmation leads from API and sync with repository
   /// This will replace existing booking confirmation leads with fresh data from API
-  Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
+  Future<void> fetchBookingConfirmationLeadsFromApi({String? store, String? functionFrom, String? functionTo}) async {
     try {
       await ensureInitialized();
 
@@ -1002,7 +1002,7 @@ class LeadRepository extends ChangeNotifier {
 
   /// Fetch Return leads from API and sync with repository
   /// This will replace existing return leads with fresh data from API
-  Future<void> fetchReturnLeadsFromApi({String? store}) async {
+  Future<void> fetchReturnLeadsFromApi({String? store, String? enquiryFrom, String? enquiryTo}) async {
     try {
       await ensureInitialized();
 
@@ -1759,14 +1759,37 @@ class LeadRepository extends ChangeNotifier {
         try {
           final lead = LeadModel.fromApiJson(leadData);
 
+          // Mark as starred since it came from the starred calls endpoint
+          final starredLead = LeadModel(
+            id: lead.id,
+            name: lead.name,
+            phone: lead.phone,
+            brand: lead.brand,
+            location: lead.location,
+            leadStatus: lead.leadStatus,
+            callStatus: lead.callStatus,
+            followUpDate: lead.followUpDate,
+            reason: lead.reason,
+            category: lead.category,
+            callDuration: lead.callDuration,
+            callCount: lead.callCount,
+            createdAt: lead.createdAt,
+            returnDate: lead.returnDate,
+            source: lead.source,
+            leadType: lead.leadType,
+            isStarred: true, // Explicitly mark as starred
+          );
+
           // Check if lead already exists in repository
-          final existingIndex = _leads.indexWhere((l) => l.id == lead.id);
+          final existingIndex = _leads.indexWhere(
+            (l) => l.id == starredLead.id,
+          );
           if (existingIndex >= 0) {
             // Update existing lead
-            _leads[existingIndex] = lead;
+            _leads[existingIndex] = starredLead;
           } else {
             // Add new lead
-            _leads.add(lead);
+            _leads.add(starredLead);
           }
           successCount++;
         } catch (e) {

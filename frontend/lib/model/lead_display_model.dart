@@ -31,7 +31,7 @@ class LeadDisplayModel {
     return LeadDisplayModel(
       name: lead.name,
       phone: lead.phone,
-      date: DateFormatter.formatDate(lead.createdAt),
+      date: DateFormatter.formatDate(lead.getEffectiveDate()),
       category: lead.category ?? "Follow Up",
       bgColor: style.tagBgColor,
       iconColor: style.iconColor,

@@ -93,7 +93,10 @@ class LeadScreenController extends ChangeNotifier {
         fetchAllLeadsFromApi(date: singleDate).catchError((_) {});
       }
 
-      fetchLossOfSaleLeadsFromApi().catchError((_) {});
+      fetchLossOfSaleLeadsFromApi(
+        visitFrom: '',
+        visitTo: '',
+      ).catchError((_) {});
       fetchReturnLeadsFromApi().catchError((_) {});
       fetchBookingConfirmationLeadsFromApi().catchError((_) {});
     }
@@ -162,7 +165,7 @@ class LeadScreenController extends ChangeNotifier {
         final end = dateEnd;
         leads =
             leads.where((lead) {
-              final leadDate = lead.createdAt;
+              final leadDate = lead.getEffectiveDate();
               final normalizedLeadDate = DateTime.utc(
                 leadDate.year,
                 leadDate.month,
@@ -181,7 +184,7 @@ class LeadScreenController extends ChangeNotifier {
         final selectedDate = date;
         leads =
             leads.where((lead) {
-              final leadDate = lead.createdAt;
+              final leadDate = lead.getEffectiveDate();
               return leadDate.year == selectedDate.year &&
                   leadDate.month == selectedDate.month &&
                   leadDate.day == selectedDate.day;
@@ -238,7 +241,7 @@ class LeadScreenController extends ChangeNotifier {
         final end = dateEnd;
         leads =
             leads.where((lead) {
-              final leadDate = lead.createdAt;
+              final leadDate = lead.getEffectiveDate();
               final normalizedLeadDate = DateTime.utc(
                 leadDate.year,
                 leadDate.month,
@@ -257,7 +260,7 @@ class LeadScreenController extends ChangeNotifier {
         final selectedDate = date;
         leads =
             leads.where((lead) {
-              final leadDate = lead.createdAt;
+              final leadDate = lead.getEffectiveDate();
               return leadDate.year == selectedDate.year &&
                   leadDate.month == selectedDate.month &&
                   leadDate.day == selectedDate.day;
@@ -314,7 +317,7 @@ class LeadScreenController extends ChangeNotifier {
         "icon": Icons.flag_outlined,
       },
       {
-        "title": "Starred",
+        "title": "Marked Calls",
         "count": getStarredLeadsCount().toString(),
         "bgColor": const Color(0xFFE3F2FD),
         "iconColor": const Color(0xFF1976D2),
@@ -353,7 +356,7 @@ class LeadScreenController extends ChangeNotifier {
         final end = dateEnd;
         filteredLeads =
             filteredLeads.where((lead) {
-              final leadDate = lead.createdAt;
+              final leadDate = lead.getEffectiveDate();
               final normalizedLeadDate = DateTime.utc(
                 leadDate.year,
                 leadDate.month,
@@ -372,7 +375,7 @@ class LeadScreenController extends ChangeNotifier {
         final selectedDate = date;
         filteredLeads =
             filteredLeads.where((lead) {
-              final leadDate = lead.createdAt;
+              final leadDate = lead.getEffectiveDate();
               return leadDate.year == selectedDate.year &&
                   leadDate.month == selectedDate.month &&
                   leadDate.day == selectedDate.day;
@@ -405,9 +408,7 @@ class LeadScreenController extends ChangeNotifier {
       // The backend "All Calls" endpoint doesn't include starred calls, so we should exclude them here too
       if (_selectedCallTypeIndex == 0) {
         // Filter out starred leads from All Calls
-        filteredLeads = filteredLeads
-            .where((lead) => !lead.isStarred)
-            .toList();
+        filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
       }
     }
 
@@ -450,7 +451,7 @@ class LeadScreenController extends ChangeNotifier {
       case 3:
         return "Booking Confirmation";
       case 4:
-        return "Starred Calls";
+        return "Marked Calls";
       default:
         return "All Calls";
     }
@@ -505,9 +506,17 @@ class LeadScreenController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchLossOfSaleLeadsFromApi({String? store}) async {
+  Future<void> fetchLossOfSaleLeadsFromApi({
+    String? store,
+    String? visitFrom,
+    String? visitTo,
+  }) async {
     try {
-      await _repository.fetchLossOfSaleLeadsFromApi(store: store);
+      await _repository.fetchLossOfSaleLeadsFromApi(
+        store: store,
+        visitFrom: visitFrom,
+        visitTo: visitTo,
+      );
       notifyListeners();
     } catch (e, s) {
       FirebaseCrashlytics.instance.recordError(
@@ -519,9 +528,17 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
+  Future<void> fetchBookingConfirmationLeadsFromApi({
+    String? store,
+    String? functionFrom,
+    String? functionTo,
+  }) async {
     try {
-      await _repository.fetchBookingConfirmationLeadsFromApi(store: store);
+      await _repository.fetchBookingConfirmationLeadsFromApi(
+        store: store,
+        functionFrom: functionFrom,
+        functionTo: functionTo,
+      );
       notifyListeners();
     } catch (e, s) {
       FirebaseCrashlytics.instance.recordError(
@@ -533,9 +550,17 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchReturnLeadsFromApi({String? store}) async {
+  Future<void> fetchReturnLeadsFromApi({
+    String? store,
+    String? enquiryFrom,
+    String? enquiryTo,
+  }) async {
     try {
-      await _repository.fetchReturnLeadsFromApi(store: store);
+      await _repository.fetchReturnLeadsFromApi(
+        store: store,
+        enquiryFrom: enquiryFrom,
+        enquiryTo: enquiryTo,
+      );
       notifyListeners();
     } catch (e, s) {
       FirebaseCrashlytics.instance.recordError(

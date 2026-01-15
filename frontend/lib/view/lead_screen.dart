@@ -176,7 +176,7 @@ class _LeadScreenState extends State<LeadScreen> {
       }
     } catch (e) {
       if (mounted && controller.selectedCallTypeIndex == _tabIndexStarred) {
-        _showError("Failed to load Starred calls", e);
+        _showError("Failed to load Marked calls", e);
       }
     } finally {
       if (mounted) setState(() => _isLoadingStarred = false);

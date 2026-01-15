@@ -95,7 +95,7 @@ class _StarredCallsScreenState extends State<StarredCallsScreen> {
                   vertical: 16,
                 ),
                 child: const Text(
-                  "Starred Calls",
+                  "Marked Calls",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -161,7 +161,7 @@ class _StarredCallsScreenState extends State<StarredCallsScreen> {
                         : currentLeads.isEmpty
                         ? Center(
                           child: Text(
-                            "No starred calls found",
+                            "No marked calls found",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],

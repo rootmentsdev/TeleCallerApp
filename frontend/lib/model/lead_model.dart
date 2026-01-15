@@ -10,6 +10,8 @@ class LeadModel {
   final String? reason;
   final String? category; // Loss of Sale, Feedback, Booking Confirmation, etc.
   final DateTime createdAt;
+  final DateTime?
+  returnDate; // Return date for return leads (used instead of createdAt for return lead filtering)
   final int? callDuration; // Call duration in seconds
   final int callCount; // Number of calls made to this lead
   final String? source; // Source of lead (Walk-in, Call, etc.)
@@ -30,6 +32,7 @@ class LeadModel {
     this.callDuration,
     this.callCount = 0,
     DateTime? createdAt,
+    this.returnDate,
     this.source,
     this.leadType,
     this.isStarred = false,
@@ -49,6 +52,7 @@ class LeadModel {
       'reason': reason,
       'category': category,
       'createdAt': createdAt.toIso8601String(),
+      'returnDate': returnDate?.toIso8601String(),
       'callDuration': callDuration,
       'callCount': callCount,
       'source': source,
@@ -98,6 +102,8 @@ class LeadModel {
           map['createdAt'] != null
               ? DateTime.parse(map['createdAt'])
               : DateTime.now(),
+      returnDate:
+          map['returnDate'] != null ? DateTime.parse(map['returnDate']) : null,
       source: map['source'],
       leadType: map['leadType'],
       isStarred: map['isStarred'] ?? false,
@@ -108,21 +114,21 @@ class LeadModel {
   factory LeadModel.fromApiJson(Map<String, dynamic> json) {
     // Handle both snake_case and camelCase field names
     final id = json['_id'] ?? json['id'] ?? '';
-    final name = json['lead_name'] ?? 
-                 json['name'] ?? 
-                 json['customerName'] ?? 
-                 json['customer_name'] ?? 
-                 '';
-    final phone = json['phone_number'] ?? 
-                  json['phone'] ?? 
-                  json['phoneNumber'] ?? 
-                  '';
-    
+    final name =
+        json['lead_name'] ??
+        json['name'] ??
+        json['customerName'] ??
+        json['customer_name'] ??
+        '';
+    final phone =
+        json['phone_number'] ?? json['phone'] ?? json['phoneNumber'] ?? '';
+
     // Parse store field to extract brand and location
     String? brand;
     String? location;
-    final storeField = json['store']?.toString() ?? json['store_location']?.toString();
-    
+    final storeField =
+        json['store']?.toString() ?? json['store_location']?.toString();
+
     if (storeField != null && storeField.isNotEmpty) {
       if (storeField.contains(' - ')) {
         // Extract brand and location from "Brand - Location" format
@@ -141,16 +147,15 @@ class LeadModel {
       brand = json['brand'];
       location = json['location'];
     }
-    
+
     // Handle both snake_case and camelCase for status fields
     final leadStatus = json['lead_status'] ?? json['leadStatus'];
     final callStatus = json['call_status'] ?? json['callStatus'];
-    
+
     // Handle follow-up date (both formats)
     DateTime? followUpDate;
-    final followUpDateValue = json['follow_up_date'] ?? 
-                              json['followUpDate'] ?? 
-                              json['follow_upDate'];
+    final followUpDateValue =
+        json['follow_up_date'] ?? json['followUpDate'] ?? json['follow_upDate'];
     if (followUpDateValue != null) {
       try {
         followUpDate = DateTime.parse(followUpDateValue.toString());
@@ -158,16 +163,16 @@ class LeadModel {
         // If parsing fails, leave as null
       }
     }
-    
+
     // Handle remarks/reason
     final reason = json['remarks'] ?? json['reason'];
-    
+
     // Handle call duration (both formats)
     final callDuration = json['call_duration'] ?? json['callDuration'];
-    
+
     // Handle call count
     final callCount = json['call_count'] ?? json['callCount'] ?? 0;
-    
+
     // Handle createdAt (both formats)
     DateTime createdAt = DateTime.now();
     final createdAtValue = json['created_at'] ?? json['createdAt'];
@@ -178,16 +183,28 @@ class LeadModel {
         // If parsing fails, use current time
       }
     }
-    
+
     // Handle lead type (both formats)
     final leadType = json['lead_type'] ?? json['leadType'];
-    
+
     // Handle isStarred (multiple possible field names)
-    final isStarred = json['mark_as_issue'] ??
-                     json['is_starred'] ??
-                     json['isStarred'] ??
-                     false;
-    
+    final isStarred =
+        json['mark_as_issue'] ??
+        json['is_starred'] ??
+        json['isStarred'] ??
+        false;
+
+    // Handle returnDate (for return leads - both formats)
+    DateTime? returnDate;
+    final returnDateValue = json['return_date'] ?? json['returnDate'];
+    if (returnDateValue != null) {
+      try {
+        returnDate = DateTime.parse(returnDateValue.toString());
+      } catch (e) {
+        // If parsing fails, leave as null
+      }
+    }
+
     return LeadModel(
       id: id,
       name: name,
@@ -199,9 +216,18 @@ class LeadModel {
       followUpDate: followUpDate,
       reason: reason,
       category: json['category'],
-      callDuration: callDuration != null ? (callDuration is int ? callDuration : int.tryParse(callDuration.toString())) : null,
-      callCount: callCount is int ? callCount : (int.tryParse(callCount.toString()) ?? 0),
+      callDuration:
+          callDuration != null
+              ? (callDuration is int
+                  ? callDuration
+                  : int.tryParse(callDuration.toString()))
+              : null,
+      callCount:
+          callCount is int
+              ? callCount
+              : (int.tryParse(callCount.toString()) ?? 0),
       createdAt: createdAt,
+      returnDate: returnDate,
       source: json['source'],
       leadType: leadType,
       isStarred: isStarred,
@@ -211,6 +237,16 @@ class LeadModel {
   // Check if lead needs follow-up (has followUpDate set)
   // Used to determine if lead should use follow-up API endpoint
   bool get needsFollowUp => followUpDate != null;
+
+  /// Get the effective date for this lead based on its type
+  /// For return leads: use returnDate if available, otherwise createdAt
+  /// For all other leads: use createdAt
+  DateTime getEffectiveDate() {
+    if (leadType == 'return' && returnDate != null) {
+      return returnDate!;
+    }
+    return createdAt;
+  }
 
   // UI-level sorting helpers for Follow-Up screen tabs (Today/Upcoming/Overdue)
   // These are used ONLY for display sorting, not for data filtering

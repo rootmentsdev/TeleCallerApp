@@ -163,7 +163,7 @@ class StarredCallsController extends ChangeNotifier {
         };
       default:
         return {
-          "tag": category ?? "Starred Call",
+          "tag": category ?? "Marked Call",
           "tagColor": const Color(0xFFFFB800),
           "tagBgColor": const Color(0xFFFFF4E6),
           "icon": Icons.star,
