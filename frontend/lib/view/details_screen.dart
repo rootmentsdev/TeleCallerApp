@@ -69,18 +69,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
       "icon": Icons.trending_down,
     },
     {
-      "title": "Hard-Out Calls",
+      "title": "Feedback Calls",
       "count": "15",
       "bgColor": const Color(0xFFFFF7CC),
       "iconColor": const Color(0xFFFFCC00),
       "icon": Icons.message_outlined,
-    },
-    {
-      "title": "Booking\nConfirmation",
-      "count": "0",
-      "bgColor": const Color(0xFFD4F5DA),
-      "iconColor": const Color(0xff56BE6B),
-      "icon": Icons.flag_outlined,
     },
   ];
 
@@ -143,8 +136,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
         return "All Calls Lead Details";
       case 1:
         return "Loss of Sale Lead Details";
-      case 3:
-        return "Booking Confirmation Lead Details";
       default:
         return "Lead Details";
     }
@@ -622,7 +613,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
           }
         }
 
-        // If it's a Return lead, also update via API
+        // If it's a Feedback call, also update via API
         if (lead.category == LeadConstants.categoryRentOut ||
             widget.contact["isRentout"] == true) {
           try {
@@ -661,7 +652,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Return lead updated successfully'),
+                  content: Text('Feedback call updated successfully'),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2),
                 ),
@@ -680,68 +671,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 ),
               );
             }
-            print('Error updating Return lead via API: $e');
-          }
-        }
-
-        // If it's a Booking Confirmation lead, also update via API
-        if (lead.category == LeadConstants.categoryBookingConfirmation ||
-            widget.callTypeIndex == 3) {
-          try {
-            // Get LeadScreenController from Provider
-            final leadController = Provider.of<LeadScreenController>(
-              context,
-              listen: false,
-            );
-
-            // Determine call date - use current time if call was made
-            DateTime? callDate;
-            if (_callDurationSeconds > 0 || _isCallActive) {
-              callDate = DateTime.now();
-            }
-
-            await leadController.updateBookingConfirmationLead(
-              id: leadId,
-              callStatus: selectedCallStatus,
-              leadStatus: selectedLeadStatus,
-              followUpFlag: markAsFollowUp,
-              callDate: callDate,
-              remarks:
-                  remarksController.text.trim().isEmpty
-                      ? null
-                      : remarksController.text.trim(),
-              // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
-              // Backend needs duration 0 to create report entries
-              callDuration:
-                  _callDurationSeconds >= 0 ? _callDurationSeconds : null,
-            );
-
-            // Show success message
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Booking Confirmation lead updated successfully',
-                  ),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          } catch (e) {
-            // Show error message but don't block navigation
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Failed to update on server: ${e.toString().replaceFirst('Exception: ', '')}',
-                  ),
-                  backgroundColor: Colors.orange,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            }
-            print('Error updating Booking Confirmation lead via API: $e');
+            print('Error updating Feedback call via API: $e');
           }
         }
 
@@ -1417,9 +1347,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                         _buildRatingSection(),
                         const SizedBox(height: 16),
                       ],
-                      // Lead Status Dropdown - Only for Booking Confirmation and Return
-                      if (widget.callTypeIndex == 3 ||
-                          widget.contact["isRentout"] == true)
+                      // Lead Status Dropdown - Only for Return
+                      if (widget.contact["isRentout"] == true)
                         _buildDropdown(
                           label: "Lead Status",
                           value: selectedLeadStatus,
@@ -1434,8 +1363,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           },
                         ),
 
-                      if (widget.callTypeIndex == 3 ||
-                          widget.contact["isRentout"] == true)
+                      if (widget.contact["isRentout"] == true)
                         const SizedBox(height: 16),
 
                       const SizedBox(height: 16),
@@ -1909,42 +1837,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
           _buildDetailRow(
             "Attended By",
             widget.contact["attendedBy"] ?? "Not available",
-          ),
-          const SizedBox(height: 8),
-          _buildDetailRow(
-            "Security Amount",
-            widget.contact["securityAmount"] ?? "Not available",
-          ),
-        ],
-      );
-    }
-
-    // Booking Confirmation (callTypeIndex: 3)
-    if (widget.callTypeIndex == 3) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailRow(
-                  "Enquiry Date",
-                  widget.contact["enquiryDate"] ?? "Not available",
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildDetailRow(
-                  "Function Date",
-                  widget.contact["functionDate"] ?? "Not available",
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildDetailRow(
-            "Booking No",
-            widget.contact["bookingNo"] ?? "Not available",
           ),
           const SizedBox(height: 8),
           _buildDetailRow(

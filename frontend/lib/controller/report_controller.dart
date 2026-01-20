@@ -162,16 +162,6 @@ class ReportController extends ChangeNotifier {
         "icon": Icons.message_outlined,
       },
       {
-        "title": "Booking\nConfirmation",
-        "count":
-            getCalledLeadsCount(
-              category: LeadConstants.categoryBookingConfirmation,
-            ).toString(),
-        "bgColor": const Color(0xFFD4F5DA),
-        "iconColor": const Color(0xff56BE6B),
-        "icon": Icons.flag_outlined,
-      },
-      {
         "title": "Follow Up\nCalls",
         "count":
             getCalledLeadsCount(
@@ -475,10 +465,8 @@ class ReportController extends ChangeNotifier {
       case 1:
         return "Loss of sale calls";
       case 2:
-        return "Return calls";
+        return "Feedback calls";
       case 3:
-        return "Booking Confirmation calls";
-      case 4:
         return "Follow Up Calls";
       default:
         return "All calls";
@@ -592,10 +580,6 @@ class ReportController extends ChangeNotifier {
         break;
 
       case 3:
-        leadType = "bookingConfirmation";
-        break;
-
-      case 4:
         // Follow Up Calls → No leadType filter
         leadType = null;
         break;

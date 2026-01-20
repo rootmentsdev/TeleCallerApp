@@ -97,10 +97,10 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         category = "Loss of Sale";
         break;
       case 2:
-        category = "Return Calls";
+        category = "Feedback Calls";
         break;
       case 3:
-        category = "Booking Calls";
+        category = "Follow-up";
         break;
       case 4:
         category = "Just Dial";
@@ -142,38 +142,38 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          if (callTypeIndex == 2) // Return Calls - index 2
+                          if (callTypeIndex == 2) // Feedback Calls - index 2
                             // const Icon(
                             //   Icons.message_outlined,
                             //   color: Colors.white,
                             //   size: 18,
                             // ),
                             if (callTypeIndex == 2) const SizedBox(width: 8),
-                    const Text(
+                          const Text(
                             "Call Completed",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: TextConstant.dmSansMedium,
-                      ),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: TextConstant.dmSansMedium,
+                            ),
                           ),
                         ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      screenSubtitle,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                        fontFamily: TextConstant.dmSansRegular,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        screenSubtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -260,17 +260,17 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                                 ),
                                               )
                                               : Text(
-                                            _formatCallDuration(
+                                                _formatCallDuration(
                                                   _callDuration ?? 0,
-                                            ),
-                                            style: TextStyle(
-                                              fontSize: 12,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 12,
                                                   color: Colors.blue[700],
-                                              fontFamily:
-                                                  TextConstant.dmSansMedium,
+                                                  fontFamily:
+                                                      TextConstant.dmSansMedium,
                                                   fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
+                                                ),
+                                              ),
                                         ],
                                       ),
                                     ),
@@ -281,7 +281,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         ),
                       ],
                     ),
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
                     // Report Details - Read Only
                     _buildReadOnlyDetailsSection(),
@@ -363,7 +363,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         _buildDetailRow(
           "Reason Collected From Store",
           contact["reason_collected_from_store"] ??
-          contact["reasonFromStore"] ??
+              contact["reasonFromStore"] ??
               contact["reason"] ??
               "No reason provided",
           isMultiline: true,
@@ -394,10 +394,10 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        // Rating (for Return Calls)
-        if (callTypeIndex == 2) // Return Calls
+        // Rating (for Feedback Calls)
+        if (callTypeIndex == 2) // Feedback Calls
           _buildRatingDisplay(),
-        if (callTypeIndex == 2) // Return Calls
+        if (callTypeIndex == 2) // Feedback Calls
           const SizedBox(height: 16),
         // Follow Up Date
         if (contact["followUpDate"] != null ||
@@ -549,8 +549,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 color: Colors.grey[600],
                 fontFamily: TextConstant.dmSansRegular,
               ),
+            ),
           ),
-        ),
       ],
     );
   }

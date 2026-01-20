@@ -33,6 +33,8 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   bool _isDirty = false;
   bool _hasCalled = false; // Track if call has been made
   bool _isSaving = false; // Track if save operation is in progress
+  bool markAsFollowUp = false; // Track if marked as follow up
+  bool markAsIssue = false; // Track if marked as issue
 
   final List<String> callStatusOptions = [
     "Not called yet",
@@ -132,6 +134,10 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
         // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
         // Backend needs duration 0 to create report entries
         callDuration: widget.lead.callDuration ?? 0,
+        followUpFlag: markAsFollowUp,
+        followUpDate:
+            markAsFollowUp ? DateTime.now().add(const Duration(days: 1)) : null,
+        isStarred: markAsIssue,
       );
 
       // Remove the lead from local repository to prevent it from showing in leads screen
@@ -154,7 +160,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Return lead updated successfully'),
+            content: Text('Feedback call updated successfully'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 1),
           ),
@@ -259,7 +265,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 30, bottom: 10),
                       child: const Text(
-                        "Return Lead",
+                        "Feedback Call",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -312,7 +318,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Error loading return lead',
+                              'Error loading feedback call',
                               style: TextStyle(
                                 fontFamily: TextConstant.dmSansMedium,
                                 fontSize: 16,
@@ -579,6 +585,56 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                 ),
                                 contentPadding: const EdgeInsets.all(12),
                               ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Mark as Follow Up
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: markAsFollowUp,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      markAsFollowUp = value ?? false;
+                                      _isDirty = true;
+                                    });
+                                  },
+                                ),
+                                Text(
+                                  "Mark as Follow Up",
+                                  style: TextStyle(
+                                    fontFamily: TextConstant.dmSansMedium,
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Mark as Issue
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: markAsIssue,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      markAsIssue = value ?? false;
+                                      _isDirty = true;
+                                    });
+                                  },
+                                ),
+                                Text(
+                                  "Mark as Issue",
+                                  style: TextStyle(
+                                    fontFamily: TextConstant.dmSansMedium,
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
                             ),
 
                             const SizedBox(height: 32),

@@ -34,10 +34,11 @@ class NavigationHelper {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => StarredCallsDetailsScreen(
-            lead: lead,
-            formattedDate: formattedDate,
-          ),
+          builder:
+              (context) => StarredCallsDetailsScreen(
+                lead: lead,
+                formattedDate: formattedDate,
+              ),
         ),
       );
       return;
@@ -46,9 +47,8 @@ class NavigationHelper {
     final category = lead.category ?? "";
     final callTypeIndex = getCallTypeIndex(category);
 
-    // Special handling for Return leads
-    if (category == LeadConstants.categoryRentOut ||
-        category == "Return") {
+    // Special handling for Feedback calls
+    if (category == LeadConstants.categoryRentOut || category == "Return") {
       Navigator.push(
         context,
         MaterialPageRoute(

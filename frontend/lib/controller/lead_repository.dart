@@ -529,7 +529,11 @@ class LeadRepository extends ChangeNotifier {
 
   /// Fetch Booking Confirmation leads from API and sync with repository
   /// This will replace existing booking confirmation leads with fresh data from API
-  Future<void> fetchBookingConfirmationLeadsFromApi({String? store, String? functionFrom, String? functionTo}) async {
+  Future<void> fetchBookingConfirmationLeadsFromApi({
+    String? store,
+    String? functionFrom,
+    String? functionTo,
+  }) async {
     try {
       await ensureInitialized();
 
@@ -1002,7 +1006,11 @@ class LeadRepository extends ChangeNotifier {
 
   /// Fetch Return leads from API and sync with repository
   /// This will replace existing return leads with fresh data from API
-  Future<void> fetchReturnLeadsFromApi({String? store, String? enquiryFrom, String? enquiryTo}) async {
+  Future<void> fetchReturnLeadsFromApi({
+    String? store,
+    String? enquiryFrom,
+    String? enquiryTo,
+  }) async {
     try {
       await ensureInitialized();
 
@@ -1749,6 +1757,15 @@ class LeadRepository extends ChangeNotifier {
 
       print(
         'LeadRepository: Fetched ${leadsData.length} starred calls from API',
+      );
+
+      // First, remove all previously starred leads that are not in the new response
+      // This ensures we only have the currently starred leads
+      final newStarredIds =
+          leadsData.map((lead) => lead['_id'] ?? lead['id'] ?? '').toSet();
+
+      _leads.removeWhere(
+        (lead) => lead.isStarred && !newStarredIds.contains(lead.id),
       );
 
       // Parse and add starred calls to repository

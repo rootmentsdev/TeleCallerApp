@@ -19,14 +19,12 @@ class _LeadScreenState extends State<LeadScreen> {
   // Tab indices constants
   static const int _tabIndexLossOfSale = 1;
   static const int _tabIndexReturn = 2;
-  static const int _tabIndexBookingConfirmation = 3;
-  static const int _tabIndexStarred = 4;
+  static const int _tabIndexStarred = 3;
 
   // Initialization delay to allow UI to settle
   static const Duration _initializationDelay = Duration(milliseconds: 500);
 
   bool _isLoadingLossOfSale = false;
-  bool _isLoadingBookingConfirmation = false;
   bool _isLoadingReturn = false;
   bool _isLoadingStarred = false;
 
@@ -68,7 +66,6 @@ class _LeadScreenState extends State<LeadScreen> {
 
         // Fetch category-specific leads
         _fetchLossOfSaleLeads(leadController, headerController);
-        _fetchBookingConfirmationLeads(leadController, headerController);
         _fetchReturnLeads(leadController, headerController);
         _fetchStarredCalls(leadController, headerController);
       });
@@ -107,32 +104,6 @@ class _LeadScreenState extends State<LeadScreen> {
     }
   }
 
-  Future<void> _fetchBookingConfirmationLeads(
-    LeadScreenController controller,
-    HeaderController headerController,
-  ) async {
-    if (_isLoadingBookingConfirmation) return;
-
-    setState(() => _isLoadingBookingConfirmation = true);
-
-    try {
-      final storeParam = _getStoreParam(headerController.selectedStore);
-      await controller.fetchBookingConfirmationLeadsFromApi(store: storeParam);
-
-      if (mounted) {
-        controller.refresh();
-        setState(() {});
-      }
-    } catch (e) {
-      if (mounted &&
-          controller.selectedCallTypeIndex == _tabIndexBookingConfirmation) {
-        _showError("Failed to load Booking Confirmation leads", e);
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingBookingConfirmation = false);
-    }
-  }
-
   Future<void> _fetchReturnLeads(
     LeadScreenController controller,
     HeaderController headerController,
@@ -151,7 +122,7 @@ class _LeadScreenState extends State<LeadScreen> {
       }
     } catch (e) {
       if (mounted && controller.selectedCallTypeIndex == _tabIndexReturn) {
-        _showError("Failed to load Return leads", e);
+        _showError("Failed to load Feedback calls", e);
       }
     } finally {
       if (mounted) setState(() => _isLoadingReturn = false);
@@ -214,9 +185,6 @@ class _LeadScreenState extends State<LeadScreen> {
       if (!_isLoadingLossOfSale) {
         _fetchLossOfSaleLeads(leadController, headerController);
       }
-      if (!_isLoadingBookingConfirmation) {
-        _fetchBookingConfirmationLeads(leadController, headerController);
-      }
       if (!_isLoadingReturn) {
         _fetchReturnLeads(leadController, headerController);
       }
@@ -230,8 +198,6 @@ class _LeadScreenState extends State<LeadScreen> {
   bool _isLoadingCategory(int selectedIndex) {
     return (_isLoadingLossOfSale && selectedIndex == _tabIndexLossOfSale) ||
         (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
-        (_isLoadingBookingConfirmation &&
-            selectedIndex == _tabIndexBookingConfirmation) ||
         (_isLoadingStarred && selectedIndex == _tabIndexStarred);
   }
 
@@ -299,7 +265,7 @@ class _LeadScreenState extends State<LeadScreen> {
                     itemBuilder: (context, index) {
                       final item = callSummary[index];
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: SizedBox(
                           width: 80,
                           child: CallSummaryCard(
@@ -328,12 +294,6 @@ class _LeadScreenState extends State<LeadScreen> {
                                 );
                               } else if (index == _tabIndexReturn) {
                                 await _fetchReturnLeads(
-                                  controller,
-                                  headerController,
-                                );
-                              } else if (index ==
-                                  _tabIndexBookingConfirmation) {
-                                await _fetchBookingConfirmationLeads(
                                   controller,
                                   headerController,
                                 );
@@ -395,12 +355,6 @@ class _LeadScreenState extends State<LeadScreen> {
                         _tabIndexReturn) {
                       await _fetchReturnLeads(controller, headerController);
                     } else if (controller.selectedCallTypeIndex ==
-                        _tabIndexBookingConfirmation) {
-                      await _fetchBookingConfirmationLeads(
-                        controller,
-                        headerController,
-                      );
-                    } else if (controller.selectedCallTypeIndex ==
                         _tabIndexStarred) {
                       await _fetchStarredCalls(controller, headerController);
                     }
@@ -449,12 +403,6 @@ class _LeadScreenState extends State<LeadScreen> {
                   } else if (controller.selectedCallTypeIndex ==
                       _tabIndexReturn) {
                     _fetchReturnLeads(controller, headerController);
-                  } else if (controller.selectedCallTypeIndex ==
-                      _tabIndexBookingConfirmation) {
-                    _fetchBookingConfirmationLeads(
-                      controller,
-                      headerController,
-                    );
                   } else if (controller.selectedCallTypeIndex ==
                       _tabIndexStarred) {
                     _fetchStarredCalls(controller, headerController);
@@ -554,6 +502,7 @@ class LeadListItem extends StatelessWidget {
             horizontal: 12,
             vertical: 8,
           ),
+
           leading: _buildLeadIcon(lead),
           title: Text(
             lead["name"] as String,

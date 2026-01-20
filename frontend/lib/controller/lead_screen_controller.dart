@@ -81,7 +81,6 @@ class LeadScreenController extends ChangeNotifier {
 
       fetchLossOfSaleLeadsFromApi(store: store).catchError((_) {});
       fetchReturnLeadsFromApi(store: store).catchError((_) {});
-      fetchBookingConfirmationLeadsFromApi(store: store).catchError((_) {});
     } else {
       if (dateFrom != null && dateTo != null) {
         fetchAllLeadsFromApi(
@@ -98,7 +97,6 @@ class LeadScreenController extends ChangeNotifier {
         visitTo: '',
       ).catchError((_) {});
       fetchReturnLeadsFromApi().catchError((_) {});
-      fetchBookingConfirmationLeadsFromApi().catchError((_) {});
     }
   }
 
@@ -297,7 +295,7 @@ class LeadScreenController extends ChangeNotifier {
         "icon": Icons.trending_down,
       },
       {
-        "title": "Return Calls",
+        "title": "Feedback Calls",
         "count":
             getUncalledLeadsCount(
               category: LeadConstants.categoryRentOut,
@@ -305,16 +303,6 @@ class LeadScreenController extends ChangeNotifier {
         "bgColor": const Color(0xFFFFF7CC),
         "iconColor": const Color(0xFFFFCC00),
         "icon": Icons.message_outlined,
-      },
-      {
-        "title": "Booking\nConfirmation",
-        "count":
-            getUncalledLeadsCount(
-              category: LeadConstants.categoryBookingConfirmation,
-            ).toString(),
-        "bgColor": const Color(0xFFD4F5DA),
-        "iconColor": const Color(0xff56BE6B),
-        "icon": Icons.flag_outlined,
       },
       {
         "title": "Marked Calls",
@@ -347,7 +335,7 @@ class LeadScreenController extends ChangeNotifier {
     List<LeadModel> filteredLeads;
 
     // Handle starred calls separately
-    if (_selectedCallTypeIndex == 4) {
+    if (_selectedCallTypeIndex == 3) {
       filteredLeads = _repository.starredCallsLeads;
 
       // Apply date filter
@@ -447,10 +435,8 @@ class LeadScreenController extends ChangeNotifier {
       case 1:
         return "Loss of Sale";
       case 2:
-        return "Return Calls";
+        return "Feedback Calls";
       case 3:
-        return "Booking Confirmation";
-      case 4:
         return "Marked Calls";
       default:
         return "All Calls";
@@ -496,7 +482,7 @@ class LeadScreenController extends ChangeNotifier {
       case 2:
         return LeadConstants.categoryRentOut;
       case 3:
-        return LeadConstants.categoryBookingConfirmation;
+        return null; // Marked Calls (handled separately)
       default:
         return null;
     }
@@ -523,28 +509,6 @@ class LeadScreenController extends ChangeNotifier {
         e,
         s,
         reason: 'fetchLossOfSaleLeadsFromApi failed',
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> fetchBookingConfirmationLeadsFromApi({
-    String? store,
-    String? functionFrom,
-    String? functionTo,
-  }) async {
-    try {
-      await _repository.fetchBookingConfirmationLeadsFromApi(
-        store: store,
-        functionFrom: functionFrom,
-        functionTo: functionTo,
-      );
-      notifyListeners();
-    } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(
-        e,
-        s,
-        reason: 'fetchBookingConfirmationLeadsFromApi failed',
       );
       rethrow;
     }
@@ -683,37 +647,6 @@ class LeadScreenController extends ChangeNotifier {
         e,
         s,
         reason: 'updateReturnLead failed',
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> updateBookingConfirmationLead({
-    required String id,
-    String? callStatus,
-    String? leadStatus,
-    bool? followUpFlag,
-    DateTime? callDate,
-    String? remarks,
-    int? callDuration,
-  }) async {
-    try {
-      await _repository.updateBookingConfirmationLeadFromApi(
-        id: id,
-        callStatus: callStatus,
-        leadStatus: leadStatus,
-        followUpFlag: followUpFlag,
-        callDate: callDate,
-        remarks: remarks,
-        callDuration: callDuration,
-      );
-      _removeLeadFromActiveLists(id);
-      notifyListeners();
-    } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(
-        e,
-        s,
-        reason: 'updateBookingConfirmationLead failed',
       );
       rethrow;
     }

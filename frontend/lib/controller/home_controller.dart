@@ -115,20 +115,43 @@ class HomeController extends ChangeNotifier {
         "icon": Icons.trending_down,
       },
       {
-        "title": "Return",
+        "title": "Feedback Calls",
         "count": count(LeadConstants.categoryRentOut).toString(),
         "bgColor": const Color(0xFFFFF7CC),
         "iconColor": const Color(0xFFFFCC00),
         "icon": Icons.message_outlined,
       },
       {
-        "title": "Booking\nConfirmation",
-        "count": count(LeadConstants.categoryBookingConfirmation).toString(),
-        "bgColor": const Color(0xFFD4F5DA),
-        "iconColor": const Color(0xff56BE6B),
-        "icon": Icons.flag_outlined,
+        "title": "Marked Calls",
+        "count": _countMarkedCalls().toString(),
+        "bgColor": const Color(0xFFE3F2FD),
+        "iconColor": const Color(0xFF1976D2),
+        "icon": Icons.star_rounded,
       },
     ];
+  }
+
+  /// Count marked (starred) calls
+  int _countMarkedCalls() {
+    final date = _headerController?.selectedDate ?? DateTime.now();
+    final store = _headerController?.selectedStore;
+
+    // Handle "All Stores" case and extract location from "Brand - Location" format
+    final storeFilter =
+        (store == null || store == 'All Stores')
+            ? null
+            : StoreLocations.resolveSelection(store).location;
+
+    final allLeads = _repository.getLeadsByDate(date);
+
+    List<LeadModel> leads = allLeads;
+
+    if (storeFilter != null) {
+      leads = leads.where((e) => e.location == storeFilter).toList();
+    }
+
+    // Count only marked (starred) leads
+    return leads.where((e) => e.isStarred == true).length;
   }
 
   // Get call list data (calls overview from API)

@@ -267,6 +267,7 @@ class ApiService {
     int? callDuration,
     bool? followUpFlag,
     DateTime? followUpDate,
+    bool? isStarred,
   }) async {
     final url = Uri.parse(ApiConfig.updateReturn(id));
 
@@ -310,6 +311,11 @@ class ApiService {
         // If followUpDate is provided without flag, set flag to true
         requestBody['follow_up_flag'] = true;
         requestBody['follow_up_date'] = followUpDate.toIso8601String();
+      }
+
+      // Handle mark as issue (starred)
+      if (isStarred != null) {
+        requestBody['mark_as_issue'] = isStarred;
       }
 
       final requestBodyJson = json.encode(requestBody);
