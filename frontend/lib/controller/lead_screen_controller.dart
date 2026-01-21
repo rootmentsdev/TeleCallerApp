@@ -10,7 +10,7 @@ import 'package:telecaller_app/utils/lead_constants.dart';
 class LeadScreenController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
   HeaderController? _headerController;
-  int _selectedCallTypeIndex = 0; // 0: All Calls, 1: Loss of Sale, etc.
+  int _selectedCallTypeIndex = 0; // 0: Feedback Calls, 1: Loss of Sale, etc.
 
   LeadScreenController() {
     // Listen to repository changes and forward notifications so UI updates
@@ -278,7 +278,7 @@ class LeadScreenController extends ChangeNotifier {
 
     return [
       {
-        "title": "All Calls",
+        "title": "Feedback Calls",
         "count": getUncalledLeadsCount().toString(),
         "bgColor": const Color(0xFFE8E3FF),
         "iconColor": const Color(0xFF7C5DFF),
@@ -392,10 +392,8 @@ class LeadScreenController extends ChangeNotifier {
       filteredLeads =
           filteredLeads.where((lead) => lead.followUpDate == null).toList();
 
-      // Exclude starred leads from "All Calls" tab - starred leads should only appear in "Starred" tab
-      // The backend "All Calls" endpoint doesn't include starred calls, so we should exclude them here too
-      if (_selectedCallTypeIndex == 0) {
-        // Filter out starred leads from All Calls
+      // Exclude starred leads from all tabs except Marked Calls
+      if (_selectedCallTypeIndex != 3) {
         filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
       }
     }
@@ -431,7 +429,7 @@ class LeadScreenController extends ChangeNotifier {
   String getCurrentTitle() {
     switch (_selectedCallTypeIndex) {
       case 0:
-        return "All Calls";
+        return "Feedback Calls";
       case 1:
         return "Loss of Sale";
       case 2:
@@ -439,7 +437,7 @@ class LeadScreenController extends ChangeNotifier {
       case 3:
         return "Marked Calls";
       default:
-        return "All Calls";
+        return "Feedback Calls";
     }
   }
 
@@ -476,7 +474,7 @@ class LeadScreenController extends ChangeNotifier {
   String? _getCategoryForIndex(int index) {
     switch (index) {
       case 0:
-        return null; // All Calls
+        return LeadConstants.categoryRentOut; // Feedback Calls
       case 1:
         return LeadConstants.categoryLossOfSales;
       case 2:

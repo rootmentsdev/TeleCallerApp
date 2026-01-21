@@ -4,7 +4,6 @@ import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
 
@@ -60,9 +59,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
             onProfileTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfileScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
               );
             },
           ),
@@ -81,39 +78,50 @@ class _FollowupScreenState extends State<FollowupScreen> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    // Filter tabs
+                    // Filter tabs with counts
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          _buildTab(
-                            context,
-                            controller,
-                            "Today",
-                            0,
-                            Icons.calendar_today,
-                            controller.selectedTabIndex == 0,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTab(
-                            context,
-                            controller,
-                            "Upcoming",
-                            1,
-                            null,
-                            controller.selectedTabIndex == 1,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTab(
-                            context,
-                            controller,
-                            "Overdue",
-                            2,
-                            null,
-                            controller.selectedTabIndex == 2,
-                            badgeCount: controller.overdueCount,
-                          ),
-                        ],
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildFilterTab(
+                              context,
+                              controller,
+                              "Overdue",
+                              0,
+                              controller.overdueCount,
+                              controller.selectedTabIndex == 0,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFilterTab(
+                              context,
+                              controller,
+                              "Today",
+                              1,
+                              controller.getCurrentLeads().length,
+                              controller.selectedTabIndex == 1,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFilterTab(
+                              context,
+                              controller,
+                              "Tomorrow",
+                              2,
+                              null,
+                              controller.selectedTabIndex == 2,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildFilterTab(
+                              context,
+                              controller,
+                              "Upcor",
+                              3,
+                              null,
+                              controller.selectedTabIndex == 3,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -129,83 +137,40 @@ class _FollowupScreenState extends State<FollowupScreen> {
     );
   }
 
-  Widget _buildTab(
+  Widget _buildFilterTab(
     BuildContext context,
     FollowupController controller,
     String label,
     int index,
-    IconData? icon,
-    bool isActive, {
-    int? badgeCount,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          controller.setSelectedTabIndex(index);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0xFFE8E3FF) : Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color:
-                  isActive
-                      ? const Color(0xFF7C5DFF)
-                      : Colors.grey.withOpacity(0.3),
-            ),
+    int? count,
+    bool isActive,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        controller.setSelectedTabIndex(index);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF0A2540) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive ? const Color(0xFF0A2540) : Colors.grey[300]!,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 16,
-                  color: isActive ? const Color(0xFF7C5DFF) : Colors.grey,
-                ),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontFamily: TextConstant.dmSansMedium,
-                  color: isActive ? const Color(0xFF7C5DFF) : Colors.grey,
-                  fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-                ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              count != null ? "$label ($count)" : label,
+              style: TextStyle(
+                fontSize: 14,
+                fontFamily: TextConstant.dmSansMedium,
+                color: isActive ? Colors.white : Colors.grey[800],
+                fontWeight: FontWeight.w500,
               ),
-              // if (isActive) ...[
-              //   const SizedBox(width: 6),
-              //   const Icon(
-              //     Icons.keyboard_arrow_down,
-              //     size: 16,
-              //     color: Color(0xFF7C5DFF),
-              //   ),
-              // ],
-              if (badgeCount != null && !isActive) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE23434),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    badgeCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -275,114 +240,148 @@ class _FollowupScreenState extends State<FollowupScreen> {
   }
 
   Widget _buildCallItem(Map<String, dynamic> call, BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Open details screen (editable view) when follow-up lead is clicked
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => DetailsScreen(
-                  contact: call,
-                  callTypeIndex: 0, // All Calls tab
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Name and Lead Type Badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    call["name"] as String,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontFamily: TextConstant.dmSansMedium,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
                 ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border(
-            left: BorderSide(color: call["borderColor"] as Color, width: 4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: call["tagBgColor"] as Color,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    call["tag"] as String,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: TextConstant.dmSansMedium,
+                      color: call["tagColor"] as Color,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Icon
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: call["iconBgColor"] as Color,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  call["icon"] as IconData,
-                  color: call["iconColor"] as Color,
-                  size: 20,
-                ),
+
+            const SizedBox(height: 8),
+
+            // Phone Number
+            Text(
+              call["phone"] as String,
+              style: TextStyle(
+                fontSize: 14,
+                fontFamily: TextConstant.dmSansRegular,
+                color: Colors.grey[600],
               ),
-              const SizedBox(width: 12),
-              // Name, phone, and reason
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      call["name"] as String,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontFamily: TextConstant.dmSansMedium,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      call["phone"] as String,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontFamily: TextConstant.dmSansRegular,
-                        color: const Color(0xff797979),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Reason: ${call["reason"] as String}",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: TextConstant.dmSansRegular,
-                        color: const Color(0xff797979),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Tag
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: call["tagBgColor"] as Color,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  call["tag"] as String,
+            ),
+
+            const SizedBox(height: 12),
+
+            // Remarks / Notes
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Remarks / Notes",
                   style: TextStyle(
                     fontSize: 12,
+                    fontFamily: TextConstant.dmSansRegular,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  call["reason"] as String? ?? "No remarks",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: TextConstant.dmSansRegular,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Store and Date/Time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    call["storeName"] as String? ?? "Store",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: TextConstant.dmSansRegular,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ),
+                Text(
+                  call["followUpDate"] as String? ?? "Date",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: TextConstant.dmSansRegular,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Call Now Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // TODO: Implement call functionality
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ColorConstant.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  "Call Now",
+                  style: TextStyle(
+                    fontSize: 16,
                     fontFamily: TextConstant.dmSansMedium,
-                    color: call["tagColor"] as Color,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

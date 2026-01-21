@@ -12,6 +12,7 @@ class LeadDisplayModel {
   final Color bgColor;
   final Color iconColor;
   final IconData icon;
+  final String? location;
   final LeadModel? leadModel;
 
   LeadDisplayModel({
@@ -22,6 +23,7 @@ class LeadDisplayModel {
     required this.bgColor,
     required this.iconColor,
     required this.icon,
+    this.location,
     this.leadModel,
   });
 
@@ -36,6 +38,7 @@ class LeadDisplayModel {
       bgColor: style.tagBgColor,
       iconColor: style.iconColor,
       icon: style.icon,
+      location: lead.location,
       leadModel: lead,
     );
   }
@@ -50,6 +53,7 @@ class LeadDisplayModel {
       "bgColor": bgColor,
       "iconColor": iconColor,
       "icon": icon,
+      "location": location,
       "lead": leadModel,
     };
   }

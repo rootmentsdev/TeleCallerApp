@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/navigation_helper.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
-import 'package:telecaller_app/widgets.dart/call_summary_card.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
 
 class LeadScreen extends StatefulWidget {
@@ -201,40 +201,12 @@ class _LeadScreenState extends State<LeadScreen> {
         (_isLoadingStarred && selectedIndex == _tabIndexStarred);
   }
 
-  /// Build lead count badge with safe type casting
-  Widget _buildLeadCountBadge(Map<String, dynamic> summaryItem, int count) {
-    final bgColor = summaryItem["bgColor"];
-    final iconColor = summaryItem["iconColor"];
-
-    if (bgColor is! Color || iconColor is! Color) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        "$count Leads",
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: iconColor,
-          fontFamily: TextConstant.dmSansMedium,
-        ),
-      ),
-    );
-  }
-
   // ============================ UI =============================
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<HeaderController, LeadScreenController>(
       builder: (context, headerController, controller, child) {
-        final callSummary = controller.getCallSummary();
         final filteredLeads = controller.getFilteredLeads();
         final currentTitle = controller.getCurrentTitle();
 
@@ -254,69 +226,13 @@ class _LeadScreenState extends State<LeadScreen> {
                 },
               ),
 
-              // ================= Summary Cards =================
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                child: SizedBox(
-                  height: 100,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: callSummary.length,
-                    itemBuilder: (context, index) {
-                      final item = callSummary[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: SizedBox(
-                          width: 80,
-                          child: CallSummaryCard(
-                            title: item["title"],
-                            count: item["count"],
-                            bgColor: item["bgColor"],
-                            iconColor: item["iconColor"],
-                            icon: item["icon"],
-                            context: context,
-                            callType: item["callType"],
-                            isSelected:
-                                controller.selectedCallTypeIndex == index,
-                            isStarred: item["isStarred"] ?? false,
-                            onTap: () async {
-                              controller.setSelectedCallTypeIndex(index);
-                              final headerController =
-                                  Provider.of<HeaderController>(
-                                    context,
-                                    listen: false,
-                                  );
-
-                              if (index == _tabIndexLossOfSale) {
-                                await _fetchLossOfSaleLeads(
-                                  controller,
-                                  headerController,
-                                );
-                              } else if (index == _tabIndexReturn) {
-                                await _fetchReturnLeads(
-                                  controller,
-                                  headerController,
-                                );
-                              } else if (index == _tabIndexStarred) {
-                                await _fetchStarredCalls(
-                                  controller,
-                                  headerController,
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-
               // ==================== List Header ====================
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 16,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -324,17 +240,21 @@ class _LeadScreenState extends State<LeadScreen> {
                     Text(
                       currentTitle,
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
                         fontFamily: TextConstant.dmSansMedium,
+                        color: Colors.black87,
                       ),
                     ),
-                    if (controller.selectedCallTypeIndex >= 0 &&
-                        controller.selectedCallTypeIndex < callSummary.length)
-                      _buildLeadCountBadge(
-                        callSummary[controller.selectedCallTypeIndex],
-                        filteredLeads.length,
+                    Text(
+                      "(${filteredLeads.length} Calls)",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: TextConstant.dmSansMedium,
+                        color: const Color(0xFFFFA500),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -449,86 +369,81 @@ class LeadListItem extends StatelessWidget {
 
   const LeadListItem({super.key, required this.lead, this.onTap});
 
-  /// Build lead icon with safe type casting
-  Widget _buildLeadIcon(Map<String, dynamic> lead) {
-    final bgColor = lead["bgColor"];
-    final icon = lead["icon"];
-    final iconColor = lead["iconColor"];
-
-    if (bgColor is! Color || icon is! IconData || iconColor is! Color) {
-      return Container(
-        height: 48,
-        width: 48,
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Icon(Icons.person, size: 24, color: Colors.grey),
-      );
-    }
-
-    return Container(
-      height: 48,
-      width: 48,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, color: iconColor, size: 24),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey[200]!),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-
-          leading: _buildLeadIcon(lead),
-          title: Text(
-            lead["name"] as String,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              lead["phone"] as String,
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-            ),
-          ),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
             children: [
-              Text(
-                lead["date"] as String,
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lead["name"] as String,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.phone,
+                          size: 16,
+                          fontWeight: FontWeight.w600,
+                          color: ColorConstant.primaryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          lead["phone"] as String,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: ColorConstant.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                          fontWeight: FontWeight.w600,
+                          color: ColorConstant.primaryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            lead["location"] as String? ?? "N/A",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: ColorConstant.primaryColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 4),
-              Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+              const SizedBox(width: 12),
+              Icon(Icons.arrow_forward_ios, size: 20, color: Colors.grey[400]),
             ],
           ),
         ),

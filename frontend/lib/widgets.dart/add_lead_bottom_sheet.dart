@@ -4,7 +4,6 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/call_model.dart';
 import 'package:telecaller_app/model/lead_model.dart';
-import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
@@ -33,10 +32,14 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
 
   String? _selectedBrand;
   String? _selectedLocation;
-  String? _selectedLeadStatus;
-  String? _selectedCallStatus;
+  String? _selectedLeadType = "Enquiry";
+  String? _selectedSubCategory;
+  String? _selectedCloseReason;
+  String? _selectedItemCategory;
   DateTime? _followUpDate;
+  DateTime? _functionDate;
   bool _markAsFollowUp = false;
+  bool _markAsComplaint = false;
   int? _callDuration;
 
   bool _isLoading = false;
@@ -48,25 +51,14 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
   }
 
   void _initializeForm() {
-    // Pre-fill phone number if provided
     if (widget.prefilledPhoneNumber != null) {
       _phoneController.text = widget.prefilledPhoneNumber!;
     }
 
-    // Pre-fill call duration if provided
     if (widget.prefilledCallDuration != null) {
       _callDuration = widget.prefilledCallDuration;
     }
 
-    // Set default values
-    // Only set to "Connected" if call duration was provided (meaning a call was made)
-    // Otherwise, default to "Not Called" so the lead appears in the leads screen
-    _selectedCallStatus = _callDuration != null && _callDuration! > 0
-        ? LeadConstants.callStatusConnected
-        : LeadConstants.callStatusNotCalled;
-    _selectedLeadStatus = LeadConstants.leadStatusNewLead;
-
-    // Set default location from header controller
     final headerController = Provider.of<HeaderController>(
       context,
       listen: false,
@@ -91,10 +83,10 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        // left: 16,
+        // right: 16,
+        top: 0,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -107,308 +99,525 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add New Lead',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                    ),
+              // Incoming Call Header
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A2540),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(25),
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(
-                      Icons.close,
-                      size: 28,
-                      color: Color(0xFF666666),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 16),
+                            child: Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Incoming Call',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_formatCallDateTime(DateTime.now())} | Connected',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 40),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
 
-              const SizedBox(height: 24),
-
-              // Customer Name with icon
-              _buildIconTextField(
-                controller: _nameController,
-                label: 'Customer Name',
-                icon: Icons.person,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter customer name';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // Phone Number with icon
-              _buildIconTextField(
-                controller: _phoneController,
-                label: 'Phone Number',
-                icon: Icons.phone,
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter phone number';
-                  }
-                  if (value.trim().length < 10) {
-                    return 'Please enter valid phone number';
-                  }
-                  return null;
-                },
+              // Form Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Add New Lead',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    // GestureDetector(
+                    //   onTap: () => Navigator.pop(context),
+                    //   child: const Icon(
+                    //     Icons.close,
+                    //     size: 28,
+                    //     color: Color(0xFF666666),
+                    //   ),
+                    // ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 20),
 
-              // Brand and Location in row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDropdownField(
-                      value: _selectedBrand,
-                      label: 'Brand',
-                      items: StoreLocations.brandStores.keys.toList(),
+              // Form fields
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Lead Type Selector
+                    _buildDropdownField(
+                      value: _selectedLeadType,
+                      label: 'Select Lead Type',
+                      items: ["Enquiry", "Booking"],
                       onChanged: (value) {
                         setState(() {
-                          _selectedBrand = value;
-                          _selectedLocation = null;
+                          _selectedLeadType = value;
+                          _selectedSubCategory = null;
+                          _selectedCloseReason = null;
+                          _selectedItemCategory = null;
                         });
                       },
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value:
-                          _selectedLocation != null &&
-                                  _selectedBrand != null &&
-                                  (StoreLocations
-                                              .brandStores[_selectedBrand!] ??
-                                          [])
-                                      .contains(_selectedLocation)
-                              ? _selectedLocation
-                              : null,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        labelText: 'Location',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color:
-                                _selectedBrand == null
-                                    ? const Color(0xFFCCCCCC)
-                                    : const Color(0xFFE0E0E0),
-                          ),
-                        ),
-                        disabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFCCCCCC),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF003D7A),
-                            width: 2,
-                          ),
-                        ),
-                        filled: _selectedBrand == null,
-                        fillColor:
-                            _selectedBrand == null
-                                ? const Color(0xFFF5F5F5)
-                                : Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                      ),
-                      items:
-                          _selectedBrand != null
-                              ? (StoreLocations.brandStores[_selectedBrand!] ??
-                                      [])
-                                  .map(
-                                    (item) => DropdownMenuItem(
-                                      value: item,
-                                      child: Text(
-                                        item,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                  )
-                                  .toList()
-                              : [],
-                      selectedItemBuilder: (BuildContext context) {
-                        if (_selectedBrand == null) return [];
-                        return (StoreLocations.brandStores[_selectedBrand!] ??
-                                [])
-                            .map(
-                              (item) => Text(
-                                item,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            )
-                            .toList();
-                      },
-                      onChanged:
-                          _selectedBrand == null
-                              ? null
-                              : (value) {
-                                setState(() {
-                                  _selectedLocation = value;
-                                });
-                              },
+
+                    const SizedBox(height: 16),
+
+                    // Phone Number
+                    _buildIconTextField(
+                      controller: _phoneController,
+                      label: 'Phone Number',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
                       validator: (value) {
-                        if (_selectedBrand != null && value == null) {
-                          return 'Location is required';
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter phone number';
+                        }
+                        if (value.trim().length < 10) {
+                          return 'Please enter valid phone number';
                         }
                         return null;
                       },
                     ),
-                  ),
-                ],
-              ),
 
-              const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-              // Lead Status and Call Status in row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDropdownField(
-                      value: _selectedLeadStatus,
-                      label: 'Lead Status',
-                      items: [
-                        LeadConstants.leadStatusNewLead,
-                        LeadConstants.leadStatusContacted,
-                        LeadConstants.leadStatusQualified,
-                        LeadConstants.leadStatusNegotiation,
-                        LeadConstants.leadStatusWon,
-                        LeadConstants.leadStatusLost,
+                    // Customer Name
+                    _buildIconTextField(
+                      controller: _nameController,
+                      label: 'Customer Name (Optional)',
+                      icon: Icons.person,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Store and Location
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownField(
+                            value: _selectedBrand,
+                            label: 'Store',
+                            items: StoreLocations.brandStores.keys.toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedBrand = value;
+                                _selectedLocation = null;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDropdownField(
+                            value: _selectedLocation,
+                            label: 'Location',
+                            items:
+                                _selectedBrand != null
+                                    ? (StoreLocations
+                                            .brandStores[_selectedBrand!] ??
+                                        [])
+                                    : [],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedLocation = value;
+                              });
+                            },
+                          ),
+                        ),
                       ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedLeadStatus = value;
-                        });
-                      },
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildDropdownField(
-                      value: _selectedCallStatus,
-                      label: 'Call Status',
-                      items: [
-                        LeadConstants.callStatusConnected,
-                        LeadConstants.callStatusNotConnected,
-                        LeadConstants.callStatusCallBackLater,
-                        LeadConstants.callStatusNotCalled,
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCallStatus = value;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
 
-              const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-              // Remarks
-              _buildIconTextField(
-                controller: _remarksController,
-                label: 'Remarks (Optional)',
-                icon: Icons.note_outlined,
-                keyboardType: TextInputType.multiline,
-              ),
-
-              const SizedBox(height: 20),
-
-              // Mark As Follow Up Checkbox and Date Picker
-              _buildFollowUpSection(),
-
-              const SizedBox(height: 24),
-
-              // Buttons Row
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(
-                          color: Color(0xFFE0E0E0),
-                          width: 1.5,
+                    // Function Date and Call Duration
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _selectFunctionDate,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: const Color(0xFFE0E0E0),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Function Date',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF666666),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _functionDate != null
+                                        ? _formatDate(_functionDate!)
+                                        : 'dd/mm/yyyy',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF333333),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF333333),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveLead,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF003D7A),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        disabledBackgroundColor: const Color(0xFFCCCCCC),
-                      ),
-                      child:
-                          _isLoading
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xFFE0E0E0),
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Call Duration',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF666666),
                                   ),
                                 ),
-                              )
-                              : const Text(
-                                'Save Lead',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                const SizedBox(height: 4),
+                                Text(
+                                  _callDuration != null
+                                      ? _formatDuration(_callDuration!)
+                                      : '00:00 Mins',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF333333),
+                                  ),
                                 ),
-                              ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 16),
+
+                    // Mark as Complaint
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _markAsComplaint,
+                          onChanged: (value) {
+                            setState(() {
+                              _markAsComplaint = value ?? false;
+                            });
+                          },
+                          activeColor: const Color(0xFF003D7A),
+                        ),
+                        const Text(
+                          "Mark as Complaint",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Complaint sub category - only show if marked as complaint
+                    if (_markAsComplaint) ...[
+                      _buildDropdownField(
+                        value: _selectedSubCategory,
+                        label: 'Complaint Sub Category',
+                        items: [
+                          "Product Changed",
+                          "Product Cleaning/Quality Issue",
+                          "Price Issue",
+                          "Delivery Issue",
+                          "Return/Exchange Issue",
+                          "Bill not recieved",
+                          "Security Refund",
+                          "Stitching/Alteration Issue",
+                          "Product Missing",
+                          "Staff Attitude/Communication",
+                          "Product-Return-Damage",
+                          "Store Ambience",
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSubCategory = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Enquiry specific fields - only show if NOT marked as complaint
+                    if (!_markAsComplaint &&
+                        _selectedLeadType == "Enquiry") ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedSubCategory,
+                              label: "Sub Category",
+                              items: [
+                                "Store Location",
+                                "Product Enquiry",
+                                "Price Enquiry",
+                                "Outside Products",
+                                "Others",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSubCategory = value;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedCloseReason,
+                              label: 'Close Reason',
+                              items: [
+                                "Connected to store",
+                                "Not Interested",
+                                "Visit Directly",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCloseReason = value;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildDropdownField(
+                        value: _selectedItemCategory,
+                        label: 'Item Category',
+                        items: [
+                          "Suit",
+                          "Bandgala/Jodhpuri",
+                          "Indo-western",
+                          "Sherwani",
+                          "Kurtha",
+                          "Kids Suit",
+                          "Gowns",
+                          "Sarees",
+                          "Tie",
+                          "Shoes",
+                          "Blazer",
+                          "Others",
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedItemCategory = value;
+                          });
+                        },
+                      ),
+                    ] else if (!_markAsComplaint &&
+                        _selectedLeadType == "Booking") ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedSubCategory,
+                              label: 'Sub Category',
+                              items: [
+                                "Delivery Preparation Enquiry",
+                                "Cancelation",
+                                "Change Product",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSubCategory = value;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedCloseReason,
+                              label: 'Close Reason',
+                              items: [
+                                "Connected to Branch",
+                                "Found Another Product",
+                                "Price Issue",
+                                "Converted to Booking",
+                                "Not Interested",
+                                "Follow Up Later",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCloseReason = value;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Call Remarks
+                    _buildIconTextField(
+                      controller: _remarksController,
+                      label: 'Call Remarks / Notes',
+                      icon: Icons.note_outlined,
+                      keyboardType: TextInputType.multiline,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Mark As Follow Up
+                    _buildFollowUpSection(),
+
+                    const SizedBox(height: 20),
+
+                    // Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(
+                                color: Color(0xFFE0E0E0),
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _saveLead,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF003D7A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              disabledBackgroundColor: const Color(0xFFCCCCCC),
+                            ),
+                            child:
+                                _isLoading
+                                    ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                    : const Text(
+                                      'Save Lead',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _formatCallDateTime(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final year = dateTime.year;
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$day-$month-$year, $hour:$minute AM';
   }
 
   Widget _buildIconTextField({
@@ -451,7 +660,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     required List<String> items,
     required Function(String?) onChanged,
   }) {
-    // Ensure value is in items list, otherwise set to null
     final validValue = (value != null && items.contains(value)) ? value : null;
     final isDisabled = items.isEmpty;
 
@@ -509,7 +717,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Mark As Follow Up Checkbox
         Row(
           children: [
             Checkbox(
@@ -518,10 +725,8 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                 setState(() {
                   _markAsFollowUp = value ?? false;
                   if (_markAsFollowUp && _followUpDate == null) {
-                    // Set default follow-up date to 7 days from now
                     _followUpDate = DateTime.now().add(const Duration(days: 7));
                   } else if (!_markAsFollowUp) {
-                    // Clear follow-up date when unchecked
                     _followUpDate = null;
                   }
                 });
@@ -529,7 +734,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
               activeColor: const Color(0xFF003D7A),
             ),
             const Text(
-              "Mark As Follow Up",
+              "Mark as Follow Up",
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -539,7 +744,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
           ],
         ),
 
-        // Follow-up Date Picker (shown when checkbox is checked)
         if (_markAsFollowUp) ...[
           const SizedBox(height: 12),
           InkWell(
@@ -549,7 +753,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
               decoration: BoxDecoration(
                 border: Border.all(color: const Color(0xFF003D7A)),
                 borderRadius: BorderRadius.circular(12),
-                color: const Color(0xFF003D7A).withOpacity(0.05),
+                color: const Color(0xFF003D7A).withValues(alpha: 0.05),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -572,17 +776,18 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                             : 'Select Date',
                         style: TextStyle(
                           fontSize: 14,
-                          color: _followUpDate != null
-                              ? const Color(0xFF333333)
-                              : const Color(0xFF999999),
+                          color:
+                              _followUpDate != null
+                                  ? const Color(0xFF333333)
+                                  : const Color(0xFF999999),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                  Icon(
+                  const Icon(
                     Icons.calendar_today,
-                    color: const Color(0xFF003D7A),
+                    color: Color(0xFF003D7A),
                     size: 20,
                   ),
                 ],
@@ -609,6 +814,31 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     }
   }
 
+  Future<void> _selectFunctionDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _functionDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+
+    if (date != null) {
+      setState(() {
+        _functionDate = date;
+      });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')} Mins';
+  }
+
   Future<void> _saveLead() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -632,16 +862,14 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       final apiService = ApiService();
       final leadRepository = LeadRepository();
 
-      // Get store name from brand and location
       final store = _selectedLocation ?? _selectedBrand ?? 'Unknown';
 
-      // Call API to create lead with correct snake_case fields
       final apiResponse = await apiService.createLead(
         leadName: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         store: store,
-        source: 'Walk-in',
-        leadType: 'General',
+        source: 'Incoming Call',
+        leadType: _selectedLeadType ?? 'Enquiry',
         remarks:
             _remarksController.text.trim().isEmpty
                 ? null
@@ -651,18 +879,13 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         callDuration: _callDuration,
       );
 
-      print('AddLeadBottomSheet: API Response: $apiResponse');
-
-      // Extract the lead ID from API response
       String leadId = '';
 
-      // Check nested lead object first (new format)
       if (apiResponse.containsKey('lead') && apiResponse['lead'] is Map) {
         final lead = apiResponse['lead'] as Map<String, dynamic>;
         leadId = lead['id']?.toString() ?? lead['_id']?.toString() ?? '';
       }
 
-      // Check top-level fields
       if (leadId.isEmpty) {
         if (apiResponse.containsKey('_id')) {
           leadId = apiResponse['_id'].toString();
@@ -675,21 +898,21 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         }
       }
 
-      print('AddLeadBottomSheet: Extracted lead ID: $leadId');
-
       if (leadId.isEmpty) {
         throw Exception('Failed to get lead ID from server response');
       }
 
-      // Create local lead model with the ID from API
       final lead = LeadModel(
         id: leadId,
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         brand: _selectedBrand,
         location: _selectedLocation,
-        leadStatus: _selectedLeadStatus,
-        callStatus: _selectedCallStatus,
+        leadStatus: 'New',
+        callStatus:
+            _callDuration != null && _callDuration! > 0
+                ? 'Connected'
+                : 'Not Called',
         followUpDate: _markAsFollowUp ? _followUpDate : null,
         reason:
             _remarksController.text.trim().isEmpty
@@ -699,17 +922,15 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         callDuration: _callDuration,
         callCount: _callDuration != null && _callDuration! > 0 ? 1 : 0,
         createdAt: DateTime.now(),
-        source: 'Walk-in',
-        leadType: 'General',
+        source: 'Incoming Call',
+        leadType: _selectedLeadType ?? 'Enquiry',
       );
 
-      // Add to local repository
       await leadRepository.addLead(lead);
 
       if (mounted) {
         Navigator.pop(context);
 
-        // If follow-up date is set, navigate to follow-up screen
         if (_markAsFollowUp && _followUpDate != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             BottomNavState.navigateToFollowUp();
@@ -724,7 +945,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         }
       }
     } catch (e) {
-      print('AddLeadBottomSheet: Error saving lead: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -741,13 +961,8 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       }
     }
   }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
 }
 
-/// Show Add Lead Bottom Sheet
 void showAddLeadBottomSheet(
   BuildContext context, {
   String? phoneNumber,

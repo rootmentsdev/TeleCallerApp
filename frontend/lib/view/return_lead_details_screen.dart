@@ -3,12 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/utils/format_helper.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
-import 'package:telecaller_app/controller/lead_repository.dart';
-import 'package:telecaller_app/controller/lead_screen_controller.dart';
-import 'package:telecaller_app/controller/report_controller.dart';
+import 'package:telecaller_app/controller/call_tracking_controller.dart';
 
 class ReturnLeadDetailsScreen extends StatefulWidget {
   final LeadModel lead;
@@ -24,40 +21,77 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   late Map<String, dynamic> returnData;
   bool _isLoading = true;
   String? _error;
-  String? _returnLeadId; // Store the return lead ID from backend
+  bool _hasCalled = false;
+  int _callDuration = 0;
 
-  String? selectedCallStatus;
-  String? selectedLeadStatus;
-  int rating = 0;
-  final TextEditingController remarksController = TextEditingController();
-  bool _isDirty = false;
-  bool _hasCalled = false; // Track if call has been made
-  bool _isSaving = false; // Track if save operation is in progress
-  bool markAsFollowUp = false; // Track if marked as follow up
-  bool markAsIssue = false; // Track if marked as issue
+  // Form fields
+  String? _selectedCallStatus;
+  bool _markAsComplaint = false;
+  String? _selectedComplaintSubCategory;
+  int _rating = 0;
+  final TextEditingController _remarksController = TextEditingController();
+  bool _markAsFollowUp = false;
+  DateTime? _followUpDate;
+  final bool _isSaving = false;
 
   final List<String> callStatusOptions = [
-    "Not called yet",
+    "Interested",
+    "Not Interested",
+    "Call Back Later",
     "Connected",
     "Not Connected",
-    "Call Back Later",
-    "Confirmed",
-    "Cancelled",
   ];
 
-  final List<String> leadStatusOptions = [
-    "New Lead",
-    "Contacted",
-    "Qualified",
-    "Negotiation",
-    "Won",
-    "Lost",
+  final List<String> complaintSubCategoryOptions = [
+    "Product Changed",
+    "Product Cleaning/Quality Issue",
+    "Price Issue",
+    "Delivery Issue",
+    "Return/Exchange Issue",
+    "Bill not recieved",
+    "Security Refund",
+    "Stitching/Alteration Issue",
+    "Product Missing",
+    "Staff Attitude/Communication",
+    "Product-Return-Damage",
+    "Store Ambience",
+    "Product Damage",
   ];
 
   @override
   void initState() {
     super.initState();
     _fetchReturnLeadDetails();
+
+    // Initialize call tracking and listen for call duration updates
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final callTrackingController = Provider.of<CallTrackingController>(
+        context,
+        listen: false,
+      );
+      callTrackingController.initialize();
+      callTrackingController.addListener(_onCallDurationUpdate);
+    });
+  }
+
+  void _onCallDurationUpdate() {
+    final callTrackingController = Provider.of<CallTrackingController>(
+      context,
+      listen: false,
+    );
+
+    if (callTrackingController.lastDuration != null &&
+        callTrackingController.lastDuration! > 0) {
+      if (mounted) {
+        setState(() {
+          _callDuration = callTrackingController.lastDuration!;
+          // Auto-set call status to Connected if duration > 0
+          if (_selectedCallStatus == null) {
+            _selectedCallStatus = "Connected";
+          }
+        });
+      }
+    }
   }
 
   Future<void> _fetchReturnLeadDetails() async {
@@ -74,24 +108,6 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
         setState(() {
           returnData = response;
           _isLoading = false;
-
-          // Get the return lead ID from backend response (may be different from lead.id)
-          // Try multiple possible ID fields
-          _returnLeadId =
-              returnData['id'] ??
-              returnData['_id'] ??
-              returnData['returnId'] ??
-              widget.lead.id; // Fallback to lead.id if not found
-
-          print(
-            'ReturnLeadDetailsScreen: Using return lead ID: $_returnLeadId (original lead ID: ${widget.lead.id})',
-          );
-
-          // Initialize form fields from fetched data
-          selectedCallStatus = returnData['callStatus'] ?? 'Not called yet';
-          selectedLeadStatus = returnData['leadStatus'];
-          rating = returnData['rating'] ?? 0;
-          remarksController.text = returnData['remarks'] ?? '';
         });
       }
     } catch (e) {
@@ -104,121 +120,12 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
     }
   }
 
-  Future<void> _saveChanges() async {
-    // Prevent duplicate saves
-    if (_isSaving) {
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      // Use the return lead ID from backend if available, otherwise use lead.id
-      final returnId = _returnLeadId ?? widget.lead.id;
-      print(
-        'ReturnLeadDetailsScreen: Saving changes with return lead ID: $returnId',
-      );
-
-      final apiService = ApiService();
-      await apiService.updateReturn(
-        id: returnId,
-        callStatus: selectedCallStatus,
-        leadStatus: selectedLeadStatus,
-        rating: rating > 0 ? rating : null,
-        remarks:
-            remarksController.text.trim().isEmpty
-                ? null
-                : remarksController.text.trim(),
-        // IMPORTANT: Pass duration even if 0, as 0 is a valid duration for unanswered calls
-        // Backend needs duration 0 to create report entries
-        callDuration: widget.lead.callDuration ?? 0,
-        followUpFlag: markAsFollowUp,
-        followUpDate:
-            markAsFollowUp ? DateTime.now().add(const Duration(days: 1)) : null,
-        isStarred: markAsIssue,
-      );
-
-      // Remove the lead from local repository to prevent it from showing in leads screen
-      // Backend has moved it to Reports collection
-      // Remove by both ID and phone number to handle cases where backend might return it with different ID
-      try {
-        final repository = LeadRepository();
-        await repository.removeLead(widget.lead.id);
-        await repository.removeLeadByPhone(widget.lead.phone);
-        print(
-          'ReturnLeadDetailsScreen: Removed lead from local repository (by ID and phone: ${widget.lead.phone})',
-        );
-      } catch (e) {
-        print(
-          'ReturnLeadDetailsScreen: Error removing lead from repository: $e',
-        );
-        // Don't block navigation if removal fails
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Feedback call updated successfully'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 1),
-          ),
-        );
-
-        // Refresh leads and reports screens
-        try {
-          final leadController = Provider.of<LeadScreenController>(
-            context,
-            listen: false,
-          );
-          await leadController.fetchAllLeadsFromApi();
-          print('ReturnLeadDetailsScreen: Refreshed leads screen');
-        } catch (e) {
-          print('ReturnLeadDetailsScreen: Error refreshing leads: $e');
-        }
-
-        try {
-          final reportController = Provider.of<ReportController>(
-            context,
-            listen: false,
-          );
-          await reportController.fetchReportsWithCurrentFilters();
-          print('ReturnLeadDetailsScreen: Refreshed reports screen');
-        } catch (e) {
-          print('ReturnLeadDetailsScreen: Error refreshing reports: $e');
-        }
-
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (mounted) {
-          setState(() {
-            _isSaving = false;
-          });
-          Navigator.pop(context);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving changes: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _makeCall() async {
     try {
       final phoneNumber = widget.lead.phone;
       await PhoneCallService.makeCall(phoneNumber);
 
-      // Enable form fields after call is initiated
+      // After call is made, show the form
       if (mounted) {
         setState(() {
           _hasCalled = true;
@@ -238,8 +145,32 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
 
   @override
   void dispose() {
-    remarksController.dispose();
+    _remarksController.dispose();
     super.dispose();
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')} Mins';
   }
 
   @override
@@ -258,37 +189,20 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                   child: const Icon(Icons.arrow_back_ios, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  // mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 30, bottom: 10),
-                      child: const Text(
-                        "Feedback Call",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: TextConstant.dmSansMedium,
-                        ),
+                const Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 30, bottom: 10),
+                    child: Text(
+                      "Feedback Call",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: TextConstant.dmSansMedium,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Text(
-                        widget.lead.location ?? "Store",
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 16,
-                          fontFamily: TextConstant.dmSansRegular,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const Spacer(),
               ],
             ),
           ),
@@ -325,16 +239,6 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                 color: Colors.grey[800],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _error ?? '',
-                              style: TextStyle(
-                                fontFamily: TextConstant.dmSansRegular,
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: _fetchReturnLeadDetails,
@@ -344,529 +248,730 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                         ),
                       )
                       : SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Customer Information
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                            // Customer Details Card
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.grey[200]!,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Title
+                                  const Text(
+                                    "Customer Details",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: TextConstant.dmSansMedium,
+                                      color: Color(0xFF333333),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Name and Phone Number
+                                  Row(
                                     children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Name",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
                                               widget.lead.name,
                                               style: const TextStyle(
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
                                                 fontFamily:
                                                     TextConstant.dmSansMedium,
+                                                color: Color(0xFF1A1A1A),
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          ElevatedButton.icon(
-                                            onPressed: _makeCall,
-                                            icon: const Icon(
-                                              Icons.call,
-                                              size: 18,
-                                            ),
-                                            label: const Text("Call Now"),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  ColorConstant.primaryColor,
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 16,
-                                                    vertical: 8,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        widget.lead.phone,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.grey[700],
-                                          fontFamily:
-                                              TextConstant.dmSansRegular,
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Phone Number",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              widget.lead.phone,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily:
+                                                    TextConstant.dmSansMedium,
+                                                color: Color(0xFF1A1A1A),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
 
-                            // Return Details from Backend
-                            _buildDetailRow(
-                              "Booking Number",
-                              returnData['bookingNumber'] ?? "N/A",
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDetailRow(
-                              "Return Date",
-                              returnData['returnDate'] ?? "N/A",
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDetailRow(
-                              "Security Amount",
-                              returnData['securityAmount'] ?? "N/A",
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDetailRow(
-                              "Refund Status",
-                              returnData['refundStatus'] ?? "N/A",
-                            ),
-                            const SizedBox(height: 24),
+                                  const SizedBox(height: 16),
 
-                            // Call Duration Container
-                            if (returnData['callDuration'] != null ||
-                                returnData['call_duration'] != null ||
-                                widget.lead.callDuration != null)
-                              _buildCallDurationContainer(
-                                duration:
-                                    returnData['callDuration'] as int? ??
-                                    returnData['call_duration'] as int? ??
-                                    widget.lead.callDuration ??
-                                    0,
-                              ),
-
-                            const SizedBox(height: 24),
-
-                            // Call Status and Lead Status
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildDropdown(
-                                    label: "Call Status",
-                                    value: selectedCallStatus,
-                                    items: callStatusOptions,
-                                    enabled: _hasCalled,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        selectedCallStatus = value;
-                                        _isDirty = true;
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildDropdown(
-                                    label: "Lead Status",
-                                    value: selectedLeadStatus,
-                                    items: leadStatusOptions,
-                                    hint: "Select Lead Status",
-                                    enabled: _hasCalled,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        selectedLeadStatus = value;
-                                        _isDirty = true;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Rating
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Rating",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    fontFamily: TextConstant.dmSansMedium,
-                                    color:
-                                        _hasCalled
-                                            ? Colors.grey[800]
-                                            : Colors.grey[400],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: List.generate(5, (index) {
-                                    return GestureDetector(
-                                      onTap:
-                                          _hasCalled
-                                              ? () {
-                                                setState(() {
-                                                  rating = index + 1;
-                                                  _isDirty = true;
-                                                });
-                                              }
-                                              : null,
-                                      child: Icon(
-                                        Icons.star,
-                                        size: 32,
-                                        color:
-                                            index < rating
-                                                ? Colors.amber
-                                                : (_hasCalled
-                                                    ? Colors.grey[300]
-                                                    : Colors.grey[200]),
-                                      ),
-                                    );
-                                  }),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Remarks
-                            Text(
-                              "Remarks",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: TextConstant.dmSansMedium,
-                                color:
-                                    _hasCalled
-                                        ? Colors.grey[800]
-                                        : Colors.grey[400],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: remarksController,
-                              enabled: _hasCalled,
-                              maxLines: 3,
-                              onChanged: (_) {
-                                setState(() {
-                                  _isDirty = true;
-                                });
-                              },
-                              decoration: InputDecoration(
-                                hintText: "Enter your remarks",
-                                hintStyle: TextStyle(
-                                  color:
-                                      _hasCalled
-                                          ? Colors.grey[400]
-                                          : Colors.grey[300],
-                                  fontFamily: TextConstant.dmSansRegular,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color:
-                                        _hasCalled
-                                            ? Colors.grey[300]!
-                                            : Colors.grey[200]!,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey[300]!,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: ColorConstant.primaryColor,
-                                    width: 2,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.all(12),
-                              ),
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Mark as Follow Up
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: markAsFollowUp,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      markAsFollowUp = value ?? false;
-                                      _isDirty = true;
-                                    });
-                                  },
-                                ),
-                                Text(
-                                  "Mark as Follow Up",
-                                  style: TextStyle(
-                                    fontFamily: TextConstant.dmSansMedium,
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Mark as Issue
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: markAsIssue,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      markAsIssue = value ?? false;
-                                      _isDirty = true;
-                                    });
-                                  },
-                                ),
-                                Text(
-                                  "Mark as Issue",
-                                  style: TextStyle(
-                                    fontFamily: TextConstant.dmSansMedium,
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 32),
-
-                            // Action Buttons
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 14,
-                                      ),
-                                      side: BorderSide(
-                                        color: Colors.grey[300]!,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      "Cancel",
-                                      style: TextStyle(
-                                        color: Colors.grey[800],
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: TextConstant.dmSansMedium,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed:
-                                        _hasCalled && _isDirty && !_isSaving
-                                            ? () async {
-                                              await _saveChanges();
-                                            }
-                                            : null,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          _hasCalled && _isDirty && !_isSaving
-                                              ? ColorConstant.primaryColor
-                                              : Colors.grey[300],
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 14,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child:
-                                        _isSaving
-                                            ? const SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor:
-                                                    AlwaysStoppedAnimation<
-                                                      Color
-                                                    >(Colors.white),
-                                              ),
-                                            )
-                                            : Text(
-                                              "Save Changes",
+                                  // Store & Location and Attended by
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Store & Location",
                                               style: TextStyle(
-                                                color:
-                                                    _hasCalled && _isDirty
-                                                        ? Colors.white
-                                                        : Colors.grey[600],
-                                                fontSize: 16,
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              widget.lead.location ??
+                                                  widget.lead.brand ??
+                                                  "N/A",
+                                              style: const TextStyle(
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily:
                                                     TextConstant.dmSansMedium,
+                                                color: Color(0xFF1A1A1A),
                                               ),
                                             ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Attended by",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              returnData['attendedBy'] ?? "N/A",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily:
+                                                    TextConstant.dmSansMedium,
+                                                color: Color(0xFF1A1A1A),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+
+                                  const SizedBox(height: 16),
+
+                                  // Return Date and Attended by Date
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Return Date",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              returnData['returnDate'] ?? "N/A",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily:
+                                                    TextConstant.dmSansMedium,
+                                                color: Color(0xFF1A1A1A),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Attended by",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              returnData['attendedDate'] ??
+                                                  "N/A",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily:
+                                                    TextConstant.dmSansMedium,
+                                                color: Color(0xFF1A1A1A),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 24),
+
+                            if (!_hasCalled)
+                              // Call Now Button (before call)
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: _makeCall,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: ColorConstant.primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    "Call Now",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: TextConstant.dmSansMedium,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              // Form fields (after call)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Call Status and Call Duration
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Call Status",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color: Colors.grey[300]!,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: DropdownButton<String>(
+                                                value: _selectedCallStatus,
+                                                hint: const Text("Select"),
+                                                isExpanded: true,
+                                                underline: const SizedBox(),
+                                                items:
+                                                    callStatusOptions.map((
+                                                      String item,
+                                                    ) {
+                                                      return DropdownMenuItem<
+                                                        String
+                                                      >(
+                                                        value: item,
+                                                        child: Text(item),
+                                                      );
+                                                    }).toList(),
+                                                onChanged: (String? value) {
+                                                  setState(() {
+                                                    _selectedCallStatus = value;
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Call Duration",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 12,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color: Colors.grey[300]!,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                _formatDuration(_callDuration),
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[800],
+                                                  fontFamily:
+                                                      TextConstant
+                                                          .dmSansRegular,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Mark as Complaint
+                                  Row(
+                                    children: [
+                                      Checkbox(
+                                        value: _markAsComplaint,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _markAsComplaint = value ?? false;
+                                            if (!_markAsComplaint) {
+                                              _selectedComplaintSubCategory =
+                                                  null;
+                                            }
+                                          });
+                                        },
+                                        activeColor: ColorConstant.primaryColor,
+                                      ),
+                                      Text(
+                                        "Mark as Complaint",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.red[400],
+                                          fontFamily: TextConstant.dmSansMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  if (_markAsComplaint) ...[
+                                    const SizedBox(height: 16),
+                                    // Sub Category Dropdown
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Sub Category",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                            fontFamily:
+                                                TextConstant.dmSansRegular,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: DropdownButton<String>(
+                                            value:
+                                                _selectedComplaintSubCategory,
+                                            hint: const Text("Select"),
+                                            isExpanded: true,
+                                            underline: const SizedBox(),
+                                            items:
+                                                complaintSubCategoryOptions.map(
+                                                  (String item) {
+                                                    return DropdownMenuItem<
+                                                      String
+                                                    >(
+                                                      value: item,
+                                                      child: Text(item),
+                                                    );
+                                                  },
+                                                ).toList(),
+                                            onChanged: (String? value) {
+                                              setState(() {
+                                                _selectedComplaintSubCategory =
+                                                    value;
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+
+                                  const SizedBox(height: 16),
+
+                                  // Rating (only show if not marked as complaint)
+                                  if (!_markAsComplaint)
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Rating",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                            fontFamily:
+                                                TextConstant.dmSansRegular,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: List.generate(5, (index) {
+                                            return GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _rating = index + 1;
+                                                });
+                                              },
+                                              child: Icon(
+                                                Icons.star,
+                                                size: 32,
+                                                color:
+                                                    index < _rating
+                                                        ? Colors.amber
+                                                        : Colors.grey[300],
+                                              ),
+                                            );
+                                          }),
+                                        ),
+                                      ],
+                                    ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Call Remarks
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Call Remarks / Notes",
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontFamily:
+                                              TextConstant.dmSansRegular,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextField(
+                                        controller: _remarksController,
+                                        maxLines: 3,
+                                        decoration: InputDecoration(
+                                          hintText: "Enter your remarks",
+                                          hintStyle: TextStyle(
+                                            color: Colors.grey[400],
+                                            fontFamily:
+                                                TextConstant.dmSansRegular,
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            borderSide: BorderSide(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            borderSide: BorderSide(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            borderSide: BorderSide(
+                                              color: ColorConstant.primaryColor,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          contentPadding: const EdgeInsets.all(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Mark as Follow Up
+                                  Row(
+                                    children: [
+                                      Checkbox(
+                                        value: _markAsFollowUp,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _markAsFollowUp = value ?? false;
+                                            if (_markAsFollowUp &&
+                                                _followUpDate == null) {
+                                              _followUpDate = DateTime.now()
+                                                  .add(const Duration(days: 1));
+                                            }
+                                          });
+                                        },
+                                        activeColor: ColorConstant.primaryColor,
+                                      ),
+                                      Text(
+                                        "Mark as Follow Up",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                          fontFamily: TextConstant.dmSansMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  if (_markAsFollowUp) ...[
+                                    const SizedBox(height: 12),
+                                    InkWell(
+                                      onTap: () async {
+                                        final date = await showDatePicker(
+                                          context: context,
+                                          initialDate:
+                                              _followUpDate ??
+                                              DateTime.now().add(
+                                                const Duration(days: 1),
+                                              ),
+                                          firstDate: DateTime.now(),
+                                          lastDate: DateTime.now().add(
+                                            const Duration(days: 365),
+                                          ),
+                                        );
+                                        if (date != null) {
+                                          setState(() {
+                                            _followUpDate = date;
+                                          });
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Colors.grey[300]!,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              _followUpDate != null
+                                                  ? "Follow-Ups Date (${_followUpDate!.day} ${_getMonthName(_followUpDate!.month)} ${_followUpDate!.year})"
+                                                  : "Follow-Ups Date",
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                            ),
+                                            Icon(
+                                              Icons.calendar_today,
+                                              size: 18,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+
+                                  const SizedBox(height: 24),
+
+                                  // Action Buttons
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed:
+                                              () => Navigator.pop(context),
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            side: BorderSide(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            "Cancel",
+                                            style: TextStyle(
+                                              color: Colors.grey[800],
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily:
+                                                  TextConstant.dmSansMedium,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: _isSaving ? null : () {},
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                ColorConstant.primaryColor,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child:
+                                              _isSaving
+                                                  ? const SizedBox(
+                                                    height: 20,
+                                                    width: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                            Color
+                                                          >(Colors.white),
+                                                    ),
+                                                  )
+                                                  : const Text(
+                                                    "Save Call Update",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontFamily:
+                                                          TextConstant
+                                                              .dmSansMedium,
+                                                    ),
+                                                  ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[600],
-            fontFamily: TextConstant.dmSansRegular,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[800],
-            fontFamily: TextConstant.dmSansMedium,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required String? value,
-    required List<String> items,
-    String? hint,
-    required Function(String?)? onChanged,
-    bool enabled = true,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            fontFamily: TextConstant.dmSansMedium,
-            color: enabled ? Colors.grey[800] : Colors.grey[400],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: enabled ? Colors.grey[300]! : Colors.grey[200]!,
-            ),
-            borderRadius: BorderRadius.circular(8),
-            color: enabled ? Colors.transparent : Colors.grey[100],
-          ),
-          child: DropdownButton<String>(
-            value: value,
-            hint: Text(
-              hint ?? "Select $label",
-              style: TextStyle(
-                color: enabled ? Colors.grey[400] : Colors.grey[300],
-                fontFamily: TextConstant.dmSansRegular,
-              ),
-            ),
-            isExpanded: true,
-            underline: const SizedBox(),
-            icon: Icon(
-              Icons.keyboard_arrow_down,
-              color: enabled ? Colors.grey[600] : Colors.grey[300],
-            ),
-            items:
-                items.map((String item) {
-                  return DropdownMenuItem<String>(
-                    value: item,
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        fontFamily: TextConstant.dmSansRegular,
-                        fontSize: 14,
-                        color: enabled ? Colors.black : Colors.grey[400],
-                      ),
-                    ),
-                  );
-                }).toList(),
-            onChanged: enabled ? onChanged : null,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCallDurationContainer({required int duration}) {
-    final bool hasDuration = duration > 0;
-    final Color containerColor = hasDuration ? Colors.green : Colors.orange;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: containerColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: containerColor.withOpacity(0.4), width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: containerColor.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.timer, color: containerColor, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Call Duration',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: containerColor,
-                    fontFamily: TextConstant.dmSansRegular,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  FormatHelper.formatCallDurationWithUnits(duration),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: containerColor,
-                    fontFamily: TextConstant.dmSansMedium,
-                  ),
-                ),
-              ],
             ),
           ),
         ],

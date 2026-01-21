@@ -9,7 +9,6 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/widgets.dart/call_card.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
-import 'package:telecaller_app/widgets.dart/call_summary_card.dart';
 import 'package:telecaller_app/view/call_card_details_screen.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
 import 'package:telecaller_app/view/bottomnavigation_bar.dart';
@@ -51,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Consumer2<HeaderController, HomeController>(
       builder: (context, headerController, homeController, child) {
-        final callSummary = homeController.getCallSummary();
         final callList = homeController.getCallList();
 
         return Scaffold(
@@ -73,51 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   onNotificationTap: () {
                     // Handle notification tap
                   },
-                ),
-
-                // Call Summary Cards - Horizontal Scroll
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 8,
-                  ),
-                  child: SizedBox(
-                    height: 100,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: callSummary.length,
-                      itemBuilder: (context, index) {
-                        final item = callSummary[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: SizedBox(
-                            width: 80,
-                            child: CallSummaryCard(
-                              title: item["title"],
-                              count: item["count"],
-                              bgColor: item["bgColor"],
-                              iconColor: item["iconColor"],
-                              icon: item["icon"],
-                              context: context,
-                              callType: item["callType"],
-                              onTap: () {
-                                // Map the tapped summary card to the Lead screen tab
-                                final leadController =
-                                    Provider.of<LeadScreenController>(
-                                      context,
-                                      listen: false,
-                                    );
-                                leadController.setSelectedCallTypeIndex(index);
-
-                                // Navigate to lead screen using BottomNav
-                                BottomNavState.navigateToLeadScreen();
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
                 ),
 
                 Padding(

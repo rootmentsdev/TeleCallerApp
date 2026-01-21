@@ -7,7 +7,7 @@ import 'package:telecaller_app/view/home_screen.dart';
 import 'package:telecaller_app/view/lead_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_screen.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
-import 'package:telecaller_app/widgets.dart/add_lead_bottom_sheet.dart';
+import 'package:telecaller_app/widgets.dart/add_lead_outgoing_call_bottom_sheet.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key, this.initialIndex});
@@ -130,7 +130,7 @@ class BottomNavState extends State<BottomNav>
   void _openAddLeadSheet() {
     _controller.forward().then((value) => _controller.reverse());
 
-    showAddLeadBottomSheet(context);
+    showAddLeadOutgoingCallBottomSheet(context);
   }
 
   @override

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class ColorConstant {
   // Primary Color
-  static const Color primaryColor = Color(0xFF133658);
+  static const Color primaryColor =Color(0xFF0A2540)
+;
 
   // Icon Colors
   static const Color iconColor1 = Color(0xFFD8FFE0);

@@ -758,11 +758,10 @@ class ApiService {
         'closing_status': null,
       };
 
-      // Add optional fields if provided
+      // Add optional fields if provided - DO NOT include null values
       if (remarks != null && remarks.isNotEmpty) {
         requestBody['remarks'] = remarks;
-      } else {
-        requestBody['remarks'] = null;
+        requestBody['reason_collected_from_store'] = remarks;
       }
 
       if (followUpFlag && functionDate != null && functionDate.isNotEmpty) {
@@ -779,11 +778,6 @@ class ApiService {
 
       if (securityAmount > 0) {
         requestBody['security_amount'] = securityAmount;
-      }
-
-      // Add reason_collected_from_store if remarks provided
-      if (remarks != null && remarks.isNotEmpty) {
-        requestBody['reason_collected_from_store'] = remarks;
       }
 
       final requestBodyJson = json.encode(requestBody);
