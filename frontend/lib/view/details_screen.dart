@@ -679,7 +679,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
         if (lead.category == null || lead.category!.isEmpty) {
           try {
             final apiService = ApiService();
-            final store = lead.location ?? lead.brand ?? 'Unknown';
+            // Concatenate brand and location like 'suitor guy-chavakkad'
+            final store =
+                lead.brand != null && lead.location != null
+                    ? '${lead.brand}-${lead.location}'
+                    : lead.location ?? lead.brand ?? 'Unknown';
 
             print('DetailsScreen: Updating general lead via API');
             print('DetailsScreen: Lead ID: $leadId');

@@ -650,6 +650,7 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
+
   Future<void> fetchStarredCallsFromApi({String? store}) async {
     try {
       await _repository.fetchStarredCallsFromApi(store: store);

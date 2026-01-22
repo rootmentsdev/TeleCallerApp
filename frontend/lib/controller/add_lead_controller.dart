@@ -97,10 +97,16 @@ class AddLeadController extends ChangeNotifier {
 
     try {
       // Call API to create lead with correct snake_case fields
+      // Concatenate brand and location like 'suitor guy-chavakkad'
+      final store =
+          selectedBrand != null && selectedLocation != null
+              ? '$selectedBrand-$selectedLocation'
+              : storeLocation ?? selectedBrand ?? selectedLocation ?? 'Unknown';
+
       final response = await _apiService.createLead(
         leadName: nameController.text.trim(),
         phoneNumber: phoneController.text.trim(),
-        store: storeLocation ?? selectedBrand ?? selectedLocation ?? 'Unknown',
+        store: store,
         source: 'Walk-in',
         leadType: 'General',
         remarks: null,
@@ -123,31 +129,44 @@ class AddLeadController extends ChangeNotifier {
         throw Exception('Failed to get lead ID from server response');
       }
 
-      // Create lead model with API response ID
-      final lead = LeadModel(
-        id: leadId,
-        name: nameController.text.trim(),
-        phone: phoneController.text.trim(),
-        brand: selectedBrand,
-        location: selectedLocation,
-        leadStatus: selectedLeadStatus,
-        callStatus: selectedCallStatus,
-        followUpDate: followUpDate,
-        category: null,
-        reason: null,
-        source: 'Walk-in',
-        leadType: 'General',
+      // Check if lead already exists locally to avoid duplicates
+      final existingLead = _repository.allLeads.cast<LeadModel?>().firstWhere(
+        (lead) => lead != null && lead.id == leadId,
+        orElse: () => null,
       );
 
-      // Save lead to local repository
-      await _repository.addLead(lead);
+      if (existingLead == null) {
+        // Only add if it doesn't already exist
+        // Create lead model with API response ID
+        final lead = LeadModel(
+          id: leadId,
+          name: nameController.text.trim(),
+          phone: phoneController.text.trim(),
+          brand: selectedBrand,
+          location: selectedLocation,
+          leadStatus: selectedLeadStatus,
+          callStatus: selectedCallStatus,
+          followUpDate: followUpDate,
+          category: null,
+          reason: null,
+          source: 'Walk-in',
+          leadType: 'General',
+        );
+
+        // Save lead to local repository
+        await _repository.addLead(lead);
+      }
 
       // Clear form
       clearForm();
 
       return {'success': true, 'message': 'Lead added successfully'};
     } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(e, s, reason: 'createLead failed');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'createLead failed',
+      );
       // Return error message
       return {
         'success': false,

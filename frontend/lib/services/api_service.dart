@@ -719,7 +719,7 @@ class ApiService {
   }
 
   /// Create a new lead (Walk-in/General lead)
-  /// Matches backend POST /api/pages/leads
+  /// Matches backend POST /api/pages/add-lead
   Future<Map<String, dynamic>> createLead({
     required String leadName,
     required String phoneNumber,
@@ -732,6 +732,10 @@ class ApiService {
     String? bookingNumber,
     int securityAmount = 0,
     int? callDuration,
+    String? subCategory,
+    String? itemCategory,
+    String? closingAction,
+    bool markAsComplaint = false,
   }) async {
     final url = Uri.parse(ApiConfig.addLead());
 
@@ -742,43 +746,29 @@ class ApiService {
         throw Exception('Authentication required. Please login again.');
       }
 
-      // Prepare request body with EXACT snake_case fields required by backend
-      // Backend expects: customer_name, phone_number, store_location, source, lead_status, call_status
+      // Prepare request body with EXACT fields required by backend
       final requestBody = <String, dynamic>{
         'customer_name': leadName,
         'phone_number': phoneNumber,
+        'brand': store.contains('-') ? store.split('-')[0] : store,
         'store_location': store,
-        'source': source,
-        'lead_type': leadType,
         'lead_status': 'No Status',
         'call_status': 'Not Called',
+        'subCategory': subCategory,
+        'itemCategory': itemCategory,
+        'closingAction': closingAction,
+        'reasons': remarks,
+        'remarks': remarks,
+        'leadType': leadType,
+        'functionDate': functionDate,
+        'mark_as_complaint': markAsComplaint,
         'follow_up_flag': followUpFlag,
-        'call_duration': callDuration ?? 0,
-        'rating': 0,
-        'closing_status': null,
+        'follow_up_date':
+            followUpFlag && functionDate != null ? functionDate : null,
       };
 
-      // Add optional fields if provided - DO NOT include null values
-      if (remarks != null && remarks.isNotEmpty) {
-        requestBody['remarks'] = remarks;
-        requestBody['reason_collected_from_store'] = remarks;
-      }
-
-      if (followUpFlag && functionDate != null && functionDate.isNotEmpty) {
-        requestBody['follow_up_date'] = functionDate;
-      }
-
-      if (functionDate != null && functionDate.isNotEmpty) {
-        requestBody['function_date'] = functionDate;
-      }
-
-      if (bookingNumber != null && bookingNumber.isNotEmpty) {
-        requestBody['booking_number'] = bookingNumber;
-      }
-
-      if (securityAmount > 0) {
-        requestBody['security_amount'] = securityAmount;
-      }
+      // Remove null values
+      requestBody.removeWhere((key, value) => value == null);
 
       final requestBodyJson = json.encode(requestBody);
 

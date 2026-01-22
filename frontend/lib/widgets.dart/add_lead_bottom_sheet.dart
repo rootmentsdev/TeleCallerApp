@@ -862,7 +862,11 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       final apiService = ApiService();
       final leadRepository = LeadRepository();
 
-      final store = _selectedLocation ?? _selectedBrand ?? 'Unknown';
+      // Concatenate brand and location like 'suitor guy-chavakkad'
+      final store =
+          _selectedBrand != null && _selectedLocation != null
+              ? '$_selectedBrand-$_selectedLocation'
+              : _selectedLocation ?? _selectedBrand ?? 'Unknown';
 
       final apiResponse = await apiService.createLead(
         leadName: _nameController.text.trim(),
@@ -877,6 +881,10 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         followUpFlag: _markAsFollowUp,
         functionDate: _markAsFollowUp ? _followUpDate?.toIso8601String() : null,
         callDuration: _callDuration,
+        subCategory: _selectedSubCategory,
+        itemCategory: _selectedItemCategory,
+        closingAction: _selectedCloseReason,
+        markAsComplaint: _markAsComplaint,
       );
 
       String leadId = '';
@@ -902,46 +910,51 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         throw Exception('Failed to get lead ID from server response');
       }
 
-      final lead = LeadModel(
-        id: leadId,
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        brand: _selectedBrand,
-        location: _selectedLocation,
-        leadStatus: 'New',
-        callStatus:
-            _callDuration != null && _callDuration! > 0
-                ? 'Connected'
-                : 'Not Called',
-        followUpDate: _markAsFollowUp ? _followUpDate : null,
-        reason:
-            _remarksController.text.trim().isEmpty
-                ? null
-                : _remarksController.text.trim(),
-        category: null,
-        callDuration: _callDuration,
-        callCount: _callDuration != null && _callDuration! > 0 ? 1 : 0,
-        createdAt: DateTime.now(),
-        source: 'Incoming Call',
-        leadType: _selectedLeadType ?? 'Enquiry',
-      );
+      // Check if lead already exists locally to avoid duplicates
+      final existingLead = leadRepository.allLeads
+          .cast<LeadModel?>()
+          .firstWhere(
+            (lead) => lead != null && lead.id == leadId,
+            orElse: () => null,
+          );
 
-      await leadRepository.addLead(lead);
+      if (existingLead == null) {
+        // Only add if it doesn't already exist
+        final lead = LeadModel(
+          id: leadId,
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          brand: _selectedBrand,
+          location: _selectedLocation,
+          leadStatus: 'New',
+          callStatus:
+              _callDuration != null && _callDuration! > 0
+                  ? 'Connected'
+                  : 'Not Called',
+          followUpDate: _markAsFollowUp ? _followUpDate : null,
+          reason:
+              _remarksController.text.trim().isEmpty
+                  ? null
+                  : _remarksController.text.trim(),
+          category: null,
+          callDuration: _callDuration,
+          callCount: _callDuration != null && _callDuration! > 0 ? 1 : 0,
+          createdAt: DateTime.now(),
+          source: 'Incoming Call',
+          leadType: _selectedLeadType ?? 'Enquiry',
+        );
+
+        await leadRepository.addLead(lead);
+      }
 
       if (mounted) {
-        Navigator.pop(context);
-
         if (_markAsFollowUp && _followUpDate != null) {
+          Navigator.pop(context);
           WidgetsBinding.instance.addPostFrameCallback((_) {
             BottomNavState.navigateToFollowUp();
           });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Lead saved successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          Navigator.pop(context);
         }
       }
     } catch (e) {

@@ -246,72 +246,113 @@ class _AddLeadOutgoingCallBottomSheetState
 
                   const SizedBox(height: 16),
 
-                  // Call Now Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _makeCall,
-                      icon: const Icon(Icons.phone, size: 20),
-                      label: const Text('Call Now'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF003D7A),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  // Call Now Button - only show BEFORE call
+                  if (!_hasCalled)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _makeCall,
+                        icon: const Icon(Icons.phone, size: 20),
+                        label: const Text('Call Now'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF003D7A),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
                   const SizedBox(height: 16),
 
-                  // Store and Location
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildDropdownField(
-                          value: _selectedBrand,
-                          label: 'Store',
-                          items: StoreLocations.brandStores.keys.toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedBrand = value;
-                              _selectedLocation = null;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildDropdownField(
-                          value: _selectedLocation,
-                          label: 'Location',
-                          items:
-                              _selectedBrand != null
-                                  ? (StoreLocations
-                                          .brandStores[_selectedBrand!] ??
-                                      [])
-                                  : [],
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedLocation = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Function Date and Call Duration (after call)
-                  if (_hasCalled)
+                  // All fields below only show AFTER call is made
+                  if (_hasCalled) ...[
+                    // Store and Location
                     Row(
                       children: [
                         Expanded(
-                          child: InkWell(
-                            onTap: _selectFunctionDate,
+                          child: _buildDropdownField(
+                            value: _selectedBrand,
+                            label: 'Store',
+                            items: StoreLocations.brandStores.keys.toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedBrand = value;
+                                _selectedLocation = null;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDropdownField(
+                            value: _selectedLocation,
+                            label: 'Location',
+                            items:
+                                _selectedBrand != null
+                                    ? (StoreLocations
+                                            .brandStores[_selectedBrand!] ??
+                                        [])
+                                    : [],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedLocation = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Function Date and Call Duration (after call)
+                    if (_hasCalled)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: _selectFunctionDate,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0xFFE0E0E0),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Function Date',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF666666),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _functionDate != null
+                                          ? _formatDate(_functionDate!)
+                                          : 'dd/mm/yyyy',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF333333),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -327,7 +368,7 @@ class _AddLeadOutgoingCallBottomSheetState
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Function Date',
+                                    'Call Duration',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Color(0xFF666666),
@@ -335,276 +376,240 @@ class _AddLeadOutgoingCallBottomSheetState
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    _functionDate != null
-                                        ? _formatDate(_functionDate!)
-                                        : 'dd/mm/yyyy',
+                                    _callDuration > 0
+                                        ? _formatDuration(_callDuration)
+                                        : '00:00 Mins',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF333333),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: const Color(0xFFE0E0E0),
+                        ],
+                      )
+                    else
+                      InkWell(
+                        onTap: _selectFunctionDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Function Date',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF666666),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Call Duration',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF666666),
-                                  ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _functionDate != null
+                                    ? _formatDate(_functionDate!)
+                                    : 'dd/mm/yyyy',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF333333),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _callDuration > 0
-                                      ? _formatDuration(_callDuration)
-                                      : '00:00 Mins',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF333333),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 16),
+
+                    // Mark as Complaint
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _markAsComplaint,
+                          onChanged: (value) {
+                            setState(() {
+                              _markAsComplaint = value ?? false;
+                            });
+                          },
+                          activeColor: const Color(0xFF003D7A),
+                        ),
+                        const Text(
+                          "Mark as Complaint",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF333333),
                           ),
                         ),
                       ],
-                    )
-                  else
-                    InkWell(
-                      onTap: _selectFunctionDate,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFE0E0E0)),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Function Date',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF666666),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _functionDate != null
-                                  ? _formatDate(_functionDate!)
-                                  : 'dd/mm/yyyy',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF333333),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Mark as Complaint
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _markAsComplaint,
+                    // Complaint sub category - only show if marked as complaint
+                    if (_markAsComplaint) ...[
+                      _buildDropdownField(
+                        value: _selectedSubCategory,
+                        label: 'Complaint Sub Category',
+                        items: [
+                          "Product Changed",
+                          "Product Cleaning/Quality Issue",
+                          "Price Issue",
+                          "Delivery Issue",
+                          "Return/Exchange Issue",
+                          "Bill not recieved",
+                          "Security Refund",
+                          "Stitching/Alteration Issue",
+                          "Product Missing",
+                          "Staff Attitude/Communication",
+                          "Product-Return-Damage",
+                          "Store Ambience",
+                        ],
                         onChanged: (value) {
                           setState(() {
-                            _markAsComplaint = value ?? false;
+                            _selectedSubCategory = value;
                           });
                         },
-                        activeColor: const Color(0xFF003D7A),
                       ),
-                      const Text(
-                        "Mark as Complaint",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF333333),
-                        ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Enquiry specific fields
+                    if (!_markAsComplaint &&
+                        _selectedLeadType == "Enquiry") ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedSubCategory,
+                              label: "Sub Category",
+                              items: [
+                                "Store Location",
+                                "Product Enquiry",
+                                "Price Enquiry",
+                                "Outside Products",
+                                "Others",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSubCategory = value;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedCloseReason,
+                              label: 'Close Reason',
+                              items: [
+                                "Connected to store",
+                                "Not Interested",
+                                "Visit Directly",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCloseReason = value;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildDropdownField(
+                        value: _selectedItemCategory,
+                        label: 'Item Category',
+                        items: [
+                          "Suit",
+                          "Bandgala/Jodhpuri",
+                          "Indo-western",
+                          "Sherwani",
+                          "Kurtha",
+                          "Kids Suit",
+                          "Gowns",
+                          "Sarees",
+                          "Tie",
+                          "Shoes",
+                          "Blazer",
+                          "Others",
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedItemCategory = value;
+                          });
+                        },
+                      ),
+                    ] else if (!_markAsComplaint &&
+                        _selectedLeadType == "Booking") ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedSubCategory,
+                              label: 'Sub Category',
+                              items: [
+                                "Delivery Preparation Enquiry",
+                                "Cancelation",
+                                "Change Product",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSubCategory = value;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedCloseReason,
+                              label: 'Close Reason',
+                              items: [
+                                "Connected to Branch",
+                                "Found Another Product",
+                                "Price Issue",
+                                "Converted to Booking",
+                                "Not Interested",
+                                "Follow Up Later",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCloseReason = value;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
 
-                  const SizedBox(height: 16),
-
-                  // Complaint sub category - only show if marked as complaint
-                  if (_markAsComplaint) ...[
-                    _buildDropdownField(
-                      value: _selectedSubCategory,
-                      label: 'Complaint Sub Category',
-                      items: [
-                        "Product Changed",
-                        "Product Cleaning/Quality Issue",
-                        "Price Issue",
-                        "Delivery Issue",
-                        "Return/Exchange Issue",
-                        "Bill not recieved",
-                        "Security Refund",
-                        "Stitching/Alteration Issue",
-                        "Product Missing",
-                        "Staff Attitude/Communication",
-                        "Product-Return-Damage",
-                        "Store Ambience",
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedSubCategory = value;
-                        });
-                      },
-                    ),
                     const SizedBox(height: 16),
-                  ],
 
-                  // Enquiry specific fields
-                  if (!_markAsComplaint && _selectedLeadType == "Enquiry") ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDropdownField(
-                            value: _selectedSubCategory,
-                            label: "Sub Category",
-                            items: [
-                              "Store Location",
-                              "Product Enquiry",
-                              "Price Enquiry",
-                              "Outside Products",
-                              "Others",
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedSubCategory = value;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildDropdownField(
-                            value: _selectedCloseReason,
-                            label: 'Close Reason',
-                            items: [
-                              "Connected to store",
-                              "Not Interested",
-                              "Visit Directly",
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedCloseReason = value;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
+                    // Call Remarks
+                    _buildIconTextField(
+                      controller: _remarksController,
+                      label: 'Call Remarks / Notes',
+                      icon: Icons.note_outlined,
+                      keyboardType: TextInputType.multiline,
                     ),
+
                     const SizedBox(height: 16),
-                    _buildDropdownField(
-                      value: _selectedItemCategory,
-                      label: 'Item Category',
-                      items: [
-                        "Suit",
-                        "Bandgala/Jodhpuri",
-                        "Indo-western",
-                        "Sherwani",
-                        "Kurtha",
-                        "Kids Suit",
-                        "Gowns",
-                        "Sarees",
-                        "Tie",
-                        "Shoes",
-                        "Blazer",
-                        "Others",
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedItemCategory = value;
-                        });
-                      },
-                    ),
-                  ] else if (!_markAsComplaint &&
-                      _selectedLeadType == "Booking") ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildDropdownField(
-                            value: _selectedSubCategory,
-                            label: 'Sub Category',
-                            items: [
-                              "Delivery Preparation Enquiry",
-                              "Cancelation",
-                              "Change Product",
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedSubCategory = value;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildDropdownField(
-                            value: _selectedCloseReason,
-                            label: 'Close Reason',
-                            items: [
-                              "Connected to Branch",
-                              "Found Another Product",
-                              "Price Issue",
-                              "Converted to Booking",
-                              "Not Interested",
-                              "Follow Up Later",
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedCloseReason = value;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+
+                    // Mark As Follow Up
+                    _buildFollowUpSection(),
+
+                    const SizedBox(height: 20),
                   ],
-
-                  const SizedBox(height: 16),
-
-                  // Call Remarks
-                  _buildIconTextField(
-                    controller: _remarksController,
-                    label: 'Call Remarks / Notes',
-                    icon: Icons.note_outlined,
-                    keyboardType: TextInputType.multiline,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Mark As Follow Up
-                  _buildFollowUpSection(),
-
-                  const SizedBox(height: 20),
 
                   // Buttons
                   Row(
@@ -875,8 +880,12 @@ class _AddLeadOutgoingCallBottomSheetState
         return;
       }
 
-      // Make the call
-      await PhoneCallService.makeCall(phoneNumber);
+      // Mark this as an outgoing call in CallTrackingController
+      final callTrackingController = Provider.of<CallTrackingController>(
+        context,
+        listen: false,
+      );
+      callTrackingController.startOutgoingCall(phoneNumber);
 
       if (mounted) {
         setState(() {
@@ -963,7 +972,11 @@ class _AddLeadOutgoingCallBottomSheetState
       final apiService = ApiService();
       final leadRepository = LeadRepository();
 
-      final store = _selectedLocation ?? _selectedBrand ?? 'Unknown';
+      // Concatenate brand and location like 'suitor guy-chavakkad'
+      final store =
+          _selectedBrand != null && _selectedLocation != null
+              ? '$_selectedBrand-$_selectedLocation'
+              : _selectedLocation ?? _selectedBrand ?? 'Unknown';
 
       final apiResponse = await apiService.createLead(
         leadName: _nameController.text.trim(),
@@ -978,6 +991,10 @@ class _AddLeadOutgoingCallBottomSheetState
         followUpFlag: _markAsFollowUp,
         functionDate: _markAsFollowUp ? _followUpDate?.toIso8601String() : null,
         callDuration: _callDuration,
+        subCategory: _selectedSubCategory,
+        itemCategory: _selectedItemCategory,
+        closingAction: _selectedCloseReason,
+        markAsComplaint: _markAsComplaint,
       );
 
       String leadId = '';
@@ -1003,43 +1020,48 @@ class _AddLeadOutgoingCallBottomSheetState
         throw Exception('Failed to get lead ID from server response');
       }
 
-      final lead = LeadModel(
-        id: leadId,
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        brand: _selectedBrand,
-        location: _selectedLocation,
-        leadStatus: 'New',
-        callStatus: _callDuration > 0 ? 'Connected' : 'Not Called',
-        followUpDate: _markAsFollowUp ? _followUpDate : null,
-        reason:
-            _remarksController.text.trim().isEmpty
-                ? null
-                : _remarksController.text.trim(),
-        category: null,
-        callDuration: _callDuration > 0 ? _callDuration : null,
-        callCount: _callDuration > 0 ? 1 : 0,
-        createdAt: DateTime.now(),
-        source: 'Outgoing Call',
-        leadType: _selectedLeadType ?? 'Enquiry',
-      );
+      // Check if lead already exists locally to avoid duplicates
+      final existingLead = leadRepository.allLeads
+          .cast<LeadModel?>()
+          .firstWhere(
+            (lead) => lead != null && lead.id == leadId,
+            orElse: () => null,
+          );
 
-      await leadRepository.addLead(lead);
+      if (existingLead == null) {
+        // Only add if it doesn't already exist
+        final lead = LeadModel(
+          id: leadId,
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          brand: _selectedBrand,
+          location: _selectedLocation,
+          leadStatus: 'New',
+          callStatus: _callDuration > 0 ? 'Connected' : 'Not Called',
+          followUpDate: _markAsFollowUp ? _followUpDate : null,
+          reason:
+              _remarksController.text.trim().isEmpty
+                  ? null
+                  : _remarksController.text.trim(),
+          category: null,
+          callDuration: _callDuration > 0 ? _callDuration : null,
+          callCount: _callDuration > 0 ? 1 : 0,
+          createdAt: DateTime.now(),
+          source: 'Outgoing Call',
+          leadType: _selectedLeadType ?? 'Enquiry',
+        );
+
+        await leadRepository.addLead(lead);
+      }
 
       if (mounted) {
-        Navigator.pop(context);
-
         if (_markAsFollowUp && _followUpDate != null) {
+          Navigator.pop(context);
           WidgetsBinding.instance.addPostFrameCallback((_) {
             BottomNavState.navigateToFollowUp();
           });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Lead saved successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          Navigator.pop(context);
         }
       }
     } catch (e) {

@@ -17,6 +17,9 @@ class CallTrackingController extends ChangeNotifier {
   bool _isInitialized = false;
   bool _lastCallWasAnswered = false; // Track if the last call was answered
   bool _lastCallWasIncoming = false; // Track if the last call was incoming
+  String?
+  _outgoingCallPhone; // Track the phone number of outgoing call we initiated
+  DateTime? _outgoingCallStartTime; // Track when we initiated the outgoing call
 
   bool get isInitialized => _isInitialized;
   String? get lastPhone => _lastPhone;
@@ -60,8 +63,27 @@ class CallTrackingController extends ChangeNotifier {
 
         _lastPhone = phoneNumber;
         _lastDuration = duration;
-        _lastCallWasIncoming = callType == 'incoming';
-        
+
+        // Check if this call matches an outgoing call we initiated
+        // If we initiated an outgoing call within the last 30 seconds and the phone number matches,
+        // treat it as an outgoing call regardless of what the native receiver says
+        final isOurOutgoingCall =
+            _outgoingCallPhone != null &&
+            _cleanPhoneNumber(_outgoingCallPhone!) ==
+                _cleanPhoneNumber(phoneNumber) &&
+            _outgoingCallStartTime != null &&
+            DateTime.now().difference(_outgoingCallStartTime!).inSeconds < 30;
+
+        if (isOurOutgoingCall) {
+          _lastCallWasIncoming = false; // This is our outgoing call
+          print('CallTrackingController: Detected as our outgoing call');
+        } else {
+          _lastCallWasIncoming = callType == 'incoming';
+          print(
+            'CallTrackingController: Detected as incoming call from native receiver',
+          );
+        }
+
         // Reset answered flag when call ends
         if (duration > 0) {
           // Call was answered and had duration
@@ -70,13 +92,22 @@ class CallTrackingController extends ChangeNotifier {
           // Reset answered flag - call ended without duration
           _lastCallWasAnswered = false;
         }
-        
+
         _updateLeadWithDuration(phoneNumber, duration);
 
         // Show add lead bottom sheet for incoming calls with duration > 0
-        if (_lastCallWasIncoming && duration > 0 && phoneNumber != 'Unknown' && phoneNumber.isNotEmpty) {
+        // Only show for ACTUAL incoming calls, not for outgoing calls made via the app
+        if (_lastCallWasIncoming &&
+            duration > 0 &&
+            phoneNumber != 'Unknown' &&
+            phoneNumber.isNotEmpty) {
           _showAddLeadBottomSheetForIncomingCall(phoneNumber, duration);
         }
+
+        // Reset incoming call flag and outgoing call tracking after handling
+        _lastCallWasIncoming = false;
+        _outgoingCallPhone = null;
+        _outgoingCallStartTime = null;
 
         print('CallTrackingController: Notifying listeners...');
         // Only notify if controller is not disposed
@@ -95,13 +126,13 @@ class CallTrackingController extends ChangeNotifier {
         print(
           'CallTrackingController: Received onCallStateChanged - state=$state, phone=$phoneNumber',
         );
-        
+
         // Track if call was answered
         if (state == 'answered') {
           _lastCallWasAnswered = true;
           print('CallTrackingController: Call was answered');
         }
-        
+
         // Track if call is incoming (ringing state without outgoing flag)
         if (state == 'ringing') {
           _lastCallWasIncoming = true;
@@ -117,15 +148,20 @@ class CallTrackingController extends ChangeNotifier {
   void startOutgoingCall(String phone) {
     _lastCallWasAnswered = false; // Reset answered flag when new call starts
     _lastCallWasIncoming = false; // Mark as outgoing call
+    _outgoingCallPhone = phone; // Track the phone number we're calling
+    _outgoingCallStartTime = DateTime.now(); // Track when we initiated the call
     PhoneCallService.makeCall(phone);
   }
 
   /// Show add lead bottom sheet for incoming calls
-  void _showAddLeadBottomSheetForIncomingCall(String phoneNumber, int duration) {
+  void _showAddLeadBottomSheetForIncomingCall(
+    String phoneNumber,
+    int duration,
+  ) {
     // Check if lead already exists - don't show bottom sheet if it does
     final cleanPhone = _cleanPhoneNumber(phoneNumber);
     final existingLead = _findLeadByPhone(cleanPhone);
-    
+
     if (existingLead != null) {
       print(
         'CallTrackingController: Lead already exists for $phoneNumber, skipping add lead bottom sheet',
