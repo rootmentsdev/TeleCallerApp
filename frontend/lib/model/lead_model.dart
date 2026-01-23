@@ -17,6 +17,16 @@ class LeadModel {
   final String? source; // Source of lead (Walk-in, Call, etc.)
   final String? leadType; // Type of lead
   final bool isStarred; // Whether the lead is starred/favorite
+  final String? subCategory; // Sub category for the lead
+  final String? closingAction; // Closing action for the lead
+  final DateTime? enquiryDate; // Enquiry date from API
+  final DateTime? functionDate; // Function date from API
+  final DateTime? visitDate; // Visit date from API
+  final String? bookingNumber; // Booking number from API
+  final Map<String, dynamic>? assignedTo; // Assigned to user info from API
+  final int? rating; // Rating for return leads (1-5)
+  final bool? followUpFlag; // Flag to keep in Follow-Ups collection
+  final bool? markAsComplaint; // Flag to move to Complaints
 
   LeadModel({
     required this.id,
@@ -36,6 +46,16 @@ class LeadModel {
     this.source,
     this.leadType,
     this.isStarred = false,
+    this.subCategory,
+    this.closingAction,
+    this.enquiryDate,
+    this.functionDate,
+    this.visitDate,
+    this.bookingNumber,
+    this.assignedTo,
+    this.rating,
+    this.followUpFlag,
+    this.markAsComplaint,
   }) : createdAt = createdAt ?? DateTime.now();
 
   // Convert to Map for local storage (camelCase)
@@ -58,6 +78,16 @@ class LeadModel {
       'source': source,
       'leadType': leadType,
       'isStarred': isStarred,
+      'subCategory': subCategory,
+      'closingAction': closingAction,
+      'enquiryDate': enquiryDate?.toIso8601String(),
+      'functionDate': functionDate?.toIso8601String(),
+      'visitDate': visitDate?.toIso8601String(),
+      'bookingNumber': bookingNumber,
+      'assignedTo': assignedTo,
+      'rating': rating,
+      'followUpFlag': followUpFlag,
+      'markAsComplaint': markAsComplaint,
     };
   }
 
@@ -107,6 +137,23 @@ class LeadModel {
       source: map['source'],
       leadType: map['leadType'],
       isStarred: map['isStarred'] ?? false,
+      subCategory: map['subCategory'],
+      closingAction: map['closingAction'],
+      enquiryDate:
+          map['enquiryDate'] != null
+              ? DateTime.parse(map['enquiryDate'])
+              : null,
+      functionDate:
+          map['functionDate'] != null
+              ? DateTime.parse(map['functionDate'])
+              : null,
+      visitDate:
+          map['visitDate'] != null ? DateTime.parse(map['visitDate']) : null,
+      bookingNumber: map['bookingNumber'],
+      assignedTo: map['assignedTo'],
+      rating: map['rating'],
+      followUpFlag: map['followUpFlag'],
+      markAsComplaint: map['markAsComplaint'],
     );
   }
 
@@ -205,6 +252,55 @@ class LeadModel {
       }
     }
 
+    // Handle enquiry date
+    DateTime? enquiryDate;
+    final enquiryDateValue = json['enquiry_date'] ?? json['enquiryDate'];
+    if (enquiryDateValue != null) {
+      try {
+        enquiryDate = DateTime.parse(enquiryDateValue.toString());
+      } catch (e) {
+        // If parsing fails, leave as null
+      }
+    }
+
+    // Handle function date
+    DateTime? functionDate;
+    final functionDateValue = json['function_date'] ?? json['functionDate'];
+    if (functionDateValue != null) {
+      try {
+        functionDate = DateTime.parse(functionDateValue.toString());
+      } catch (e) {
+        // If parsing fails, leave as null
+      }
+    }
+
+    // Handle visit date
+    DateTime? visitDate;
+    final visitDateValue = json['visit_date'] ?? json['visitDate'];
+    if (visitDateValue != null) {
+      try {
+        visitDate = DateTime.parse(visitDateValue.toString());
+      } catch (e) {
+        // If parsing fails, leave as null
+      }
+    }
+
+    // Handle booking number
+    final bookingNumber = json['booking_number'] ?? json['bookingNumber'];
+
+    // Handle assigned_to (user info)
+    final assignedTo = json['assigned_to'] ?? json['assignedTo'];
+
+    // Handle rating
+    final rating = json['rating'];
+
+    // Handle follow_up_flag
+    final followUpFlag = json['follow_up_flag'] ?? json['followUpFlag'];
+
+    // Handle mark_as_complaint
+    final markAsComplaint =
+        json['mark_as_complaint'] ?? json['markAsComplaint'];
+
     return LeadModel(
       id: id,
       name: name,
@@ -231,6 +327,29 @@ class LeadModel {
       source: json['source'],
       leadType: leadType,
       isStarred: isStarred,
+      subCategory: json['sub_category'] ?? json['subCategory'],
+      closingAction: json['closing_action'] ?? json['closingAction'],
+      enquiryDate: enquiryDate,
+      functionDate: functionDate,
+      visitDate: visitDate,
+      bookingNumber: bookingNumber,
+      assignedTo: assignedTo,
+      rating:
+          rating != null
+              ? (rating is int ? rating : int.tryParse(rating.toString()))
+              : null,
+      followUpFlag:
+          followUpFlag != null
+              ? (followUpFlag is bool
+                  ? followUpFlag
+                  : followUpFlag.toString().toLowerCase() == 'true')
+              : null,
+      markAsComplaint:
+          markAsComplaint != null
+              ? (markAsComplaint is bool
+                  ? markAsComplaint
+                  : markAsComplaint.toString().toLowerCase() == 'true')
+              : null,
     );
   }
 

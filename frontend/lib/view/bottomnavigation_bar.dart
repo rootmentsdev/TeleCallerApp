@@ -130,6 +130,8 @@ class BottomNavState extends State<BottomNav>
   void _openAddLeadSheet() {
     _controller.forward().then((value) => _controller.reverse());
 
+    // Always open outgoing call form from FAB
+    // Incoming call form is opened automatically when an incoming call ends
     showAddLeadOutgoingCallBottomSheet(context);
   }
 

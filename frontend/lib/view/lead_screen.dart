@@ -17,14 +17,12 @@ class LeadScreen extends StatefulWidget {
 
 class _LeadScreenState extends State<LeadScreen> {
   // Tab indices constants
-  static const int _tabIndexLossOfSale = 1;
-  static const int _tabIndexReturn = 2;
-  static const int _tabIndexStarred = 3;
+  static const int _tabIndexReturn = 0;
+  static const int _tabIndexStarred = 1;
 
   // Initialization delay to allow UI to settle
   static const Duration _initializationDelay = Duration(milliseconds: 500);
 
-  bool _isLoadingLossOfSale = false;
   bool _isLoadingReturn = false;
   bool _isLoadingStarred = false;
 
@@ -46,26 +44,7 @@ class _LeadScreenState extends State<LeadScreen> {
       leadController.refresh();
 
       Future.delayed(_initializationDelay, () {
-        // Fetch all leads with store and date filters for "All Calls" tab
-        final storeParam = _getStoreParam(headerController.selectedStore);
-        final selectedDate = headerController.selectedDate;
-
-        if (storeParam != null) {
-          leadController
-              .fetchAllLeadsFromApi(store: storeParam, date: selectedDate)
-              .catchError((e) {
-                debugPrint('Error fetching all leads: $e');
-              });
-        } else {
-          leadController.fetchAllLeadsFromApi(date: selectedDate).catchError((
-            e,
-          ) {
-            debugPrint('Error fetching all leads: $e');
-          });
-        }
-
-        // Fetch category-specific leads
-        _fetchLossOfSaleLeads(leadController, headerController);
+        // Fetch only Feedback Calls and Marked Calls
         _fetchReturnLeads(leadController, headerController);
         _fetchStarredCalls(leadController, headerController);
       });
@@ -78,31 +57,6 @@ class _LeadScreenState extends State<LeadScreen> {
   }
 
   // ====================== FETCH FUNCTIONS ======================
-
-  Future<void> _fetchLossOfSaleLeads(
-    LeadScreenController controller,
-    HeaderController headerController,
-  ) async {
-    if (_isLoadingLossOfSale) return;
-
-    setState(() => _isLoadingLossOfSale = true);
-
-    try {
-      final storeParam = _getStoreParam(headerController.selectedStore);
-      await controller.fetchLossOfSaleLeadsFromApi(store: storeParam);
-
-      if (mounted) {
-        controller.refresh();
-        setState(() {});
-      }
-    } catch (e) {
-      if (mounted && controller.selectedCallTypeIndex == _tabIndexLossOfSale) {
-        _showError("Failed to load Loss of Sale leads", e);
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingLossOfSale = false);
-    }
-  }
 
   Future<void> _fetchReturnLeads(
     LeadScreenController controller,
@@ -182,9 +136,6 @@ class _LeadScreenState extends State<LeadScreen> {
 
       leadController.refresh();
 
-      if (!_isLoadingLossOfSale) {
-        _fetchLossOfSaleLeads(leadController, headerController);
-      }
       if (!_isLoadingReturn) {
         _fetchReturnLeads(leadController, headerController);
       }
@@ -196,8 +147,7 @@ class _LeadScreenState extends State<LeadScreen> {
 
   /// Helper method to check if a category is currently loading
   bool _isLoadingCategory(int selectedIndex) {
-    return (_isLoadingLossOfSale && selectedIndex == _tabIndexLossOfSale) ||
-        (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
+    return (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
         (_isLoadingStarred && selectedIndex == _tabIndexStarred);
   }
 
@@ -268,11 +218,7 @@ class _LeadScreenState extends State<LeadScreen> {
                       listen: false,
                     );
 
-                    if (controller.selectedCallTypeIndex ==
-                        _tabIndexLossOfSale) {
-                      await _fetchLossOfSaleLeads(controller, headerController);
-                    } else if (controller.selectedCallTypeIndex ==
-                        _tabIndexReturn) {
+                    if (controller.selectedCallTypeIndex == _tabIndexReturn) {
                       await _fetchReturnLeads(controller, headerController);
                     } else if (controller.selectedCallTypeIndex ==
                         _tabIndexStarred) {
@@ -318,10 +264,7 @@ class _LeadScreenState extends State<LeadScreen> {
                     listen: false,
                   );
 
-                  if (controller.selectedCallTypeIndex == _tabIndexLossOfSale) {
-                    _fetchLossOfSaleLeads(controller, headerController);
-                  } else if (controller.selectedCallTypeIndex ==
-                      _tabIndexReturn) {
+                  if (controller.selectedCallTypeIndex == _tabIndexReturn) {
                     _fetchReturnLeads(controller, headerController);
                   } else if (controller.selectedCallTypeIndex ==
                       _tabIndexStarred) {
@@ -451,3 +394,4 @@ class LeadListItem extends StatelessWidget {
     );
   }
 }
+

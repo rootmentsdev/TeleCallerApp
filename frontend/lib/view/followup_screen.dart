@@ -6,6 +6,8 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
+import 'package:telecaller_app/view/followup_detail_screen.dart';
+import 'package:telecaller_app/model/lead_model.dart';
 
 class FollowupScreen extends StatefulWidget {
   const FollowupScreen({super.key});
@@ -108,16 +110,16 @@ class _FollowupScreenState extends State<FollowupScreen> {
                               controller,
                               "Tomorrow",
                               2,
-                              null,
+                              controller.tomorrowCount,
                               controller.selectedTabIndex == 2,
                             ),
                             const SizedBox(width: 8),
                             _buildFilterTab(
                               context,
                               controller,
-                              "Upcor",
+                              "Upcoming",
                               3,
-                              null,
+                              controller.upcomingCount,
                               controller.selectedTabIndex == 3,
                             ),
                           ],
@@ -240,151 +242,155 @@ class _FollowupScreenState extends State<FollowupScreen> {
   }
 
   Widget _buildCallItem(Map<String, dynamic> call, BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Name and Lead Type Badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    call["name"] as String,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: TextConstant.dmSansMedium,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[800],
+    return GestureDetector(
+      onTap: () {
+        // Navigate to follow-up detail screen
+        final lead = call["lead"] as LeadModel?;
+        if (lead != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FollowupDetailScreen(lead: lead),
+            ),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!, width: 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Name and Lead Type Badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      call["name"] as String,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: TextConstant.dmSansMedium,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: call["tagBgColor"] as Color,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      call["tag"] as String,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: TextConstant.dmSansMedium,
+                        color: call["tagColor"] as Color,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Phone Number
+              Text(
+                call["phone"] as String,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontFamily: TextConstant.dmSansRegular,
+                  color: Colors.grey[600],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: call["tagBgColor"] as Color,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    call["tag"] as String,
+              ),
+
+              const SizedBox(height: 12),
+
+              // Remarks / Notes
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Remarks / Notes",
                     style: TextStyle(
                       fontSize: 12,
-                      fontFamily: TextConstant.dmSansMedium,
-                      color: call["tagColor"] as Color,
-                      fontWeight: FontWeight.w500,
+                      fontFamily: TextConstant.dmSansRegular,
+                      color: Colors.grey[600],
                     ),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Phone Number
-            Text(
-              call["phone"] as String,
-              style: TextStyle(
-                fontSize: 14,
-                fontFamily: TextConstant.dmSansRegular,
-                color: Colors.grey[600],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Remarks / Notes
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Remarks / Notes",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontFamily: TextConstant.dmSansRegular,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  call["reason"] as String? ?? "No remarks",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontFamily: TextConstant.dmSansRegular,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Store and Date/Time
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    call["storeName"] as String? ?? "Store",
+                  const SizedBox(height: 4),
+                  Text(
+                    call["reason"] as String? ?? "No remarks",
                     style: TextStyle(
                       fontSize: 13,
                       fontFamily: TextConstant.dmSansRegular,
                       color: Colors.grey[700],
                     ),
                   ),
-                ),
-                Text(
-                  call["followUpDate"] as String? ?? "Date",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontFamily: TextConstant.dmSansRegular,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Call Now Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Implement call functionality
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ColorConstant.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  "Call Now",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontFamily: TextConstant.dmSansMedium,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                ],
               ),
-            ),
-          ],
+
+              const SizedBox(height: 12),
+
+              // Store and Date/Time
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      call["storeName"] as String? ?? "Store",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontFamily: TextConstant.dmSansRegular,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _formatFollowUpDate(call["followUpDate"]),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: TextConstant.dmSansRegular,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Format follow-up date - handles both DateTime and String types
+  String _formatFollowUpDate(dynamic date) {
+    if (date == null) return "Date";
+
+    try {
+      if (date is DateTime) {
+        return '${date.day}/${date.month}/${date.year}';
+      } else if (date is String) {
+        final parsed = DateTime.parse(date);
+        return '${parsed.day}/${parsed.month}/${parsed.year}';
+      }
+    } catch (e) {
+      return "Date";
+    }
+
+    return "Date";
   }
 }
 

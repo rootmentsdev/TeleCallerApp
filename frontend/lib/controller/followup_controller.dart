@@ -89,9 +89,26 @@ class FollowupController extends ChangeNotifier {
       selectedDate.month,
       selectedDate.day,
     );
+    final tomorrowUtc = selectedDateUtc.add(const Duration(days: 1));
 
     switch (_selectedTabIndex) {
       case 0:
+        // Overdue: follow-up date is before selected date
+        currentLeads =
+            allFollowUpLeads.where((lead) {
+              if (lead.followUpDate == null) return false;
+              // Normalize follow-up date to UTC midnight for date-only comparison
+              final followUpUtc = DateTime.utc(
+                lead.followUpDate!.year,
+                lead.followUpDate!.month,
+                lead.followUpDate!.day,
+              );
+              // Compare normalized UTC dates - overdue means followUpDate < selectedDate
+              final isOverdue = followUpUtc.compareTo(selectedDateUtc) < 0;
+              return isOverdue;
+            }).toList();
+        break;
+      case 1:
         // Today: follow-up date equals selected date
         currentLeads =
             allFollowUpLeads.where((lead) {
@@ -107,8 +124,8 @@ class FollowupController extends ChangeNotifier {
               return isToday;
             }).toList();
         break;
-      case 1:
-        // Upcoming: follow-up date is after selected date
+      case 2:
+        // Tomorrow: follow-up date equals tomorrow
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
@@ -118,13 +135,13 @@ class FollowupController extends ChangeNotifier {
                 lead.followUpDate!.month,
                 lead.followUpDate!.day,
               );
-              // Compare normalized UTC dates - upcoming means followUpDate > selectedDate
-              final isUpcoming = followUpUtc.compareTo(selectedDateUtc) > 0;
-              return isUpcoming;
+              // Compare normalized UTC dates - tomorrow means followUpDate == tomorrowUtc
+              final isTomorrow = followUpUtc.compareTo(tomorrowUtc) == 0;
+              return isTomorrow;
             }).toList();
         break;
-      case 2:
-        // Overdue: follow-up date is before selected date
+      case 3:
+        // Upcoming: follow-up date is after tomorrow
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
@@ -134,9 +151,9 @@ class FollowupController extends ChangeNotifier {
                 lead.followUpDate!.month,
                 lead.followUpDate!.day,
               );
-              // Compare normalized UTC dates - overdue means followUpDate < selectedDate
-              final isOverdue = followUpUtc.compareTo(selectedDateUtc) < 0;
-              return isOverdue;
+              // Compare normalized UTC dates - upcoming means followUpDate > tomorrowUtc
+              final isUpcoming = followUpUtc.compareTo(tomorrowUtc) > 0;
+              return isUpcoming;
             }).toList();
         break;
       default:
@@ -218,11 +235,75 @@ class FollowupController extends ChangeNotifier {
     }).length;
   }
 
+  // Get today count for badge based on selected date
+  int get todayCount {
+    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final allFollowUpLeads = _repository.followUpLeads;
+
+    return allFollowUpLeads.where((lead) {
+      if (lead.followUpDate == null) return false;
+      final followUpDate = DateTime(
+        lead.followUpDate!.year,
+        lead.followUpDate!.month,
+        lead.followUpDate!.day,
+      );
+      final today = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+      );
+      return followUpDate.compareTo(today) == 0;
+    }).length;
+  }
+
+  // Get tomorrow count for badge based on selected date
+  int get tomorrowCount {
+    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final allFollowUpLeads = _repository.followUpLeads;
+    final tomorrow = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day + 1,
+    );
+
+    return allFollowUpLeads.where((lead) {
+      if (lead.followUpDate == null) return false;
+      final followUpDate = DateTime(
+        lead.followUpDate!.year,
+        lead.followUpDate!.month,
+        lead.followUpDate!.day,
+      );
+      return followUpDate.compareTo(tomorrow) == 0;
+    }).length;
+  }
+
+  // Get upcoming count for badge based on selected date
+  int get upcomingCount {
+    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final allFollowUpLeads = _repository.followUpLeads;
+    final tomorrow = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day + 1,
+    );
+
+    return allFollowUpLeads.where((lead) {
+      if (lead.followUpDate == null) return false;
+      final followUpDate = DateTime(
+        lead.followUpDate!.year,
+        lead.followUpDate!.month,
+        lead.followUpDate!.day,
+      );
+      return followUpDate.isAfter(tomorrow);
+    }).length;
+  }
+
   // Convert LeadModel to display format
   // Includes all fields needed by DetailsScreen to properly identify and update follow-up leads
   Map<String, dynamic> leadToDisplayMap(LeadModel lead) {
     final categoryStyle = _getCategoryStyle(lead.category);
     return {
+      "lead": lead, // REQUIRED: Needed to navigate to detail screen
       "id": lead.id, // REQUIRED: Needed to identify the lead for API updates
       "name": lead.name,
       "phone": lead.phone,
@@ -348,7 +429,6 @@ class FollowupController extends ChangeNotifier {
       print('FollowupController: Starting notification check...');
       final today = DateTime.now();
       final todayUtc = DateTime.utc(today.year, today.month, today.day);
-      final tomorrowUtc = todayUtc.add(const Duration(days: 1));
 
       print('FollowupController: Today UTC: $todayUtc');
       print(

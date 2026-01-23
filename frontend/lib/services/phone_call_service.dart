@@ -81,6 +81,21 @@ class PhoneCallService {
   static Future<bool> makeCall(String phone) async {
     _reset();
     try {
+      // First, notify Android that we're making an outgoing call
+      // This ensures the CallTrackingReceiver knows this is outgoing
+      try {
+        await _methodChannel.invokeMethod('markOutgoingCall', {
+          'phoneNumber': phone,
+        });
+        print('PhoneCallService: Marked call as outgoing for $phone');
+      } catch (e) {
+        print(
+          'PhoneCallService: Warning - could not mark call as outgoing: $e',
+        );
+        // Continue anyway - the call will still be made
+      }
+
+      // Now make the actual call
       return await _methodChannel.invokeMethod('callPhone', {
             'phoneNumber': phone,
           }) ??

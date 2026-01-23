@@ -607,6 +607,8 @@ class LeadRepository extends ChangeNotifier {
               category: LeadConstants.categoryBookingConfirmation,
               callDuration: lead.callDuration,
               createdAt: lead.createdAt,
+              subCategory: lead.subCategory,
+              closingAction: lead.closingAction,
             );
             _leads.add(bookingLead);
 
@@ -647,6 +649,7 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
+      notifyListeners(); // Notify UI of changes
     } catch (e) {
       print('LeadRepository: Error fetching Booking Confirmation leads: $e');
       rethrow;
@@ -744,6 +747,7 @@ class LeadRepository extends ChangeNotifier {
       }
 
       await _saveLeads();
+      notifyListeners(); // Notify UI of changes
     } catch (e) {
       print('LeadRepository: Error fetching Loss of Sale leads: $e');
       rethrow;
@@ -831,6 +835,7 @@ class LeadRepository extends ChangeNotifier {
 
   /// Parse API lead data to LeadModel
   /// Handles different possible API response formats
+  /// Supports both snake_case (backend list endpoints) and camelCase (individual endpoints)
   LeadModel? _parseApiLeadToLeadModel(dynamic leadData) {
     try {
       if (leadData is! Map<String, dynamic>) {
@@ -838,34 +843,43 @@ class LeadRepository extends ChangeNotifier {
       }
 
       // Extract fields from API response
-      // Backend uses: lead_name, phone_number, store, lead_type, call_status, lead_status, enquiry_date, function_date
+      // Supports both snake_case and camelCase field names
       final id =
           leadData['id']?.toString() ??
           leadData['_id']?.toString() ??
           leadData['leadId']?.toString() ??
           leadData['lead_id']?.toString() ??
           DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Name field - try both snake_case and camelCase
       final name =
-          leadData['lead_name']?.toString() ?? // Backend field name
+          leadData['lead_name']?.toString() ?? // Backend snake_case
+          leadData['leadName']?.toString() ?? // Individual endpoint camelCase
           leadData['name']?.toString() ??
           leadData['customerName']?.toString() ??
           leadData['customer_name']?.toString() ??
           leadData['customer']?.toString() ??
           leadData['clientName']?.toString() ??
           '';
+
+      // Phone field - try both snake_case and camelCase
       final phone =
-          leadData['phone_number']?.toString() ?? // Backend field name
+          leadData['phone_number']?.toString() ?? // Backend snake_case
+          leadData['phoneNumber']
+              ?.toString() ?? // Individual endpoint camelCase
           leadData['phone']?.toString() ??
-          leadData['phoneNumber']?.toString() ??
           leadData['mobile']?.toString() ??
           leadData['contactNumber']?.toString() ??
           leadData['contact']?.toString() ??
           '';
+
       // Extract brand and location from store field if available
       String? brand;
       String? location;
       final storeField =
-          leadData['store']?.toString() ?? leadData['location']?.toString();
+          leadData['store']?.toString() ??
+          leadData['store_location']?.toString() ??
+          leadData['location']?.toString();
 
       if (storeField != null && storeField.isNotEmpty) {
         if (storeField.contains(' - ')) {
@@ -885,6 +899,22 @@ class LeadRepository extends ChangeNotifier {
           } else {
             location = StoreLocations.normalizeStoreName(storeField.trim());
           }
+        } else if (storeField.contains('-')) {
+          // Extract brand and location from "Brand-Location" format (hyphen without spaces)
+          final parts = storeField.split('-');
+          if (parts.length >= 2) {
+            brand = parts[0].trim();
+            location = parts[1].trim();
+            // Normalize store name with brand context
+            if (brand.toLowerCase().contains('suitor') &&
+                location.toLowerCase() == 'kottakkal') {
+              location = 'Kottakal';
+            } else {
+              location = StoreLocations.normalizeStoreName(location);
+            }
+          } else {
+            location = StoreLocations.normalizeStoreName(storeField.trim());
+          }
         } else {
           location = StoreLocations.normalizeStoreName(storeField.trim());
         }
@@ -894,45 +924,55 @@ class LeadRepository extends ChangeNotifier {
       if (brand == null || brand.isEmpty) {
         brand = leadData['brand']?.toString();
       }
+
+      // Lead status - try both snake_case and camelCase
       final leadStatus =
-          leadData['lead_status']?.toString() ?? // Backend field name
-          leadData['leadStatus']?.toString();
+          leadData['lead_status']?.toString() ?? // Backend snake_case
+          leadData['leadStatus']?.toString() ?? // Individual endpoint camelCase
+          leadData['status']?.toString();
+
+      // Call status - try both snake_case and camelCase
       final callStatus =
-          leadData['call_status']?.toString() ?? // Backend field name
-          leadData['callStatus']?.toString() ??
+          leadData['call_status']?.toString() ?? // Backend snake_case
+          leadData['callStatus']?.toString() ?? // Individual endpoint camelCase
           LeadConstants.callStatusNotCalled;
-      final reason = leadData['reason']?.toString();
+
+      // Reason/remarks - try multiple field names (optional field)
+      final reason =
+          leadData['remarks']?.toString() ??
+          leadData['reason']?.toString() ??
+          leadData['reason_collected_from_store']?.toString() ??
+          leadData['notes']?.toString();
+
+      // Note: reason/remarks/notes are optional fields for return leads
+      // They may not be present in the API response, which is fine
+
       final callDuration =
           leadData['callDuration'] as int? ?? leadData['call_duration'] as int?;
 
       // Parse dates using the helper function that handles multiple formats
-      // Backend uses: enquiry_date, function_date, created_at
+      // Backend uses: follow_up_date for follow-up date, function_date for function date
+      // Individual endpoint may use camelCase: followUpDate, functionDate
+      // IMPORTANT: Only set followUpDate if there's an actual follow_up_date field
+      // Do NOT use function_date as a fallback for followUpDate
       DateTime? followUpDate =
-          _parseDate(leadData['followUpDate']) ??
-          _parseDate(leadData['follow_up_date']) ??
-          _parseDate(leadData['followUp']) ??
-          _parseDate(leadData['follow_up']);
+          _parseDate(leadData['follow_up_date']) ?? // Backend snake_case
+          _parseDate(leadData['followUpDate']); // Individual endpoint camelCase
 
       DateTime createdAt = DateTime.now();
-      // Backend uses enquiry_date as the main date field
+      // Try multiple date field names for created/enquiry date
       final parsedCreatedAt =
-          _parseDate(leadData['created_at']) ??
-          _parseDate(leadData['enquiry_date']) ??
-          _parseDate(leadData['enquiryDate']) ??
-          _parseDate(leadData['visit_date']) ??
-          _parseDate(leadData['visitDate']) ??
+          _parseDate(leadData['created_at']) ?? // Backend snake_case
+          _parseDate(leadData['createdAt']) ?? // Individual endpoint camelCase
+          _parseDate(leadData['enquiry_date']) ?? // Backend snake_case
+          _parseDate(
+            leadData['enquiryDate'],
+          ) ?? // Individual endpoint camelCase
+          _parseDate(leadData['visit_date']) ?? // Backend snake_case
+          _parseDate(leadData['visitDate']) ?? // Individual endpoint camelCase
+          _parseDate(leadData['return_date']) ?? // Backend snake_case
+          _parseDate(leadData['returnDate']) ?? // Individual endpoint camelCase
           DateTime.now();
-
-      // _parseDate(
-      //   leadData['enquiry_date'],
-      // ) ??
-      // Backend field name (primary)
-      // _parseDate(leadData['created_at']) ?? // Backend field name
-      // _parseDate(leadData['enquiryDate']) ??
-      // _parseDate(leadData['createdAt']) ??
-      // _parseDate(leadData['date']) ??
-      // _parseDate(leadData['leadDate']) ??
-      // _parseDate(leadData['lead_date']);
 
       createdAt = parsedCreatedAt;
 
@@ -943,8 +983,12 @@ class LeadRepository extends ChangeNotifier {
 
       // Determine category - backend uses lead_type field
       String? category; // Default to null (will show in "All Calls" tab)
-      if (leadData['lead_type'] != null) {
-        final leadType = leadData['lead_type'].toString().toLowerCase();
+      final leadTypeField =
+          leadData['lead_type']?.toString() ?? // Backend snake_case
+          leadData['leadType']?.toString(); // Individual endpoint camelCase
+
+      if (leadTypeField != null) {
+        final leadType = leadTypeField.toLowerCase();
         if (leadType == 'lossofsale' || leadType == 'loss of sale') {
           category = LeadConstants.categoryLossOfSales;
         } else if (leadType == 'rentout' ||
@@ -968,22 +1012,6 @@ class LeadRepository extends ChangeNotifier {
         // If leadType doesn't match any known type, category remains null
       }
 
-      // if (leadData['lead_type'] != null) {
-      //   final leadType = leadData['lead_type'].toString().toLowerCase();
-      //   if (leadType == 'lossofsale' || leadType == 'loss of sale') {
-      //     category = LeadConstants.categoryLossOfSales;
-      //   } else if (leadType == 'rentout' || leadType == 'rent out') {
-      //     category = LeadConstants.categoryRentOut;
-      //   } else if (leadType == 'bookingconfirmation' ||
-      //       leadType == 'booking confirmation') {
-      //     category = LeadConstants.categoryBookingConfirmation;
-      //   } else if (leadType == 'justdial' || leadType == 'just dial') {
-      //     category = LeadConstants.categoryJustDial;
-      //   } else if (leadType == 'followup' || leadType == 'follow up') {
-      //     category = LeadConstants.categoryFollowUp;
-      //   }
-      // }
-
       return LeadModel(
         id: id,
         name: name,
@@ -997,6 +1025,14 @@ class LeadRepository extends ChangeNotifier {
         category: category,
         callDuration: callDuration,
         createdAt: createdAt,
+        subCategory:
+            leadData['sub_category']?.toString() ?? // Backend snake_case
+            leadData['subCategory']
+                ?.toString(), // Individual endpoint camelCase
+        closingAction:
+            leadData['closing_action']?.toString() ?? // Backend snake_case
+            leadData['closingAction']
+                ?.toString(), // Individual endpoint camelCase
       );
     } catch (e) {
       print('Error parsing API lead: $e');
@@ -1005,7 +1041,7 @@ class LeadRepository extends ChangeNotifier {
   }
 
   /// Fetch Return leads from API and sync with repository
-  /// This will replace existing return leads with fresh data from API
+  /// Uses the list endpoint which returns complete lead data
   Future<void> fetchReturnLeadsFromApi({
     String? store,
     String? enquiryFrom,
@@ -1061,9 +1097,12 @@ class LeadRepository extends ChangeNotifier {
       );
 
       int failedCount = 0;
+      int successCount = 0;
 
+      // Parse leads directly from list endpoint (which has complete data)
       for (var leadData in leadsData) {
         try {
+          // Parse the lead data from list endpoint
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
             // Ensure category is Return
@@ -1080,8 +1119,11 @@ class LeadRepository extends ChangeNotifier {
               category: LeadConstants.categoryRentOut,
               callDuration: lead.callDuration,
               createdAt: lead.createdAt,
+              subCategory: lead.subCategory,
+              closingAction: lead.closingAction,
             );
             _leads.add(returnLead);
+            successCount++;
           } else {
             failedCount++;
           }
@@ -1091,11 +1133,22 @@ class LeadRepository extends ChangeNotifier {
         }
       }
 
+      print(
+        'LeadRepository: Fetched $successCount Return leads successfully, $failedCount failed',
+      );
+      print(
+        'LeadRepository: Total leads in repository after fetch: ${_leads.length}',
+      );
+      print(
+        'LeadRepository: Return leads in repository: ${_leads.where((l) => l.category == LeadConstants.categoryRentOut).length}',
+      );
+
       if (failedCount > 0) {
         print('LeadRepository: Failed to parse $failedCount Return leads');
       }
 
       await _saveLeads();
+      notifyListeners(); // Notify UI of changes
     } catch (e) {
       print('LeadRepository: Error fetching Return leads: $e');
       rethrow;
@@ -1145,6 +1198,8 @@ class LeadRepository extends ChangeNotifier {
           category: lead.category,
           callDuration: lead.callDuration,
           createdAt: lead.createdAt,
+          subCategory: lead.subCategory,
+          closingAction: lead.closingAction,
         );
         await updateLead(updatedLead);
       }
@@ -1166,6 +1221,15 @@ class LeadRepository extends ChangeNotifier {
     int? callDuration,
     DateTime? followUpDate,
     bool? clearFollowUpDate,
+    String? subCategory,
+    String? itemCategory,
+    DateTime? functionDate,
+    String? leadType,
+    bool? markAsComplaint,
+    String? numberOfFunctions,
+    String? numberOfAttires,
+    String? competitor,
+    String? service,
   }) async {
     try {
       await ensureInitialized();
@@ -1181,6 +1245,15 @@ class LeadRepository extends ChangeNotifier {
         callDuration: callDuration,
         followUpDate: followUpDate,
         clearFollowUpDate: clearFollowUpDate,
+        subCategory: subCategory,
+        itemCategory: itemCategory,
+        functionDate: functionDate,
+        leadType: leadType,
+        markAsComplaint: markAsComplaint,
+        numberOfFunctions: numberOfFunctions,
+        numberOfAttires: numberOfAttires,
+        competitor: competitor,
+        service: service,
       );
 
       // Update local lead if it exists
@@ -1204,6 +1277,8 @@ class LeadRepository extends ChangeNotifier {
           category: lead.category,
           callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
+          subCategory: lead.subCategory,
+          closingAction: lead.closingAction,
         );
         await updateLead(updatedLead);
       }
@@ -1255,6 +1330,8 @@ class LeadRepository extends ChangeNotifier {
           category: lead.category,
           callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
+          subCategory: lead.subCategory,
+          closingAction: lead.closingAction,
         );
         await updateLead(updatedLead);
       }
@@ -1386,6 +1463,8 @@ class LeadRepository extends ChangeNotifier {
               category: LeadConstants.categoryFollowUp,
               callDuration: lead.callDuration,
               createdAt: lead.createdAt,
+              subCategory: lead.subCategory,
+              closingAction: lead.closingAction,
             );
             _leads.add(followUpLead);
             addedCount++;
@@ -1432,6 +1511,13 @@ class LeadRepository extends ChangeNotifier {
     int? callDuration,
     DateTime? followUpDate,
     required bool clearFollowUpDate,
+    String? subCategory,
+    String? closingAction,
+    int? rating,
+    String? leadType,
+    DateTime? functionDate,
+    bool? followUpFlag,
+    bool? markAsComplaint,
   }) async {
     try {
       await ensureInitialized();
@@ -1444,6 +1530,13 @@ class LeadRepository extends ChangeNotifier {
         callDuration: callDuration,
         followUpDate: followUpDate,
         clearFollowUpDate: clearFollowUpDate,
+        subCategory: subCategory,
+        closingAction: closingAction,
+        rating: rating,
+        leadType: leadType,
+        functionDate: functionDate,
+        followUpFlag: followUpFlag,
+        markAsComplaint: markAsComplaint,
       );
 
       // Update local lead if it exists
@@ -1463,6 +1556,16 @@ class LeadRepository extends ChangeNotifier {
           category: lead.category,
           callDuration: callDuration ?? lead.callDuration,
           createdAt: lead.createdAt,
+          subCategory: subCategory ?? lead.subCategory,
+          closingAction: closingAction ?? lead.closingAction,
+          enquiryDate: lead.enquiryDate,
+          functionDate: functionDate ?? lead.functionDate,
+          visitDate: lead.visitDate,
+          bookingNumber: lead.bookingNumber,
+          assignedTo: lead.assignedTo,
+          rating: rating ?? lead.rating,
+          followUpFlag: followUpFlag ?? lead.followUpFlag,
+          markAsComplaint: markAsComplaint ?? lead.markAsComplaint,
         );
         await updateLead(updatedLead);
       }
@@ -1795,6 +1898,8 @@ class LeadRepository extends ChangeNotifier {
             source: lead.source,
             leadType: lead.leadType,
             isStarred: true, // Explicitly mark as starred
+            subCategory: lead.subCategory,
+            closingAction: lead.closingAction,
           );
 
           // Check if lead already exists in repository

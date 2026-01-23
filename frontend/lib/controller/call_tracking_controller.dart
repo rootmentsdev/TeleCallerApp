@@ -17,15 +17,15 @@ class CallTrackingController extends ChangeNotifier {
   bool _isInitialized = false;
   bool _lastCallWasAnswered = false; // Track if the last call was answered
   bool _lastCallWasIncoming = false; // Track if the last call was incoming
-  String?
-  _outgoingCallPhone; // Track the phone number of outgoing call we initiated
-  DateTime? _outgoingCallStartTime; // Track when we initiated the outgoing call
+  bool _outgoingCallInProgress =
+      false; // Track if an outgoing call is currently in progress
 
   bool get isInitialized => _isInitialized;
   String? get lastPhone => _lastPhone;
   int? get lastDuration => _lastDuration;
   bool get lastCallWasAnswered => _lastCallWasAnswered;
   bool get lastCallWasIncoming => _lastCallWasIncoming;
+  bool get outgoingCallInProgress => _outgoingCallInProgress;
 
   get lastEndedCall => null;
 
@@ -58,31 +58,22 @@ class CallTrackingController extends ChangeNotifier {
         final callType = call.arguments['callType'] as String? ?? 'incoming';
 
         print(
-          'CallTrackingController: Received onCallEnded - phone=$phoneNumber, duration=$duration, callType=$callType',
+          'CallTrackingController: Received onCallEnded - phone=$phoneNumber, duration=$duration, callType=$callType, _outgoingCallInProgress=$_outgoingCallInProgress',
         );
 
         _lastPhone = phoneNumber;
         _lastDuration = duration;
 
-        // Check if this call matches an outgoing call we initiated
-        // If we initiated an outgoing call within the last 30 seconds and the phone number matches,
-        // treat it as an outgoing call regardless of what the native receiver says
-        final isOurOutgoingCall =
-            _outgoingCallPhone != null &&
-            _cleanPhoneNumber(_outgoingCallPhone!) ==
-                _cleanPhoneNumber(phoneNumber) &&
-            _outgoingCallStartTime != null &&
-            DateTime.now().difference(_outgoingCallStartTime!).inSeconds < 30;
+        // CRITICAL: Set _lastCallWasIncoming based on callType from Android
+        // This ensures we only show incoming call form for actual incoming calls
+        _lastCallWasIncoming = (callType == 'incoming');
+        print(
+          'CallTrackingController: Set _lastCallWasIncoming=$_lastCallWasIncoming based on callType=$callType',
+        );
 
-        if (isOurOutgoingCall) {
-          _lastCallWasIncoming = false; // This is our outgoing call
-          print('CallTrackingController: Detected as our outgoing call');
-        } else {
-          _lastCallWasIncoming = callType == 'incoming';
-          print(
-            'CallTrackingController: Detected as incoming call from native receiver',
-          );
-        }
+        // Reset outgoing call flag when call ends
+        _outgoingCallInProgress = false;
+        print('CallTrackingController: Reset _outgoingCallInProgress=false');
 
         // Reset answered flag when call ends
         if (duration > 0) {
@@ -95,19 +86,21 @@ class CallTrackingController extends ChangeNotifier {
 
         _updateLeadWithDuration(phoneNumber, duration);
 
-        // Show add lead bottom sheet for incoming calls with duration > 0
-        // Only show for ACTUAL incoming calls, not for outgoing calls made via the app
+        // Show add lead bottom sheet ONLY for incoming calls with duration > 0
+        // Do NOT show for outgoing calls - they are handled by the outgoing call form
         if (_lastCallWasIncoming &&
             duration > 0 &&
             phoneNumber != 'Unknown' &&
             phoneNumber.isNotEmpty) {
+          print(
+            'CallTrackingController: Showing incoming call form for phone=$phoneNumber, duration=$duration',
+          );
           _showAddLeadBottomSheetForIncomingCall(phoneNumber, duration);
+        } else {
+          print(
+            'CallTrackingController: NOT showing incoming call form - isIncoming=$_lastCallWasIncoming, duration=$duration, phone=$phoneNumber',
+          );
         }
-
-        // Reset incoming call flag and outgoing call tracking after handling
-        _lastCallWasIncoming = false;
-        _outgoingCallPhone = null;
-        _outgoingCallStartTime = null;
 
         print('CallTrackingController: Notifying listeners...');
         // Only notify if controller is not disposed
@@ -148,8 +141,10 @@ class CallTrackingController extends ChangeNotifier {
   void startOutgoingCall(String phone) {
     _lastCallWasAnswered = false; // Reset answered flag when new call starts
     _lastCallWasIncoming = false; // Mark as outgoing call
-    _outgoingCallPhone = phone; // Track the phone number we're calling
-    _outgoingCallStartTime = DateTime.now(); // Track when we initiated the call
+    _outgoingCallInProgress = true; // Mark that outgoing call is in progress
+    print(
+      'CallTrackingController: Starting outgoing call - _outgoingCallInProgress=true',
+    );
     PhoneCallService.makeCall(phone);
   }
 

@@ -369,6 +369,71 @@ class LeadScreenController extends ChangeNotifier {
                   leadDate.day == selectedDate.day;
             }).toList();
       }
+    } else if (_selectedCallTypeIndex == 0) {
+      // Feedback Calls tab - show return leads with date filtering
+      filteredLeads =
+          _repository.allLeads
+              .where((lead) => lead.category == LeadConstants.categoryRentOut)
+              .toList();
+
+      print(
+        'LeadScreenController: Tab 0 - Total leads in repo: ${_repository.allLeads.length}, Return leads: ${filteredLeads.length}',
+      );
+
+      // Apply date filter based on selected date or date range
+      if (dateStart != null && dateEnd != null) {
+        final start = dateStart;
+        final end = dateEnd;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.getEffectiveDate();
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
+
+        print(
+          'LeadScreenController: After date range filter - Return leads: ${filteredLeads.length}',
+        );
+      } else if (date != null) {
+        final selectedDate = date;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.getEffectiveDate();
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
+
+        print(
+          'LeadScreenController: After date filter - Return leads: ${filteredLeads.length}',
+        );
+      }
+
+      // Exclude starred leads
+      filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
+
+      print(
+        'LeadScreenController: After excluding starred - Return leads: ${filteredLeads.length}',
+      );
+
+      // Exclude leads with follow-up dates (they belong in Follow-Up screen)
+      filteredLeads =
+          filteredLeads.where((lead) => lead.followUpDate == null).toList();
+
+      print(
+        'LeadScreenController: After excluding follow-up dates - Return leads: ${filteredLeads.length}',
+      );
     } else {
       if (dateStart != null && dateEnd != null) {
         filteredLeads = _repository.getLeadsByDateRange(dateStart, dateEnd);
@@ -624,6 +689,15 @@ class LeadScreenController extends ChangeNotifier {
     int? callDuration,
     DateTime? followUpDate,
     bool? clearFollowUpDate,
+    String? subCategory,
+    String? itemCategory,
+    DateTime? functionDate,
+    String? leadType,
+    bool? markAsComplaint,
+    String? numberOfFunctions,
+    String? numberOfAttires,
+    String? competitor,
+    String? service,
   }) async {
     try {
       await _repository.updateReturnLeadFromApi(
@@ -637,6 +711,15 @@ class LeadScreenController extends ChangeNotifier {
         callDuration: callDuration,
         followUpDate: followUpDate,
         clearFollowUpDate: clearFollowUpDate,
+        subCategory: subCategory,
+        itemCategory: itemCategory,
+        functionDate: functionDate,
+        leadType: leadType,
+        markAsComplaint: markAsComplaint,
+        numberOfFunctions: numberOfFunctions,
+        numberOfAttires: numberOfAttires,
+        competitor: competitor,
+        service: service,
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();
@@ -650,6 +733,49 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
+  Future<void> updateFollowUpLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    String? remarks,
+    int? callDuration,
+    String? subCategory,
+    String? closingAction,
+    int? rating,
+    String? leadType,
+    DateTime? functionDate,
+    bool? followUpFlag,
+    DateTime? followUpDate,
+    bool? markAsComplaint,
+  }) async {
+    try {
+      await _repository.updateFollowUpLeadFromApi(
+        id: id,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        remarks: remarks,
+        callDuration: callDuration,
+        clearFollowUpDate: false,
+        subCategory: subCategory,
+        closingAction: closingAction,
+        rating: rating,
+        leadType: leadType,
+        functionDate: functionDate,
+        followUpFlag: followUpFlag,
+        followUpDate: followUpDate,
+        markAsComplaint: markAsComplaint,
+      );
+      _removeLeadFromActiveLists(id);
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateFollowUpLead failed',
+      );
+      rethrow;
+    }
+  }
 
   Future<void> fetchStarredCallsFromApi({String? store}) async {
     try {

@@ -747,6 +747,13 @@ class ApiService {
       }
 
       // Prepare request body with EXACT fields required by backend
+      // Normalize leadType to lowercase format expected by backend
+      // Convert: "Enquiry" -> "enquiry", "Booking" -> "booked"
+      String normalizedLeadType = leadType.toLowerCase();
+      if (normalizedLeadType == 'booking') {
+        normalizedLeadType = 'booked';
+      }
+
       final requestBody = <String, dynamic>{
         'customer_name': leadName,
         'phone_number': phoneNumber,
@@ -754,17 +761,19 @@ class ApiService {
         'store_location': store,
         'lead_status': 'No Status',
         'call_status': 'Not Called',
-        'subCategory': subCategory,
-        'itemCategory': itemCategory,
-        'closingAction': closingAction,
+        'sub_category': subCategory,
+        'item_category': itemCategory,
+        'closing_action': closingAction,
         'reasons': remarks,
         'remarks': remarks,
-        'leadType': leadType,
-        'functionDate': functionDate,
+        'lead_type': normalizedLeadType,
+        'function_date': functionDate,
         'mark_as_complaint': markAsComplaint,
         'follow_up_flag': followUpFlag,
         'follow_up_date':
             followUpFlag && functionDate != null ? functionDate : null,
+        'call_duration':
+            callDuration ?? 0, // Add call duration (0 if not provided)
       };
 
       // Remove null values
@@ -1019,6 +1028,15 @@ class ApiService {
     int? callDuration,
     DateTime? followUpDate,
     bool? clearFollowUpDate,
+    String? subCategory,
+    String? itemCategory,
+    DateTime? functionDate,
+    String? leadType,
+    bool? markAsComplaint,
+    String? numberOfFunctions,
+    String? numberOfAttires,
+    String? competitor,
+    String? service,
   }) async {
     final url = Uri.parse(ApiConfig.updateReturn(id));
 
@@ -1066,6 +1084,35 @@ class ApiService {
       // Backend needs duration 0 to create report entries
       if (callDuration != null) {
         requestBody['call_duration'] = callDuration;
+      }
+
+      // Add optional fields if provided
+      if (subCategory != null && subCategory.isNotEmpty) {
+        requestBody['sub_category'] = subCategory;
+      }
+      if (itemCategory != null && itemCategory.isNotEmpty) {
+        requestBody['item_category'] = itemCategory;
+      }
+      if (functionDate != null) {
+        requestBody['function_date'] = functionDate.toIso8601String();
+      }
+      if (leadType != null && leadType.isNotEmpty) {
+        requestBody['lead_type'] = leadType;
+      }
+      if (markAsComplaint != null) {
+        requestBody['mark_as_complaint'] = markAsComplaint;
+      }
+      if (numberOfFunctions != null && numberOfFunctions.isNotEmpty) {
+        requestBody['number_of_functions'] = numberOfFunctions;
+      }
+      if (numberOfAttires != null && numberOfAttires.isNotEmpty) {
+        requestBody['number_of_attires'] = numberOfAttires;
+      }
+      if (competitor != null && competitor.isNotEmpty) {
+        requestBody['competitor'] = competitor;
+      }
+      if (service != null && service.isNotEmpty) {
+        requestBody['service'] = service;
       }
 
       final requestBodyJson = json.encode(requestBody);
@@ -1475,6 +1522,13 @@ class ApiService {
     DateTime? callDate, // Deprecated - kept for backward compatibility
     DateTime? followUpDate,
     required bool clearFollowUpDate,
+    String? subCategory,
+    String? closingAction,
+    int? rating,
+    String? leadType,
+    DateTime? functionDate,
+    bool? followUpFlag,
+    bool? markAsComplaint,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/follow-ups/$id');
 
@@ -1504,20 +1558,72 @@ class ApiService {
       if (remarks != null && remarks.trim().isNotEmpty) {
         requestBody['remarks'] = remarks.trim();
       }
-      // If remarks is null or empty, don't include it in the request body
+
+      // Add sub_category if provided
+      if (subCategory != null && subCategory.trim().isNotEmpty) {
+        requestBody['sub_category'] = subCategory.trim();
+      }
+
+      // Add closing_action if provided
+      if (closingAction != null && closingAction.trim().isNotEmpty) {
+        requestBody['closing_action'] = closingAction.trim();
+      }
+
+      // Add rating if provided (1-5 for return leads)
+      if (rating != null && rating > 0) {
+        requestBody['rating'] = rating;
+      }
+
+      // Add lead_type if provided
+      if (leadType != null && leadType.trim().isNotEmpty) {
+        requestBody['lead_type'] = leadType.trim();
+      }
+
+      // Add function_date if provided
+      if (functionDate != null) {
+        requestBody['function_date'] = functionDate.toIso8601String();
+      }
+
+      // Handle follow-up flag and date
+      // CRITICAL: follow_up_flag and follow_up_date work together
+      // If follow_up_flag=true, follow_up_date is REQUIRED
+      if (followUpFlag != null) {
+        requestBody['follow_up_flag'] = followUpFlag;
+        if (followUpFlag && followUpDate != null) {
+          requestBody['follow_up_date'] = followUpDate.toIso8601String();
+        }
+      } else if (followUpDate != null && !clearFollowUpDate) {
+        // If followUpDate is provided without explicit flag, set flag to true
+        requestBody['follow_up_flag'] = true;
+        requestBody['follow_up_date'] = followUpDate.toIso8601String();
+      }
+
+      // Handle mark_as_complaint flag
+      // CRITICAL: Routing logic:
+      // - If mark_as_complaint=true → Move to Complaints (Priority 1)
+      // - Else if follow_up_flag=true → Stay in Follow-Ups
+      // - Else → Move to Reports (default)
+      if (markAsComplaint != null) {
+        requestBody['mark_as_complaint'] = markAsComplaint;
+      }
 
       // Note: call_date is deprecated - backend expects call_duration instead
       // Keeping callDate for backward compatibility but not sending it
 
-      if (followUpDate != null) {
-        requestBody['follow_up_date'] = followUpDate.toIso8601String();
-      }
-
       final requestBodyJson = json.encode(requestBody);
 
-      print('ApiService: Updating follow-up lead');
-      print('ApiService: POST URL: $url');
-      print('ApiService: POST BODY SENT: $requestBodyJson');
+      print('═══════════════════════════════════════════════════════════');
+      print('ApiService: FOLLOW-UP LEAD POST REQUEST');
+      print('═══════════════════════════════════════════════════════════');
+      print('URL: $url');
+      print('Headers: $headers');
+      print('Request Body (JSON):');
+      print(requestBodyJson);
+      print('Request Body (Formatted):');
+      requestBody.forEach((key, value) {
+        print('  $key: $value');
+      });
+      print('═══════════════════════════════════════════════════════════');
 
       final response = await http.post(
         url,
@@ -1525,10 +1631,12 @@ class ApiService {
         body: requestBodyJson,
       );
 
-      print(
-        'ApiService: Follow-up update response status: ${response.statusCode}',
-      );
-      print('ApiService: Follow-up update response body: ${response.body}');
+      print('═══════════════════════════════════════════════════════════');
+      print('ApiService: FOLLOW-UP LEAD POST RESPONSE');
+      print('═══════════════════════════════════════════════════════════');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('═══════════════════════════════════════════════════════════');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decodedResponse = json.decode(response.body);
