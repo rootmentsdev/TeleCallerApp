@@ -79,7 +79,6 @@ class LeadScreenController extends ChangeNotifier {
         fetchAllLeadsFromApi(store: store, date: singleDate).catchError((_) {});
       }
 
-      fetchLossOfSaleLeadsFromApi(store: store).catchError((_) {});
       fetchReturnLeadsFromApi(store: store).catchError((_) {});
     } else {
       if (dateFrom != null && dateTo != null) {
@@ -92,10 +91,6 @@ class LeadScreenController extends ChangeNotifier {
         fetchAllLeadsFromApi(date: singleDate).catchError((_) {});
       }
 
-      fetchLossOfSaleLeadsFromApi(
-        visitFrom: '',
-        visitTo: '',
-      ).catchError((_) {});
       fetchReturnLeadsFromApi().catchError((_) {});
     }
   }
@@ -555,28 +550,6 @@ class LeadScreenController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchLossOfSaleLeadsFromApi({
-    String? store,
-    String? visitFrom,
-    String? visitTo,
-  }) async {
-    try {
-      await _repository.fetchLossOfSaleLeadsFromApi(
-        store: store,
-        visitFrom: visitFrom,
-        visitTo: visitTo,
-      );
-      notifyListeners();
-    } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(
-        e,
-        s,
-        reason: 'fetchLossOfSaleLeadsFromApi failed',
-      );
-      rethrow;
-    }
-  }
-
   Future<void> fetchReturnLeadsFromApi({
     String? store,
     String? enquiryFrom,
@@ -647,35 +620,6 @@ class LeadScreenController extends ChangeNotifier {
 
   String _formatDateForApi(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> updateLossOfSaleLead({
-    required String id,
-    String? callStatus,
-    String? leadStatus,
-    DateTime? followUpDate,
-    String? reasonCollectedFromStore,
-    String? remarks,
-  }) async {
-    try {
-      await _repository.updateLossOfSaleLeadFromApi(
-        id: id,
-        callStatus: callStatus,
-        leadStatus: leadStatus,
-        followUpDate: followUpDate,
-        reasonCollectedFromStore: reasonCollectedFromStore,
-        remarks: remarks,
-      );
-      _removeLeadFromActiveLists(id);
-      notifyListeners();
-    } catch (e, s) {
-      FirebaseCrashlytics.instance.recordError(
-        e,
-        s,
-        reason: 'updateLossOfSaleLead failed',
-      );
-      rethrow;
-    }
   }
 
   Future<void> updateReturnLead({

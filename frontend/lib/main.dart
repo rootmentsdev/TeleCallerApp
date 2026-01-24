@@ -12,7 +12,7 @@ import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/starred_calls_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
-import 'package:telecaller_app/view/bottomnavigation_bar.dart';
+import 'package:telecaller_app/view/home_screen/bottomnavigation_bar.dart';
 import 'package:telecaller_app/view/login_screen.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/services/api_service.dart';

@@ -5,7 +5,7 @@ class ReportModel {
   // Snapshots
   final Map<String, dynamic>? beforeSnapshot;
   final Map<String, dynamic>? afterSnapshot;
-  final Map<String, dynamic>? leadSnapshot; 
+  final Map<String, dynamic>? leadSnapshot;
   final Map<String, dynamic>? listSnapshot;
 
   final String? leadType;
@@ -47,41 +47,72 @@ class ReportModel {
 
   // -------- JSON to Model -------- //
   factory ReportModel.fromJson(Map<String, dynamic> json) {
+    // Extract leadType from multiple possible locations
+    final extractedLeadType =
+        json['leadType']?.toString() ?? json['lead_type']?.toString() ?? '';
+
+    print(
+      'ReportModel: Extracted leadType: "$extractedLeadType" from JSON keys: ${json.keys.toList()}',
+    );
+
     // Fallback leadSnapshot if backend did not send nested snapshot
+    // Backend returns data at top level, so we create a snapshot from it
     final fallbackLeadSnapshot = {
-      "lead_name": json["lead_name"],
-      "phone_number": json["phone_number"],
+      // Support both snake_case and camelCase
+      "lead_name": json["name"] ?? json["lead_name"],
+      "name": json["name"] ?? json["lead_name"],
+      "phone_number": json["phone"] ?? json["phone_number"],
+      "phone": json["phone"] ?? json["phone_number"],
       "store": json["store"],
-      "lead_type": json["lead_type"],
-      "call_status": json["call_status"],
-      "lead_status": json["lead_status"],
+      "location": json["store"],
+      "lead_type": json["leadType"] ?? json["lead_type"],
+      "leadType": json["leadType"] ?? json["lead_type"],
+      "call_status": json["callStatus"] ?? json["call_status"],
+      "callStatus": json["callStatus"] ?? json["call_status"],
+      "lead_status": json["leadStatus"] ?? json["lead_status"],
+      "leadStatus": json["leadStatus"] ?? json["lead_status"],
       "remarks": json["remarks"],
-      "reason_collected_from_store": json["reason_collected_from_store"],
+      "reason_collected_from_store": json["remarks"],
       "enquiry_date": json["enquiry_date"],
       "visit_date": json["visit_date"],
-      "function_date": json["function_date"],
+      "function_date": json["functionDate"] ?? json["function_date"],
       "return_date": json["return_date"],
-      "created_at": json["created_at"],
-      "call_duration": json["call_duration"], // Include call_duration from top level
-      "callDuration": json["callDuration"] ?? json["call_duration"], // Support both formats
+      "created_at": json["createdAt"] ?? json["created_at"],
+      "createdAt": json["createdAt"] ?? json["created_at"],
+      "call_duration": json["callDuration"] ?? json["call_duration"],
+      "callDuration": json["callDuration"] ?? json["call_duration"],
+      "sub_category": json["subCategory"] ?? json["sub_category"],
+      "subCategory": json["subCategory"] ?? json["sub_category"],
+      "item_category": json["itemCategory"] ?? json["item_category"],
+      "itemCategory": json["itemCategory"] ?? json["item_category"],
+      "closing_action": json["closingAction"] ?? json["closing_action"],
+      "closingAction": json["closingAction"] ?? json["closing_action"],
+      "brand": json["brand"],
+      "source": json["source"],
+      "follow_up_flag": json["followUpFlag"] ?? json["follow_up_flag"],
+      "followUpFlag": json["followUpFlag"] ?? json["follow_up_flag"],
     };
 
     return ReportModel(
       id: json['_id']?.toString() ?? '',
-      originalId: json['originalLeadId']?.toString() ?? '',
+      originalId:
+          json['report_id']?.toString() ??
+          json['originalLeadId']?.toString() ??
+          '',
 
       beforeSnapshot: json['beforeSnapshot'] as Map<String, dynamic>?,
       afterSnapshot: json['afterSnapshot'] as Map<String, dynamic>?,
 
       // FIX: always provide a valid snapshot object
-      leadSnapshot: json['leadSnapshot'] != null
-          ? json['leadSnapshot'] as Map<String, dynamic>?
-          : fallbackLeadSnapshot,
+      leadSnapshot:
+          json['leadSnapshot'] != null
+              ? json['leadSnapshot'] as Map<String, dynamic>?
+              : fallbackLeadSnapshot,
 
       listSnapshot: json['listSnapshot'] as Map<String, dynamic>?,
 
       // FIX: support both leadType & lead_type
-      leadType: json['leadType']?.toString() ?? json['lead_type']?.toString(),
+      leadType: extractedLeadType.isNotEmpty ? extractedLeadType : null,
 
       editedBy: json['editedBy'] as Map<String, dynamic>?,
       changedFields:
@@ -89,9 +120,10 @@ class ReportModel {
               ? List<String>.from(json['changedFields'] as List)
               : null,
       note: json['note']?.toString(),
-      
+
       // Get call_duration from top-level API response
-      callDuration: json['call_duration'] as int? ?? json['callDuration'] as int?,
+      callDuration:
+          json['call_duration'] as int? ?? json['callDuration'] as int?,
 
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
@@ -125,7 +157,8 @@ class ReportModel {
     if (data != null && callDuration != null) {
       // Ensure call_duration is included in leadData
       final updatedData = Map<String, dynamic>.from(data);
-      if (!updatedData.containsKey('call_duration') && !updatedData.containsKey('callDuration')) {
+      if (!updatedData.containsKey('call_duration') &&
+          !updatedData.containsKey('callDuration')) {
         updatedData['call_duration'] = callDuration;
         updatedData['callDuration'] = callDuration;
       }
@@ -134,6 +167,7 @@ class ReportModel {
     return data;
   }
 }
+
 class PaginationInfo {
   final int page;
   final int limit;
@@ -171,9 +205,7 @@ class ReportsResponse {
 
     return ReportsResponse(
       reports: parsedReports,
-      pagination: PaginationInfo.fromJson(
-        json['pagination'] ?? {},
-      ),
+      pagination: PaginationInfo.fromJson(json['pagination'] ?? {}),
     );
   }
 }

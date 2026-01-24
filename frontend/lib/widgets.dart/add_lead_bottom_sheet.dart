@@ -6,7 +6,7 @@ import 'package:telecaller_app/model/call_model.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/services/api_service.dart';
-import 'package:telecaller_app/view/bottomnavigation_bar.dart';
+import 'package:telecaller_app/view/home_screen/bottomnavigation_bar.dart';
 
 class AddLeadBottomSheet extends StatefulWidget {
   final String? prefilledPhoneNumber;
@@ -948,6 +948,10 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       }
 
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
         if (_markAsFollowUp && _followUpDate != null) {
           Navigator.pop(context);
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -958,19 +962,18 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving lead: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
+      print('AddLeadBottomSheet: Error saving lead: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving lead: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }

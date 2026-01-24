@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/view/followup_screen.dart';
-import 'package:telecaller_app/view/home_screen.dart';
-import 'package:telecaller_app/view/lead_screen.dart';
-import 'package:telecaller_app/view/reports_screens/report_screen.dart';
+import 'package:telecaller_app/view/followup_screen/followup_screen.dart';
+import 'package:telecaller_app/view/home_screen/home_screen.dart';
+import 'package:telecaller_app/view/lead_screen/lead_screen.dart';
+import 'package:telecaller_app/view/reports_screens/reports_screen.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
 import 'package:telecaller_app/widgets.dart/add_lead_outgoing_call_bottom_sheet.dart';
 
@@ -119,7 +119,7 @@ class BottomNavState extends State<BottomNav>
     const HomeScreen(),
     const LeadScreen(),
     const SizedBox(),
-    const ReportScreen(),
+    const ReportsScreen(),
     const FollowupScreen(),
   ];
 

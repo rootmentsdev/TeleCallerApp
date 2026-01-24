@@ -6,7 +6,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
-import 'package:telecaller_app/view/followup_detail_screen.dart';
+import 'package:telecaller_app/view/followup_screen/followup_detail_screen.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 
 class FollowupScreen extends StatefulWidget {

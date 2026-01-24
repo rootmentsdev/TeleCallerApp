@@ -8,7 +8,7 @@ import 'package:telecaller_app/utils/navigation_helper.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
 import 'package:telecaller_app/widgets.dart/add_lead_outgoing_call_bottom_sheet.dart';
-import 'package:telecaller_app/view/bottomnavigation_bar.dart';
+import 'package:telecaller_app/view/home_screen/bottomnavigation_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

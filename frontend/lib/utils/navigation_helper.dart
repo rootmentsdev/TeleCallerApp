@@ -4,8 +4,7 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/view/details_screen.dart';
-import 'package:telecaller_app/view/return_lead_details_screen.dart';
-import 'package:telecaller_app/view/starred_calls_details_screen.dart';
+import 'package:telecaller_app/view/lead_screen/return_lead_details_screen.dart';
 
 /// Helper class for navigation logic
 class NavigationHelper {
@@ -29,21 +28,6 @@ class NavigationHelper {
     LeadModel lead,
     String formattedDate,
   ) {
-    // Special handling for starred calls
-    if (lead.isStarred == true) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (context) => StarredCallsDetailsScreen(
-                lead: lead,
-                formattedDate: formattedDate,
-              ),
-        ),
-      );
-      return;
-    }
-
     final category = lead.category ?? "";
     final callTypeIndex = getCallTypeIndex(category);
 
@@ -146,15 +130,15 @@ class NavigationHelper {
     }
 
     // Navigate to regular details screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => DetailsScreen(
-              contact: contactData,
-              callTypeIndex: callTypeIndex,
-            ),
-      ),
-    );
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder:
+    //         (context) => DetailsScreen(
+    //           contact: contactData,
+    //           callTypeIndex: callTypeIndex,
+    //         ),
+    //   ),
+    // );
   }
 }
