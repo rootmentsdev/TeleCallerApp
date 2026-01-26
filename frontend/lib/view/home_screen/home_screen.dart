@@ -9,6 +9,7 @@ import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
 import 'package:telecaller_app/widgets.dart/add_lead_outgoing_call_bottom_sheet.dart';
 import 'package:telecaller_app/view/home_screen/bottomnavigation_bar.dart';
+import 'package:telecaller_app/view/complaints_screen/complaints_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -289,11 +290,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.warning_amber_rounded,
                 title: 'Manage Complaints',
                 onTap: () {
-                  // Navigate to complaints - can be added later
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Manage Complaints - Coming Soon'),
-                      duration: Duration(seconds: 2),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ComplaintsScreen(),
                     ),
                   );
                 },
