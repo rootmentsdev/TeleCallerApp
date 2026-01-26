@@ -1693,4 +1693,114 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// Get complaints from API
+  /// Endpoint: GET /api/pages/complaints
+  Future<Map<String, dynamic>> getComplaints({
+    String? store,
+    String? dateFrom,
+    String? dateTo,
+    int? page,
+    int? limit,
+  }) async {
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      // Build URL with query parameters
+      final queryParams = <String, String>{};
+      if (store != null && store.isNotEmpty) queryParams['store'] = store;
+      if (dateFrom != null) queryParams['dateFrom'] = dateFrom;
+      if (dateTo != null) queryParams['dateTo'] = dateTo;
+      if (page != null) queryParams['page'] = page.toString();
+      if (limit != null) queryParams['limit'] = limit.toString();
+
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/pages/complaints',
+      ).replace(queryParameters: queryParams);
+
+      print('ApiService: Fetching complaints');
+      print('ApiService: URL => $uri');
+
+      final response = await http.get(uri, headers: headers);
+
+      print('ApiService: Complaints response status: ${response.statusCode}');
+      print('ApiService: Complaints response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+
+        // Handle both Map and List responses
+        if (decodedResponse is Map<String, dynamic>) {
+          return decodedResponse;
+        } else if (decodedResponse is List) {
+          return {'complaints': decodedResponse, 'pagination': {}};
+        } else {
+          throw Exception('Unexpected response format from server');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load complaints: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: Error fetching complaints: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getComplaints failed',
+      );
+      rethrow;
+    }
+  }
+
+  /// Get single complaint by ID
+  /// Endpoint: GET /api/pages/complaints/{id}
+  Future<Map<String, dynamic>> getComplaintById(String id) async {
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/complaints/$id');
+
+      print('ApiService: Fetching complaint by ID: $id');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print('ApiService: Complaint response status: ${response.statusCode}');
+      print('ApiService: Complaint response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic>
+            ? decodedResponse
+            : {'data': decodedResponse};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else if (response.statusCode == 404) {
+        throw Exception('Complaint not found');
+      } else {
+        throw Exception(
+          'Failed to load complaint: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: Error fetching complaint: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getComplaintById failed',
+      );
+      rethrow;
+    }
+  }
 }

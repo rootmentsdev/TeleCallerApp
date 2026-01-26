@@ -301,6 +301,20 @@ class ReportController extends ChangeNotifier {
               leadData['call_duration'] as int? ??
               report.callDuration; // Get from top-level report model
 
+          // Extract sub category and closing action
+          final subCategory =
+              leadData['subCategory']?.toString() ??
+              leadData['sub_category']?.toString() ??
+              '';
+          final closingAction =
+              leadData['closingAction']?.toString() ??
+              leadData['closing_action']?.toString() ??
+              '';
+          final itemCategory =
+              leadData['itemCategory']?.toString() ??
+              leadData['item_category']?.toString() ??
+              '';
+
           // Parse dates
           DateTime? parseDate(dynamic dateValue) {
             if (dateValue == null) return null;
@@ -360,6 +374,12 @@ class ReportController extends ChangeNotifier {
             "followUpDate": followUpDate?.toIso8601String(),
             "callDuration": callDuration,
             "remarks": report.note ?? reason ?? "",
+            "subCategory":
+                subCategory.isNotEmpty ? subCategory : "Not specified",
+            "closingAction":
+                closingAction.isNotEmpty ? closingAction : "Not specified",
+            "itemCategory":
+                itemCategory.isNotEmpty ? itemCategory : "Not specified",
           };
         }).toList();
 

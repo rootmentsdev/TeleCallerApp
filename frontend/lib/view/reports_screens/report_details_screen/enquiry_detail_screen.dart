@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 
@@ -28,6 +29,29 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
     return value.toString();
   }
 
+  void _shareCallReport() {
+    final data = widget.reportData ?? {};
+    final shareText = '''
+Call Report - ${widget.callType}
+
+Customer: ${widget.name}
+Phone: ${widget.phone}
+
+Call Details:
+Call Date: ${_getDisplayValue(data['callDate'], 'Not available')}
+Location: ${_getDisplayValue(data['storeName'], 'Not available')}
+Function Date: ${_getDisplayValue(data['functionDate'], 'Not available')}
+Sub Category: ${_getDisplayValue(data['subCategory'], 'Not available')}
+Item Category: ${_getDisplayValue(data['itemCategory'], 'Not available')}
+Close Action: ${_getDisplayValue(data['closingAction'], 'Not available')}
+Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
+
+Follow Up:
+Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
+''';
+    Share.share(shareText);
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = widget.reportData ?? {};
@@ -51,7 +75,10 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
       data['followUpDate'],
       'Not available',
     );
-    final callDuration = _getDisplayValue(data['callDuration'], '0s');
+    final callDuration =
+        data['callDuration'] != null
+            ? '${data['callDuration']}s'
+            : 'Not available';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -169,7 +196,7 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Call Details Section
+                  // Call Details Section Header
                   Text(
                     'Call Details',
                     style: TextStyle(
@@ -181,7 +208,7 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Call Date with badge
+                  // Call Date with duration badge
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -209,7 +236,7 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
+                          horizontal: 12,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
@@ -403,7 +430,7 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Follow Up Call Date
+                  // Follow Up Call Date with badge
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -411,7 +438,7 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Follow Up Date',
+                            'Call Date',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -429,9 +456,103 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
                           ),
                         ],
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE3F2FD),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          callDuration,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1976D2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Closing Action in Follow Up
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Closing Action',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        closingAction,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Remarks in Follow Up
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Remarks / Notes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        remarks,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // Share Call Report Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _shareCallReport,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE3F2FD),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        'Share Call Report',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: ColorConstant.primaryColor,
+                          fontFamily: TextConstant.dmSansMedium,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

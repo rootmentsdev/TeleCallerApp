@@ -879,7 +879,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                 ? null
                 : _remarksController.text.trim(),
         followUpFlag: _markAsFollowUp,
-        functionDate: _markAsFollowUp ? _followUpDate?.toIso8601String() : null,
+        functionDate: _functionDate?.toIso8601String(),
         callDuration: _callDuration,
         subCategory: _selectedSubCategory,
         itemCategory: _selectedItemCategory,
@@ -942,6 +942,9 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
           createdAt: DateTime.now(),
           source: 'Incoming Call',
           leadType: _selectedLeadType ?? 'Enquiry',
+          subCategory: _selectedSubCategory,
+          closingAction: _selectedCloseReason,
+          functionDate: _functionDate,
         );
 
         await leadRepository.addLead(lead);

@@ -732,15 +732,27 @@ class LeadRepository extends ChangeNotifier {
           _parseDate(leadData['follow_up_date']) ?? // Backend snake_case
           _parseDate(leadData['followUpDate']); // Individual endpoint camelCase
 
+      // Parse function_date separately (for Function Date display)
+      DateTime? functionDate =
+          _parseDate(leadData['function_date']) ?? // Backend snake_case
+          _parseDate(leadData['functionDate']); // Individual endpoint camelCase
+
+      // Parse enquiry_date separately (for Call Date/Enquiry Date display)
+      DateTime? enquiryDate =
+          _parseDate(leadData['enquiry_date']) ?? // Backend snake_case
+          _parseDate(leadData['enquiryDate']); // Individual endpoint camelCase
+
       DateTime createdAt = DateTime.now();
-      // Try multiple date field names for created/enquiry date
+      // Try multiple date field names for created date
       final parsedCreatedAt =
           _parseDate(leadData['created_at']) ?? // Backend snake_case
           _parseDate(leadData['createdAt']) ?? // Individual endpoint camelCase
-          _parseDate(leadData['enquiry_date']) ?? // Backend snake_case
+          _parseDate(
+            leadData['enquiry_date'],
+          ) ?? // Backend snake_case (fallback)
           _parseDate(
             leadData['enquiryDate'],
-          ) ?? // Individual endpoint camelCase
+          ) ?? // Individual endpoint camelCase (fallback)
           _parseDate(leadData['visit_date']) ?? // Backend snake_case
           _parseDate(leadData['visitDate']) ?? // Individual endpoint camelCase
           _parseDate(leadData['return_date']) ?? // Backend snake_case
@@ -806,6 +818,8 @@ class LeadRepository extends ChangeNotifier {
             leadData['closing_action']?.toString() ?? // Backend snake_case
             leadData['closingAction']
                 ?.toString(), // Individual endpoint camelCase
+        functionDate: functionDate, // Function date from API
+        enquiryDate: enquiryDate, // Enquiry date from API
       );
     } catch (e) {
       print('Error parsing API lead: $e');
@@ -1131,6 +1145,8 @@ class LeadRepository extends ChangeNotifier {
               createdAt: lead.createdAt,
               subCategory: lead.subCategory,
               closingAction: lead.closingAction,
+              functionDate: lead.functionDate,
+              enquiryDate: lead.enquiryDate,
             );
             _leads.add(followUpLead);
             addedCount++;
@@ -1600,5 +1616,17 @@ class LeadRepository extends ChangeNotifier {
       );
       rethrow;
     }
+  }
+
+  /// Override dispose to prevent disposal of singleton
+  /// LeadRepository is a singleton that should never be disposed
+  @override
+  // ignore: must_call_super
+  void dispose() {
+    // Do NOT call super.dispose() - this is a singleton that lives for the app lifetime
+    // Just remove listeners if needed, but don't dispose the notifier itself
+    print(
+      'LeadRepository: dispose() called but ignored - singleton should not be disposed',
+    );
   }
 }

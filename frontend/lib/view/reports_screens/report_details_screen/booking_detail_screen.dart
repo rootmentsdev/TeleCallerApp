@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 
@@ -21,8 +22,59 @@ class BookingDetailScreen extends StatefulWidget {
 }
 
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  String _getDisplayValue(dynamic value, String defaultValue) {
+    if (value == null || value.toString().isEmpty) {
+      return defaultValue;
+    }
+    return value.toString();
+  }
+
+  void _shareCallReport() {
+    final data = widget.reportData ?? {};
+    final shareText = '''
+Call Report - ${widget.callType}
+
+Customer: ${widget.name}
+Phone: ${widget.phone}
+
+Call Details:
+Call Date: ${_getDisplayValue(data['callDate'], 'Not available')}
+Location: ${_getDisplayValue(data['storeName'], 'Not available')}
+Function Date: ${_getDisplayValue(data['functionDate'], 'Not available')}
+Sub Category: ${_getDisplayValue(data['subCategory'], 'Not available')}
+Close Action: ${_getDisplayValue(data['closingAction'], 'Not available')}
+Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
+
+Follow Up:
+Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
+''';
+    Share.share(shareText);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final data = widget.reportData ?? {};
+    final callDate = _getDisplayValue(data['callDate'], 'Not available');
+    final location = _getDisplayValue(data['storeName'], 'Not available');
+    final functionDate = _getDisplayValue(
+      data['functionDate'],
+      'Not available',
+    );
+    final subCategory = _getDisplayValue(data['subCategory'], 'Not available');
+    final closingAction = _getDisplayValue(
+      data['closingAction'],
+      'Not available',
+    );
+    final remarks = _getDisplayValue(data['remarks'], 'Not available');
+    final followUpDate = _getDisplayValue(
+      data['followUpDate'],
+      'Not available',
+    );
+    final callDuration =
+        data['callDuration'] != null
+            ? '${data['callDuration']}s'
+            : 'Not available';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -168,7 +220,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '18 Jan 2026, 12:05 pm',
+                            callDate,
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -179,16 +231,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
+                          horizontal: 12,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE3F2FD),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          '02:14 mins',
-                          style: TextStyle(
+                        child: Text(
+                          callDuration,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF1976D2),
@@ -216,7 +268,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Zorucci Edappally',
+                              location,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -241,7 +293,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '17 Jan 2026',
+                              functionDate,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -272,7 +324,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Interested',
+                              subCategory,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -297,7 +349,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Interested',
+                              closingAction,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -325,7 +377,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Inquired about luxury suite availability',
+                        remarks,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -348,7 +400,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Follow Up Call Date
+                  // Follow Up Call Date with badge
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -365,7 +417,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '18 Jan 2026, 12:05 pm',
+                            followUpDate,
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -376,16 +428,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
+                          horizontal: 12,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE3F2FD),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          '02:14 mins',
-                          style: TextStyle(
+                        child: Text(
+                          callDuration,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF1976D2),
@@ -396,7 +448,32 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Follow Up Remarks
+                  // Closing Action in Follow Up
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Closing Action',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        closingAction,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Remarks in Follow Up
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -410,7 +487,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Lorem Ipsum',
+                        remarks,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -419,28 +496,23 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
                   // Share Call Report Button
-                  GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Share Call Report - Coming Soon'),
-                          duration: Duration(seconds: 2),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _shareCallReport,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE3F2FD),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE3F2FD),
-                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         'Share Call Report',
-                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -450,7 +522,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

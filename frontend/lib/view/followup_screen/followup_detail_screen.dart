@@ -293,7 +293,7 @@ class _FollowupDetailScreenState extends State<FollowupDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _formatCallDate(widget.lead.createdAt),
+                              _formatCallDate(widget.lead.enquiryDate ?? widget.lead.createdAt),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
@@ -368,7 +368,7 @@ class _FollowupDetailScreenState extends State<FollowupDetailScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                _formatDate(widget.lead.followUpDate),
+                                _formatDate(widget.lead.functionDate),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,

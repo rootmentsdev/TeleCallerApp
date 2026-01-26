@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
+import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/model/lead_display_model.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/navigation_helper.dart';
@@ -20,10 +22,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingFollowUps = false;
+  final LeadRepository _repository = LeadRepository();
 
   @override
   void initState() {
     super.initState();
+
+    // Listen to repository changes to update UI when follow-ups are fetched
+    _repository.addListener(_onRepositoryChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final headerController = Provider.of<HeaderController>(
@@ -39,9 +45,21 @@ class _HomeScreenState extends State<HomeScreen> {
       leadController.refresh();
 
       Future.delayed(const Duration(milliseconds: 500), () {
-        _fetchFollowUpLeads(leadController, headerController);
+        _fetchFollowUpLeads(headerController);
       });
     });
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_onRepositoryChanged);
+    super.dispose();
   }
 
   String? _getStoreParam(String? store) {
@@ -49,7 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchFollowUpLeads(
-    LeadScreenController controller,
     HeaderController headerController,
   ) async {
     if (_isLoadingFollowUps) return;
@@ -58,24 +75,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final storeParam = _getStoreParam(headerController.selectedStore);
-      // Fetch follow-up leads from API
-      await controller.fetchAllLeadsFromApi(store: storeParam);
+      // Fetch follow-up leads specifically from API
+      await _repository.fetchFollowUpLeadsFromApi(store: storeParam);
 
       if (mounted) {
-        controller.refresh();
         setState(() {});
       }
     } catch (e) {
+      print('HomeScreen: Error fetching follow-ups: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load follow-ups: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoadingFollowUps = false);
+      if (mounted) {
+        setState(() => _isLoadingFollowUps = false);
+      }
     }
   }
 
@@ -83,11 +103,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Consumer2<HeaderController, LeadScreenController>(
       builder: (context, headerController, controller, child) {
-        final allLeads = controller.getFilteredLeads();
         final callSummary = controller.getCallSummary();
 
-        // Filter to show only today's follow-ups
-        final todayFollowUpLeads = _filterTodaysFollowUps(allLeads);
+        // Get today's follow-ups directly from repository
+        final todayFollowUpLeads = _repository.todayFollowUps
+            .map((lead) => LeadDisplayModel.fromLead(lead))
+            .toList();
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -133,29 +154,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Filter leads to show only today's follow-ups
-  List _filterTodaysFollowUps(List allLeads) {
-    final today = DateTime.now();
-
-    return allLeads.where((lead) {
-      // Check if lead has a follow-up date
-      if (lead.leadModel?.followUpDate == null) {
-        return false;
-      }
-
-      final followUpDate = lead.leadModel!.followUpDate!;
-      // Normalize to compare dates only (ignore time)
-      final normalizedFollowUpDate = DateTime(
-        followUpDate.year,
-        followUpDate.month,
-        followUpDate.day,
-      );
-      final normalizedToday = DateTime(today.year, today.month, today.day);
-
-      // Return true if follow-up date is today
-      return normalizedFollowUpDate.isAtSameMomentAs(normalizedToday);
-    }).toList();
-  }
 
   Widget _buildDashboardSection(List<Map<String, dynamic>> callSummary) {
     return Column(

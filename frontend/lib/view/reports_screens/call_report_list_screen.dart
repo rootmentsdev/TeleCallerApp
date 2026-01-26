@@ -482,12 +482,14 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                       name: name,
                       phone: phone,
                       callType: callType,
+                      reportData: report,
                     );
                   } else {
                     detailScreen = BookingDetailScreen(
                       name: name,
                       phone: phone,
                       callType: callType,
+                      reportData: report,
                     );
                   }
                   Navigator.push(

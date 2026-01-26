@@ -117,6 +117,8 @@ class LeadScreenController extends ChangeNotifier {
   void dispose() {
     _headerController?.removeListener(_onHeaderChanged);
     _repository.removeListener(_onRepositoryChanged);
+    // NOTE: Do NOT dispose the repository - it's a singleton shared across the app
+    // Only remove our listener from it
     super.dispose();
   }
 
