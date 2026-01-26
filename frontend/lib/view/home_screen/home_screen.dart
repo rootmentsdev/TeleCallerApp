@@ -6,12 +6,13 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
-import 'package:telecaller_app/utils/navigation_helper.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
+import 'package:telecaller_app/widgets.dart/common_widgets.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
 import 'package:telecaller_app/widgets.dart/add_lead_outgoing_call_bottom_sheet.dart';
 import 'package:telecaller_app/view/home_screen/bottomnavigation_bar.dart';
 import 'package:telecaller_app/view/complaints_screen/complaints_screen.dart';
+import 'package:telecaller_app/view/followup_screen/followup_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -66,9 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return (store == null || store == 'All Stores') ? null : store;
   }
 
-  Future<void> _fetchFollowUpLeads(
-    HeaderController headerController,
-  ) async {
+  Future<void> _fetchFollowUpLeads(HeaderController headerController) async {
     if (_isLoadingFollowUps) return;
 
     setState(() => _isLoadingFollowUps = true);
@@ -106,9 +105,24 @@ class _HomeScreenState extends State<HomeScreen> {
         final callSummary = controller.getCallSummary();
 
         // Get today's follow-ups directly from repository
-        final todayFollowUpLeads = _repository.todayFollowUps
-            .map((lead) => LeadDisplayModel.fromLead(lead))
-            .toList();
+        final todayFollowUpLeads =
+            _repository.todayFollowUps
+                .map((lead) => LeadDisplayModel.fromLead(lead))
+                .toList();
+        
+        // Get total follow-up count (filtered by store if selected)
+        final selectedStore = headerController.selectedStore;
+        int totalFollowUpCount = _repository.followUpLeads.length;
+        
+        // Filter by store if a specific store is selected
+        if (selectedStore != 'All Stores') {
+          final storeLocation = selectedStore.contains(' - ')
+              ? selectedStore.split(' - ')[1].trim()
+              : selectedStore;
+          totalFollowUpCount = _repository.followUpLeads
+              .where((lead) => lead.location == storeLocation)
+              .length;
+        }
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -132,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Dashboard Section
-                      _buildDashboardSection(callSummary),
+                      _buildDashboardSection(callSummary, totalFollowUpCount),
 
                       const SizedBox(height: 24),
 
@@ -154,8 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-  Widget _buildDashboardSection(List<Map<String, dynamic>> callSummary) {
+  Widget _buildDashboardSection(
+    List<Map<String, dynamic>> callSummary,
+    int followUpCount,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -172,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildDashboardCard(
+              child: DashboardCard(
                 count: callSummary[0]['count'],
                 title: 'Calls Today',
                 icon: Icons.phone,
@@ -182,8 +198,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildDashboardCard(
-                count: callSummary[3]['count'],
+              child: DashboardCard(
+                count: followUpCount.toString(),
                 title: 'Follow Ups',
                 icon: Icons.calendar_today,
                 bgColor: Colors.white,
@@ -193,52 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildDashboardCard({
-    required String count,
-    required String title,
-    required IconData icon,
-    required Color bgColor,
-    required Color iconColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  count,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0A2540),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontFamily: TextConstant.dmSansRegular,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(icon, color: iconColor, size: 28),
-        ],
-      ),
     );
   }
 
@@ -259,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildActionButton(
+              child: ActionButton(
                 icon: Icons.add,
                 title: 'Add New Lead',
                 onTap: () {
@@ -269,11 +239,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildActionButton(
+              child: ActionButton(
                 icon: Icons.description,
                 title: 'View Reports',
                 onTap: () {
-                  // Navigate to reports screen using bottom nav
                   BottomNavState.navigateToReports();
                 },
               ),
@@ -284,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildActionButton(
+              child: ActionButton(
                 icon: Icons.warning_amber_rounded,
                 title: 'Manage Complaints',
                 onTap: () {
@@ -299,11 +268,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildActionButton(
+              child: ActionButton(
                 icon: Icons.people,
                 title: 'Leads & Feedbacks',
                 onTap: () {
-                  // Navigate to lead screen using bottom nav
                   BottomNavState.navigateToLeadScreen();
                 },
               ),
@@ -314,66 +282,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: ColorConstant.primaryColor, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                  fontFamily: TextConstant.dmSansMedium,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTodaysFollowUpsSection(List followUpLeads) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Todays Follow Ups',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-                fontFamily: TextConstant.dmSansMedium,
-              ),
-            ),
-            Text(
-              '${followUpLeads.length} Calls',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFE23434),
-              ),
-            ),
-          ],
+        SectionHeader(
+          title: 'Todays Follow Ups',
+          subtitle: '${followUpLeads.length} Calls',
         ),
         const SizedBox(height: 12),
         if (_isLoadingFollowUps)
@@ -409,12 +324,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFollowUpCard(dynamic lead) {
     return GestureDetector(
       onTap: () {
-        // Navigate to detail screen
+        // Navigate to follow-up detail screen
         if (lead.leadModel != null) {
-          NavigationHelper.navigateToDetails(
+          Navigator.push(
             context,
-            lead.leadModel!,
-            lead.date,
+            MaterialPageRoute(
+              builder: (context) => FollowupDetailScreen(lead: lead.leadModel!),
+            ),
           );
         }
       },

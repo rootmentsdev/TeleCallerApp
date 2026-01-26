@@ -245,6 +245,7 @@ class ReportController extends ChangeNotifier {
     List<Map<String, dynamic>> filteredReports =
         _reports.map((report) {
           // Get lead data from leadSnapshot (current state of the lead)
+          // leadSnapshot now includes top-level fields from API response
           final leadData = report.leadData ?? {};
 
           // Extract lead information from leadSnapshot
@@ -293,15 +294,17 @@ class ReportController extends ChangeNotifier {
           final reason =
               leadData['remarks']?.toString() ??
               leadData['reason']?.toString() ??
-              leadData['reason_collected_from_store']?.toString();
-          // Get call_duration from leadData (leadSnapshot/afterSnapshot) or from report model
-          // API response has call_duration at top level: {"call_duration": 2, ...}
+              leadData['reason_collected_from_store']?.toString() ??
+              '';
+
+          // Get call_duration from leadData or top-level report model
           final callDuration =
               leadData['callDuration'] as int? ??
               leadData['call_duration'] as int? ??
-              report.callDuration; // Get from top-level report model
+              report.callDuration;
 
-          // Extract sub category and closing action
+          // Extract sub category, closing action, and item category from leadData
+          // These are now included in leadSnapshot via fallbackLeadSnapshot
           final subCategory =
               leadData['subCategory']?.toString() ??
               leadData['sub_category']?.toString() ??
@@ -373,7 +376,7 @@ class ReportController extends ChangeNotifier {
                 "Not available - ${leadLocation.isNotEmpty ? leadLocation : 'Not available'}",
             "followUpDate": followUpDate?.toIso8601String(),
             "callDuration": callDuration,
-            "remarks": report.note ?? reason ?? "",
+            "remarks": report.note ?? reason,
             "subCategory":
                 subCategory.isNotEmpty ? subCategory : "Not specified",
             "closingAction":

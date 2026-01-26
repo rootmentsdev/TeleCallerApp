@@ -111,18 +111,9 @@ class _AddLeadOutgoingCallBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      child: SingleChildScrollView(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,55 +122,52 @@ class _AddLeadOutgoingCallBottomSheetState
             Container(
               margin: const EdgeInsets.only(bottom: 0),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0A2540),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(25),
+              decoration: const BoxDecoration(color: Color(0xFF0A2540)),
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 0),
+                            child: Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Outgoing Call',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_formatCallDateTime(DateTime.now())} | ${_hasCalled ? "Connected" : "Not Connected"}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 40),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Padding(
-                          padding: EdgeInsets.only(left: 0),
-                          child: Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Outgoing Call',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${_formatCallDateTime(DateTime.now())} | ${_hasCalled ? "Connected" : "Not Connected"}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 40),
-                    ],
-                  ),
-                ],
               ),
             ),
 
@@ -1088,14 +1076,15 @@ void showAddLeadOutgoingCallBottomSheet(
   String? phoneNumber,
   CallData? callData,
 }) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder:
-        (context) => AddLeadOutgoingCallBottomSheet(
-          prefilledPhoneNumber: phoneNumber,
-          callData: callData,
-        ),
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder:
+          (context) => AddLeadOutgoingCallBottomSheet(
+            prefilledPhoneNumber: phoneNumber,
+            callData: callData,
+          ),
+      fullscreenDialog: true,
+    ),
   );
 }

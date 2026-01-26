@@ -3,6 +3,7 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
+import 'package:telecaller_app/utils/category_style.dart';
 import 'package:telecaller_app/services/notification_service.dart';
 
 /// Controller for Followup Screen
@@ -301,19 +302,20 @@ class FollowupController extends ChangeNotifier {
   // Convert LeadModel to display format
   // Includes all fields needed by DetailsScreen to properly identify and update follow-up leads
   Map<String, dynamic> leadToDisplayMap(LeadModel lead) {
-    final categoryStyle = _getCategoryStyle(lead.category);
+    final categoryStyle = CategoryStyleHelper.getStyle(lead.category);
     return {
       "lead": lead, // REQUIRED: Needed to navigate to detail screen
       "id": lead.id, // REQUIRED: Needed to identify the lead for API updates
       "name": lead.name,
       "phone": lead.phone,
-      "tag": categoryStyle["tag"],
-      "tagColor": categoryStyle["tagColor"],
-      "tagBgColor": categoryStyle["tagBgColor"],
-      "icon": categoryStyle["icon"],
-      "iconColor": categoryStyle["iconColor"],
-      "iconBgColor": categoryStyle["iconBgColor"],
-      "borderColor": categoryStyle["borderColor"],
+      "tag": categoryStyle.tag,
+      "tagColor": categoryStyle.tagColor,
+      "tagBgColor": categoryStyle.tagBgColor,
+      "icon": categoryStyle.icon,
+      "iconColor": categoryStyle.iconColor,
+      "iconBgColor":
+          categoryStyle.tagBgColor, // Use tagBgColor for icon background
+      "borderColor": categoryStyle.tagColor, // Use tagColor for border
       "reason": lead.reason ?? "No reason provided.",
       "followUpDate":
           lead.followUpDate, // REQUIRED: Needed to identify follow-up leads
@@ -325,61 +327,6 @@ class FollowupController extends ChangeNotifier {
       "callDuration": lead.callDuration, // Needed to display call duration
       "callCount": lead.callCount, // Needed to display call count
     };
-  }
-
-  Map<String, dynamic> _getCategoryStyle(String? category) {
-    switch (category) {
-      case "Loss of Sales":
-        return {
-          "tag": "Loss of Sale",
-          "tagColor": const Color(0xFFE23434),
-          "tagBgColor": const Color(0xFFFFE8E8),
-          "icon": Icons.trending_down,
-          "iconColor": const Color(0xFFE23434),
-          "iconBgColor": const Color(0xFFFFE8E8),
-          "borderColor": const Color(0xFFE23434),
-        };
-      case "Return":
-        return {
-          "tag": "Return",
-          "tagColor": const Color(0xFFFFCC00),
-          "tagBgColor": const Color(0xFFFFF7CC),
-          "icon": Icons.message_outlined,
-          "iconColor": const Color(0xFFFFCC00),
-          "iconBgColor": const Color(0xFFFFF7CC),
-          "borderColor": const Color(0xFFFFCC00),
-        };
-      case "Booking confirmation":
-        return {
-          "tag": "Booking Confirmation",
-          "tagColor": const Color(0xff56BE6B),
-          "tagBgColor": const Color(0xFFD4F5DA),
-          "icon": Icons.flag_outlined,
-          "iconColor": const Color(0xff56BE6B),
-          "iconBgColor": const Color(0xFFD4F5DA),
-          "borderColor": const Color(0xff56BE6B),
-        };
-      case "Feedback":
-        return {
-          "tag": "Feedback",
-          "tagColor": const Color(0xFFFFCC00),
-          "tagBgColor": const Color(0xFFFFF7CC),
-          "icon": Icons.message_outlined,
-          "iconColor": const Color(0xFFFFCC00),
-          "iconBgColor": const Color(0xFFFFF7CC),
-          "borderColor": const Color(0xFFFFCC00),
-        };
-      default:
-        return {
-          "tag": category ?? "Follow Up",
-          "tagColor": const Color(0xFF7C5DFF),
-          "tagBgColor": const Color(0xFFE8E3FF),
-          "icon": Icons.phone_outlined,
-          "iconColor": const Color(0xFF7C5DFF),
-          "iconBgColor": const Color(0xFFE8E3FF),
-          "borderColor": const Color(0xFF7C5DFF),
-        };
-    }
   }
 
   void refresh() {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/controller/complaints_controller.dart';
+import 'package:telecaller_app/model/complaint_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 
@@ -250,28 +251,26 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
     );
   }
 
-  void _shareComplaint(Map<String, dynamic> complaint) {
+  void _shareComplaint(ComplaintModel complaint) {
     final shareText = '''
 Complaint Details:
-Name: ${complaint['name']}
-Phone: ${complaint['phone']}
-Store: ${complaint['store']}
-Category: ${complaint['subCategory']}
-Date: ${complaint['date']}
-Remarks: ${complaint['remarks']}
+Name: ${complaint.name}
+Phone: ${complaint.phone}
+Store: ${complaint.store}
+Category: ${complaint.subCategory}
+Date: ${complaint.date}
+Remarks: ${complaint.remarks}
 ''';
     Share.share(shareText);
   }
 
-  Widget _buildComplaintCard(Map<String, dynamic> complaint, int index) {
-    final isExpanded = complaint['isExpanded'] ?? false;
+  Widget _buildComplaintCard(ComplaintModel complaint, int index) {
+    final isExpanded = complaint.isExpanded;
 
     if (isExpanded) {
       return GestureDetector(
         onDoubleTap: () {
-          setState(() {
-            complaint['isExpanded'] = false;
-          });
+          _complaintsController.toggleExpansion(index);
         },
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -291,7 +290,7 @@ Remarks: ${complaint['remarks']}
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        complaint['name'],
+                        complaint.name,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -300,7 +299,7 @@ Remarks: ${complaint['remarks']}
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        complaint['phone'],
+                        complaint.phone,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -321,7 +320,7 @@ Remarks: ${complaint['remarks']}
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
-                          complaint['type'],
+                          complaint.type,
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -351,7 +350,7 @@ Remarks: ${complaint['remarks']}
               ),
               const SizedBox(height: 12),
               Text(
-                complaint['date'],
+                complaint.date,
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[500],
@@ -361,18 +360,18 @@ Remarks: ${complaint['remarks']}
               const SizedBox(height: 16),
 
               // Store & Location
-              _buildDetailRow('Store & Location', complaint['store']),
+              _buildDetailRow('Store & Location', complaint.store),
               const SizedBox(height: 12),
 
               // Function Date
               _buildDetailRow(
                 'Function Date',
-                complaint['functionDate'] ?? 'N/A',
+                complaint.functionDate.isEmpty ? 'N/A' : complaint.functionDate,
               ),
               const SizedBox(height: 12),
 
               // Sub Category
-              _buildDetailRow('Sub Category', complaint['subCategory']),
+              _buildDetailRow('Sub Category', complaint.subCategory),
               const SizedBox(height: 12),
 
               // Call Remarks
@@ -389,7 +388,7 @@ Remarks: ${complaint['remarks']}
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    complaint['remarks'],
+                    complaint.remarks,
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.black87,
@@ -421,7 +420,7 @@ Remarks: ${complaint['remarks']}
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      complaint['name'],
+                      complaint.name,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -430,7 +429,7 @@ Remarks: ${complaint['remarks']}
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      complaint['phone'],
+                      complaint.phone,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -442,7 +441,7 @@ Remarks: ${complaint['remarks']}
                 Row(
                   children: [
                     Text(
-                      complaint['date'],
+                      complaint.date,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[500],
@@ -464,7 +463,7 @@ Remarks: ${complaint['remarks']}
             ),
             const SizedBox(height: 12),
             Text(
-              complaint['subCategory'],
+              complaint.subCategory,
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -473,7 +472,7 @@ Remarks: ${complaint['remarks']}
             ),
             const SizedBox(height: 4),
             Text(
-              complaint['remarks'],
+              complaint.remarks,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -487,7 +486,7 @@ Remarks: ${complaint['remarks']}
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  complaint['store'],
+                  complaint.store,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -496,9 +495,7 @@ Remarks: ${complaint['remarks']}
                 ),
                 GestureDetector(
                   onTap: () {
-                    setState(() {
-                      complaint['isExpanded'] = !complaint['isExpanded'];
-                    });
+                    _complaintsController.toggleExpansion(index);
                   },
                   child: Row(
                     children: [

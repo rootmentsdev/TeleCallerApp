@@ -71,12 +71,17 @@ class ReportModel {
       "callStatus": json["callStatus"] ?? json["call_status"],
       "lead_status": json["leadStatus"] ?? json["lead_status"],
       "leadStatus": json["leadStatus"] ?? json["lead_status"],
-      "remarks": json["remarks"],
-      "reason_collected_from_store": json["remarks"],
+      "remarks": json["remarks"] ?? json["note"],
+      "reason": json["remarks"] ?? json["note"],
+      "reason_collected_from_store": json["remarks"] ?? json["note"],
       "enquiry_date": json["enquiry_date"],
+      "enquiryDate": json["enquiry_date"],
       "visit_date": json["visit_date"],
+      "visitDate": json["visit_date"],
       "function_date": json["functionDate"] ?? json["function_date"],
+      "functionDate": json["functionDate"] ?? json["function_date"],
       "return_date": json["return_date"],
+      "returnDate": json["return_date"],
       "created_at": json["createdAt"] ?? json["created_at"],
       "createdAt": json["createdAt"] ?? json["created_at"],
       "call_duration": json["callDuration"] ?? json["call_duration"],
@@ -91,6 +96,8 @@ class ReportModel {
       "source": json["source"],
       "follow_up_flag": json["followUpFlag"] ?? json["follow_up_flag"],
       "followUpFlag": json["followUpFlag"] ?? json["follow_up_flag"],
+      "follow_up_date": json["followUpDate"] ?? json["follow_up_date"],
+      "followUpDate": json["followUpDate"] ?? json["follow_up_date"],
     };
 
     return ReportModel(
@@ -103,11 +110,17 @@ class ReportModel {
       beforeSnapshot: json['beforeSnapshot'] as Map<String, dynamic>?,
       afterSnapshot: json['afterSnapshot'] as Map<String, dynamic>?,
 
-      // FIX: always provide a valid snapshot object
-      leadSnapshot:
-          json['leadSnapshot'] != null
-              ? json['leadSnapshot'] as Map<String, dynamic>?
-              : fallbackLeadSnapshot,
+      // FIX: always provide a valid snapshot object with top-level fields
+      // Merge fallbackLeadSnapshot (top-level fields) with leadSnapshot if it exists
+      leadSnapshot: () {
+        final existingSnapshot = json['leadSnapshot'] as Map<String, dynamic>?;
+        if (existingSnapshot != null && existingSnapshot.isNotEmpty) {
+          // Merge: existing snapshot takes precedence, but fallback fills missing fields
+          return Map<String, dynamic>.from(fallbackLeadSnapshot)
+            ..addAll(existingSnapshot);
+        }
+        return fallbackLeadSnapshot;
+      }(),
 
       listSnapshot: json['listSnapshot'] as Map<String, dynamic>?,
 

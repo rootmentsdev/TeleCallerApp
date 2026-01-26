@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/model/complaint_model.dart';
 
 class ComplaintsController extends ChangeNotifier {
   final ApiService _apiService = ApiService();
 
-  List<Map<String, dynamic>> _complaints = [];
+  List<ComplaintModel> _complaints = [];
   bool _isLoading = false;
   String? _error;
   int _totalComplaints = 0;
 
   // Getters
-  List<Map<String, dynamic>> get complaints => _complaints;
+  List<ComplaintModel> get complaints => _complaints;
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get totalComplaints => _totalComplaints;
@@ -43,14 +44,17 @@ class ComplaintsController extends ChangeNotifier {
       );
 
       // Parse response
-      List<Map<String, dynamic>> parsedComplaints = [];
+      List<ComplaintModel> parsedComplaints = [];
 
       if (response.containsKey('complaints')) {
         final complaintsData = response['complaints'];
         if (complaintsData is List) {
           parsedComplaints =
               complaintsData
-                  .map((item) => _parseComplaint(item as Map<String, dynamic>))
+                  .map(
+                    (item) =>
+                        ComplaintModel.fromJson(item as Map<String, dynamic>),
+                  )
                   .toList();
         }
       } else if (response.containsKey('data')) {
@@ -58,7 +62,10 @@ class ComplaintsController extends ChangeNotifier {
         if (complaintsData is List) {
           parsedComplaints =
               complaintsData
-                  .map((item) => _parseComplaint(item as Map<String, dynamic>))
+                  .map(
+                    (item) =>
+                        ComplaintModel.fromJson(item as Map<String, dynamic>),
+                  )
                   .toList();
         }
       }
@@ -83,61 +90,15 @@ class ComplaintsController extends ChangeNotifier {
     }
   }
 
-  /// Parse complaint data from API response
-  Map<String, dynamic> _parseComplaint(Map<String, dynamic> json) {
-    return {
-      'id': json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      'name': json['name']?.toString() ?? 'Unknown',
-      'phone': json['phone']?.toString() ?? '',
-      'store': json['store']?.toString() ?? '',
-      'type': json['leadType']?.toString() ?? 'Enquiry',
-      'date': _formatDate(json['createdAt']),
-      'functionDate': json['functionDate']?.toString() ?? '',
-      'subCategory': json['subCategory']?.toString() ?? '',
-      'remarks': json['remarks']?.toString() ?? '',
-      'callStatus': json['callStatus']?.toString() ?? 'Not Called',
-      'leadStatus': json['leadStatus']?.toString() ?? 'No Status',
-      'isExpanded': false,
-      'rawData': json, // Store raw data for reference
-    };
-  }
-
-  /// Format date from ISO string
-  String _formatDate(dynamic dateValue) {
-    if (dateValue == null) return 'N/A';
-    try {
-      final date = DateTime.parse(dateValue.toString());
-      final months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      final hour = date.hour.toString().padLeft(2, '0');
-      final minute = date.minute.toString().padLeft(2, '0');
-      return '${date.day} ${months[date.month - 1]} ${date.year} $hour:$minute';
-    } catch (e) {
-      return dateValue.toString();
-    }
-  }
-
   /// Get complaint by ID
-  Future<Map<String, dynamic>?> getComplaintById(String id) async {
+  Future<ComplaintModel?> getComplaintById(String id) async {
     try {
       print('ComplaintsController: Fetching complaint by ID: $id');
 
       final response = await _apiService.getComplaintById(id);
-      final complaint = _parseComplaint(response);
+      final complaint = ComplaintModel.fromJson(response);
 
-      print('ComplaintsController: Fetched complaint: ${complaint['name']}');
+      print('ComplaintsController: Fetched complaint: ${complaint.name}');
 
       return complaint;
     } catch (e, s) {
@@ -148,6 +109,16 @@ class ComplaintsController extends ChangeNotifier {
         reason: 'getComplaintById failed',
       );
       return null;
+    }
+  }
+
+  /// Toggle complaint expansion state
+  void toggleExpansion(int index) {
+    if (index >= 0 && index < _complaints.length) {
+      _complaints[index] = _complaints[index].copyWith(
+        isExpanded: !_complaints[index].isExpanded,
+      );
+      notifyListeners();
     }
   }
 
