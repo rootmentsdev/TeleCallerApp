@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/controller/complaints_controller.dart';
+import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/complaint_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/store_location.dart';
 
 class ComplaintsScreen extends StatefulWidget {
   const ComplaintsScreen({super.key});
@@ -13,8 +16,8 @@ class ComplaintsScreen extends StatefulWidget {
 }
 
 class _ComplaintsScreenState extends State<ComplaintsScreen> {
-  final String _selectedStore = 'All Stores';
   late ComplaintsController _complaintsController;
+  late HeaderController _headerController;
 
   @override
   void initState() {
@@ -23,12 +26,27 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
 
     // Fetch complaints on screen load
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _headerController = Provider.of<HeaderController>(context, listen: false);
       _fetchComplaints();
     });
   }
 
   Future<void> _fetchComplaints() async {
-    await _complaintsController.fetchComplaints();
+    String? storeParam;
+
+    if (_headerController.selectedStore != 'All Stores') {
+      // Send the full store name (Brand - Location) to the API for exact matching
+      storeParam = _headerController.selectedStore;
+    }
+
+    final startDate = _headerController.dateRangeStart ?? DateTime.now();
+    final endDate = _headerController.dateRangeEnd ?? DateTime.now();
+
+    await _complaintsController.fetchComplaints(
+      store: storeParam,
+      dateFrom: startDate.toIso8601String(),
+      dateTo: endDate.toIso8601String(),
+    );
   }
 
   @override
@@ -41,213 +59,288 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: ListenableBuilder(
-        listenable: _complaintsController,
-        builder: (context, _) {
-          return Column(
-            children: [
-              // Custom Header
-              Container(
-                color: ColorConstant.primaryColor,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: SafeArea(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+      body: Consumer<HeaderController>(
+        builder: (context, headerController, _) {
+          return ListenableBuilder(
+            listenable: _complaintsController,
+            builder: (context, _) {
+              return Column(
+                children: [
+                  // Custom Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: ColorConstant.primaryColor,
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
-                              size: 24,
-                            ),
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Complaints',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  fontFamily: TextConstant.dmSansMedium,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Complaints',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              fontFamily: TextConstant.dmSansMedium,
+                          GestureDetector(
+                            onTap: () {},
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.notifications,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      GestureDetector(
-                        onTap: () {},
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.notifications,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              // Content
-              Expanded(
-                child:
-                    _complaintsController.isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _complaintsController.error != null
-                        ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Error: ${_complaintsController.error}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.red[600],
-                                ),
-                                textAlign: TextAlign.center,
+                  // Store and Date Filter (Always Visible)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              _showStoreSelectionDialog(
+                                context,
+                                headerController,
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
                               ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _fetchComplaints,
-                                child: const Text('Retry'),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey[300]!),
                               ),
-                            ],
-                          ),
-                        )
-                        : _complaintsController.complaints.isEmpty
-                        ? Center(
-                          child: Text(
-                            'No complaints found',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        )
-                        : SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Recent Complaints Header
-                              Row(
+                              child: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Recent Complaints',
+                                    headerController.selectedStore,
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black87,
                                       fontFamily: TextConstant.dmSansMedium,
                                     ),
                                   ),
-                                  Text(
-                                    '${_complaintsController.totalComplaints} Complaints',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFFE23434),
-                                    ),
+                                  Icon(
+                                    Icons.expand_more,
+                                    color: Colors.grey[600],
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
-
-                              // Store Filter
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.grey[300]!,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            _selectedStore,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black87,
-                                              fontFamily:
-                                                  TextConstant.dmSansMedium,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.expand_more,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.grey[300]!,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.calendar_today,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Complaints List
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount:
-                                    _complaintsController.complaints.length,
-                                itemBuilder: (context, index) {
-                                  final complaint =
-                                      _complaintsController.complaints[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _buildComplaintCard(
-                                      complaint,
-                                      index,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-              ),
-            ],
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () async {
+                            final picked = await showDateRangePicker(
+                              context: context,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                              initialDateRange: DateTimeRange(
+                                start:
+                                    headerController.dateRangeStart ??
+                                    DateTime.now(),
+                                end:
+                                    headerController.dateRangeEnd ??
+                                    DateTime.now(),
+                              ),
+                            );
+
+                            if (picked != null) {
+                              headerController.setDateRange(
+                                picked.start,
+                                picked.end,
+                              );
+                              _fetchComplaints();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Icon(
+                              Icons.calendar_today,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child:
+                        _complaintsController.isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : _complaintsController.error != null
+                            ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Error: ${_complaintsController.error}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.red[600],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _fetchComplaints,
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            )
+                            : _complaintsController.complaints.isEmpty
+                            ? Center(
+                              child: Text(
+                                'No complaints found',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            )
+                            : SingleChildScrollView(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Recent Complaints Header
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Recent Complaints',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                          fontFamily: TextConstant.dmSansMedium,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${_complaintsController.totalComplaints} Complaints',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFE23434),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Complaints List
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount:
+                                        _complaintsController.complaints.length,
+                                    itemBuilder: (context, index) {
+                                      final complaint =
+                                          _complaintsController
+                                              .complaints[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _buildComplaintCard(
+                                          complaint,
+                                          index,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
+    );
+  }
+
+  void _showStoreSelectionDialog(
+    BuildContext context,
+    HeaderController headerController,
+  ) {
+    final storeOptions = StoreLocations.buildStoreOptions();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Store'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children:
+                  storeOptions.map((store) {
+                    return ListTile(
+                      title: Text(store),
+                      onTap: () {
+                        headerController.setSelectedStore(store);
+                        _fetchComplaints();
+                        Navigator.pop(context);
+                      },
+                    );
+                  }).toList(),
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:telecaller_app/utils/date_formatter.dart';
+import 'package:telecaller_app/utils/store_location.dart';
 
 /// Model class for Complaint data
 class ComplaintModel {
@@ -34,11 +35,15 @@ class ComplaintModel {
 
   /// Create ComplaintModel from API response
   factory ComplaintModel.fromJson(Map<String, dynamic> json) {
+    // Normalize store name from backend
+    final rawStore = json['store']?.toString() ?? '';
+    final normalizedStore = StoreLocations.normalizeStoreName(rawStore);
+
     return ComplaintModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Unknown',
       phone: json['phone']?.toString() ?? '',
-      store: json['store']?.toString() ?? '',
+      store: normalizedStore,
       type: json['leadType']?.toString() ?? 'Enquiry',
       date: _formatDate(json['createdAt']),
       functionDate: json['functionDate']?.toString() ?? '',
@@ -115,5 +120,3 @@ class ComplaintModel {
     );
   }
 }
-
-

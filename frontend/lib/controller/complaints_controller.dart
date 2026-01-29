@@ -70,6 +70,15 @@ class ComplaintsController extends ChangeNotifier {
         }
       }
 
+      // Client-side filtering for exact store match
+      // Backend may do substring matching, so we filter on frontend
+      if (store != null && store.isNotEmpty) {
+        parsedComplaints =
+            parsedComplaints
+                .where((complaint) => complaint.store == store)
+                .toList();
+      }
+
       _complaints = parsedComplaints;
       _totalComplaints = parsedComplaints.length;
 
