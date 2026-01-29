@@ -345,6 +345,35 @@ class ReportController extends ChangeNotifier {
           final visitDate =
               parseDate(leadData['visitDate']) ??
               parseDate(leadData['visit_date']);
+          final returnDate =
+              parseDate(leadData['returnDate']) ??
+              parseDate(leadData['return_date']);
+          final bookingDate =
+              parseDate(leadData['bookingDate']) ??
+              parseDate(leadData['booking_date']) ??
+              enquiryDate; // Fallback to enquiryDate for booking date
+
+          // Extract additional fields for feedback/return reports
+          final attendedBy =
+              leadData['attendedBy']?.toString() ??
+              leadData['attended_by']?.toString() ??
+              report.editedBy?['name']?.toString();
+          final service =
+              leadData['service']?.toString();
+          final rating =
+              leadData['rating'] as int?;
+          final markAsComplaint =
+              leadData['markAsComplaint'] as bool? ??
+              leadData['mark_as_complaint'] as bool? ??
+              false;
+          final noOfFunctions =
+              leadData['noOfFunctions']?.toString() ??
+              leadData['no_of_functions']?.toString();
+          final noOfAttires =
+              leadData['noOfAttires']?.toString() ??
+              leadData['no_of_attires']?.toString();
+          final competitor =
+              leadData['competitor']?.toString();
 
           return {
             "id": report.originalId,
@@ -365,6 +394,12 @@ class ReportController extends ChangeNotifier {
                 functionDate != null
                     ? _formatDate(functionDate)
                     : "Not available",
+            "bookingDate": bookingDate != null
+                ? bookingDate.toIso8601String()
+                : null,
+            "returnDate": returnDate != null
+                ? returnDate.toIso8601String()
+                : null,
             "storeName":
                 leadLocation.isNotEmpty ? leadLocation : "Not available",
             "type": _getTypeFromLeadType(report.leadType),
@@ -372,8 +407,7 @@ class ReportController extends ChangeNotifier {
             "leadStatus": leadStatus,
             "reason": reason,
             "reasonFromStore": reason,
-            "attendedBy":
-                "Not available - ${leadLocation.isNotEmpty ? leadLocation : 'Not available'}",
+            "attendedBy": attendedBy ?? "Not available",
             "followUpDate": followUpDate?.toIso8601String(),
             "callDuration": callDuration,
             "remarks": report.note ?? reason,
@@ -383,6 +417,15 @@ class ReportController extends ChangeNotifier {
                 closingAction.isNotEmpty ? closingAction : "Not specified",
             "itemCategory":
                 itemCategory.isNotEmpty ? itemCategory : "Not specified",
+            // Additional fields for feedback/return reports
+            "service": service,
+            "rating": rating,
+            "markAsComplaint": markAsComplaint,
+            "noOfFunctions": noOfFunctions,
+            "noOfAttires": noOfAttires,
+            "competitor": competitor,
+            // Include leadData for nested access
+            "leadData": leadData,
           };
         }).toList();
 
@@ -516,6 +559,10 @@ class ReportController extends ChangeNotifier {
     String? editedBy,
     String? dateFrom,
     String? dateTo,
+    String? createdAtFrom,
+    String? createdAtTo,
+    String? editedAtFrom,
+    String? editedAtTo,
     int? page,
     int? limit,
   }) async {
@@ -529,6 +576,10 @@ class ReportController extends ChangeNotifier {
         editedBy: editedBy,
         dateFrom: dateFrom,
         dateTo: dateTo,
+        createdAtFrom: createdAtFrom,
+        createdAtTo: createdAtTo,
+        editedAtFrom: editedAtFrom,
+        editedAtTo: editedAtTo,
         page: page,
         limit: limit,
       );
@@ -554,29 +605,26 @@ class ReportController extends ChangeNotifier {
 
   /// Fetch reports filtered by current header settings (store and date)
   Future<void> fetchReportsWithCurrentFilters() async {
-    // Note: Store filter is not directly supported by reports API
-    // We'll filter by store in getFilteredLeads
-
     // Format date to YYYY-MM-DD for API
     String formatDate(DateTime date) {
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
 
     // Use date range if available, otherwise use single selected date
-    String dateFromStr;
-    String dateToStr;
+    String editedAtFromStr;
+    String editedAtToStr;
 
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
       // Use date range
-      dateFromStr = formatDate(_headerController!.dateRangeStart!);
-      dateToStr = formatDate(_headerController!.dateRangeEnd!);
+      editedAtFromStr = formatDate(_headerController!.dateRangeStart!);
+      editedAtToStr = formatDate(_headerController!.dateRangeEnd!);
     } else {
       // Use single date
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-      dateFromStr = formatDate(selectedDate);
-      dateToStr = formatDate(selectedDate);
+      editedAtFromStr = formatDate(selectedDate);
+      editedAtToStr = formatDate(selectedDate);
     }
 
     // Determine leadType based on selected call type index
@@ -607,13 +655,35 @@ class ReportController extends ChangeNotifier {
         break;
     }
 
-    await fetchReportsFromApi(
-      leadType: leadType,
-      dateFrom: dateFromStr,
-      dateTo: dateToStr,
-      page: 1,
-      limit: 100, // Increased limit to get more reports
+    print(
+      'ReportController: Fetching reports with filters - leadType: $leadType, editedAtFrom: $editedAtFromStr, editedAtTo: $editedAtToStr',
     );
+
+    // Try fetching with date filters first
+    // If no results, fall back to fetching all reports and filtering client-side
+    try {
+      await fetchReportsFromApi(
+        leadType: leadType,
+        editedAtFrom: editedAtFromStr,
+        editedAtTo: editedAtToStr,
+        page: 1,
+        limit: 100,
+      );
+
+      // If we got results, we're done
+      if (_reports.isNotEmpty) {
+        return;
+      }
+
+      // If no results with date filter, try without date filter
+      print(
+        'ReportController: No reports found with date filter, trying without date filter',
+      );
+      await fetchReportsFromApi(leadType: leadType, page: 1, limit: 100);
+    } catch (e) {
+      print('ReportController: Error fetching reports: $e');
+      rethrow;
+    }
   }
 
   /// Get current user ID for filtering reports by editor

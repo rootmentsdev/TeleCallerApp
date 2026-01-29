@@ -98,6 +98,20 @@ class ReportModel {
       "followUpFlag": json["followUpFlag"] ?? json["follow_up_flag"],
       "follow_up_date": json["followUpDate"] ?? json["follow_up_date"],
       "followUpDate": json["followUpDate"] ?? json["follow_up_date"],
+      // Additional fields for feedback/return reports
+      "booking_date": json["bookingDate"] ?? json["booking_date"],
+      "bookingDate": json["bookingDate"] ?? json["booking_date"],
+      "attended_by": json["attendedBy"] ?? json["attended_by"],
+      "attendedBy": json["attendedBy"] ?? json["attended_by"],
+      "service": json["service"],
+      "rating": json["rating"],
+      "mark_as_complaint": json["markAsComplaint"] ?? json["mark_as_complaint"],
+      "markAsComplaint": json["markAsComplaint"] ?? json["mark_as_complaint"],
+      "no_of_functions": json["noOfFunctions"] ?? json["no_of_functions"],
+      "noOfFunctions": json["noOfFunctions"] ?? json["no_of_functions"],
+      "no_of_attires": json["noOfAttires"] ?? json["no_of_attires"],
+      "noOfAttires": json["noOfAttires"] ?? json["no_of_attires"],
+      "competitor": json["competitor"],
     };
 
     return ReportModel(

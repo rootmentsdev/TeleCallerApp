@@ -113,10 +113,13 @@ class AppHeader extends StatelessWidget {
                         // Notification badge
                         Consumer<FollowupController>(
                           builder: (context, followupController, _) {
+                            // Get ALL follow-up leads (not filtered by selected date)
+                            final allFollowUpLeads =
+                                followupController.allFollowUpLeads;
+
+                            // Filter for today's follow-ups only
                             final todayFollowUps =
-                                followupController.getCurrentLeads().where((
-                                  lead,
-                                ) {
+                                allFollowUpLeads.where((lead) {
                                   if (lead.followUpDate == null) return false;
                                   final today = DateTime.now();
                                   final todayUtc = DateTime.utc(

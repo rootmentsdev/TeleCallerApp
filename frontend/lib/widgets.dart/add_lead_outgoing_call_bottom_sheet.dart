@@ -628,7 +628,10 @@ class _AddLeadOutgoingCallBottomSheetState
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _saveLead,
+                          onPressed:
+                              (_isLoading || !_hasCalled || _callDuration == 0)
+                                  ? null
+                                  : _saveLead,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF003D7A),
                             foregroundColor: Colors.white,
@@ -966,12 +969,19 @@ class _AddLeadOutgoingCallBottomSheetState
               ? '$_selectedBrand-$_selectedLocation'
               : _selectedLocation ?? _selectedBrand ?? 'Unknown';
 
+      // Normalize lead type to lowercase format expected by backend
+      String normalizedLeadType =
+          (_selectedLeadType ?? 'Enquiry').toLowerCase();
+      if (normalizedLeadType == 'booking') {
+        normalizedLeadType = 'booked'; // Backend expects 'booked' not 'booking'
+      }
+
       final apiResponse = await apiService.createLead(
         leadName: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         store: store,
         source: 'Outgoing Call',
-        leadType: _selectedLeadType ?? 'Enquiry',
+        leadType: normalizedLeadType,
         remarks:
             _remarksController.text.trim().isEmpty
                 ? null
@@ -987,9 +997,18 @@ class _AddLeadOutgoingCallBottomSheetState
 
       String leadId = '';
 
+      // Try multiple ways to extract lead ID from response
       if (apiResponse.containsKey('lead') && apiResponse['lead'] is Map) {
         final lead = apiResponse['lead'] as Map<String, dynamic>;
         leadId = lead['id']?.toString() ?? lead['_id']?.toString() ?? '';
+      }
+
+      if (leadId.isEmpty &&
+          apiResponse.containsKey('followUp') &&
+          apiResponse['followUp'] is Map) {
+        final followUp = apiResponse['followUp'] as Map<String, dynamic>;
+        leadId =
+            followUp['id']?.toString() ?? followUp['_id']?.toString() ?? '';
       }
 
       if (leadId.isEmpty) {
@@ -1004,8 +1023,12 @@ class _AddLeadOutgoingCallBottomSheetState
         }
       }
 
+      // If still no ID found, use phone number as temporary ID (will be updated when backend confirms)
       if (leadId.isEmpty) {
-        throw Exception('Failed to get lead ID from server response');
+        print(
+          'AddLeadOutgoingCallBottomSheet: Warning - Could not extract lead ID from response, using phone as temp ID',
+        );
+        leadId = _phoneController.text.trim();
       }
 
       // Check if lead already exists locally to avoid duplicates
@@ -1036,7 +1059,7 @@ class _AddLeadOutgoingCallBottomSheetState
           callCount: _callDuration > 0 ? 1 : 0,
           createdAt: DateTime.now(),
           source: 'Outgoing Call',
-          leadType: _selectedLeadType ?? 'Enquiry',
+          leadType: normalizedLeadType,
         );
 
         await leadRepository.addLead(lead);

@@ -6,6 +6,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/booking_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/enquiry_detail_screen.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen/feedback_detail_screen.dart';
 
 class CallReportListScreen extends StatefulWidget {
   const CallReportListScreen({super.key});
@@ -15,11 +16,11 @@ class CallReportListScreen extends StatefulWidget {
 }
 
 class _CallReportListScreenState extends State<CallReportListScreen> {
-  String _selectedTimeRange = 'Last 7 Days';
+  String _selectedTimeRange = '7 Days';
   String _selectedCallType = 'All';
 
   final List<String> timeRanges = [
-    'Last 7 Days',
+    '7 Days',
     'Today',
     'This Month',
     'Last Month',
@@ -41,9 +42,59 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         listen: false,
       );
       reportController.init(headerController);
+      // Set initial date range for "7 Days"
+      _applyTimeRangeFilter(_selectedTimeRange, headerController);
       // Fetch initial reports
       reportController.fetchReportsWithCurrentFilters();
     });
+  }
+
+  void _applyTimeRangeFilter(String range, HeaderController headerController) {
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate;
+
+    switch (range) {
+      case 'Today':
+        // Both dates should be today's date
+        startDate = DateTime(now.year, now.month, now.day);
+        endDate = DateTime(now.year, now.month, now.day);
+        break;
+      case '7 Days':
+        // Today's date and 7 days back
+        endDate = DateTime(now.year, now.month, now.day);
+        startDate = endDate.subtract(
+          const Duration(days: 6),
+        ); // 7 days including today
+        break;
+      case 'This Month':
+        // First day to last day of current month
+        startDate = DateTime(now.year, now.month, 1);
+        endDate = DateTime(
+          now.year,
+          now.month + 1,
+          0,
+        ); // Last day of current month
+        break;
+      case 'Last Month':
+        // First day to last day of previous month
+        final firstDayThisMonth = DateTime(now.year, now.month, 1);
+        endDate = firstDayThisMonth.subtract(
+          const Duration(days: 1),
+        ); // Last day of last month
+        startDate = DateTime(
+          endDate.year,
+          endDate.month,
+          1,
+        ); // First day of last month
+        break;
+      default:
+        startDate = now;
+        endDate = now;
+    }
+
+    // Update header controller with date range
+    headerController.setDateRange(startDate, endDate);
   }
 
   List<Map<String, dynamic>> _getFilteredReports(
@@ -128,36 +179,29 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
             children: [
               // Header
               Container(
-                color: ColorConstant.primaryColor,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
+                ),
+                decoration: const BoxDecoration(
+                  color: ColorConstant.primaryColor,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
                 ),
                 child: SafeArea(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Call Reports',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              fontFamily: TextConstant.dmSansMedium,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Call Reports',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontFamily: TextConstant.dmSansMedium,
+                        ),
                       ),
                       GestureDetector(
                         onTap: () {},
@@ -197,6 +241,11 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                                     onTap: () {
                                       setState(
                                         () => _selectedTimeRange = range,
+                                      );
+                                      // Apply time range filter to header controller
+                                      _applyTimeRangeFilter(
+                                        range,
+                                        headerController,
                                       );
                                       // Fetch reports with new time range
                                       reportController
@@ -479,6 +528,13 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                   Widget detailScreen;
                   if (callType == 'Enquiry') {
                     detailScreen = EnquiryDetailScreen(
+                      name: name,
+                      phone: phone,
+                      callType: callType,
+                      reportData: report,
+                    );
+                  } else if (callType == 'Feedback') {
+                    detailScreen = FeedbackDetailScreen(
                       name: name,
                       phone: phone,
                       callType: callType,

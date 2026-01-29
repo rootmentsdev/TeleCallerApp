@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
+import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
@@ -41,9 +42,16 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         listen: false,
       );
+      final reportController = Provider.of<ReportController>(
+        context,
+        listen: false,
+      );
 
       leadController.init(headerController);
       leadController.refresh();
+
+      reportController.init(headerController);
+      reportController.fetchReportsWithCurrentFilters();
 
       Future.delayed(const Duration(milliseconds: 500), () {
         _fetchFollowUpLeads(headerController);
@@ -82,15 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('HomeScreen: Error fetching follow-ups: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load follow-ups: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      // Don't show error notification on app load - silently handle the error
+      // Only log it for debugging purposes
     } finally {
       if (mounted) {
         setState(() => _isLoadingFollowUps = false);
@@ -100,29 +101,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<HeaderController, LeadScreenController>(
-      builder: (context, headerController, controller, child) {
-        final callSummary = controller.getCallSummary();
-
+    return Consumer3<HeaderController, LeadScreenController, ReportController>(
+      builder: (
+        context,
+        headerController,
+        leadController,
+        reportController,
+        child,
+      ) {
         // Get today's follow-ups directly from repository
         final todayFollowUpLeads =
             _repository.todayFollowUps
                 .map((lead) => LeadDisplayModel.fromLead(lead))
                 .toList();
-        
+
         // Get total follow-up count (filtered by store if selected)
         final selectedStore = headerController.selectedStore;
         int totalFollowUpCount = _repository.followUpLeads.length;
-        
+
         // Filter by store if a specific store is selected
         if (selectedStore != 'All Stores') {
-          final storeLocation = selectedStore.contains(' - ')
-              ? selectedStore.split(' - ')[1].trim()
-              : selectedStore;
-          totalFollowUpCount = _repository.followUpLeads
-              .where((lead) => lead.location == storeLocation)
-              .length;
+          final storeLocation =
+              selectedStore.contains(' - ')
+                  ? selectedStore.split(' - ')[1].trim()
+                  : selectedStore;
+          totalFollowUpCount =
+              _repository.followUpLeads
+                  .where((lead) => lead.location == storeLocation)
+                  .length;
         }
+
+        // Get calls today count from backend reports
+        final callsTodayCount = reportController.reports.length.toString();
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -146,7 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Dashboard Section
-                      _buildDashboardSection(callSummary, totalFollowUpCount),
+                      _buildDashboardSection(
+                        callsTodayCount,
+                        totalFollowUpCount,
+                      ),
 
                       const SizedBox(height: 24),
 
@@ -168,10 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDashboardSection(
-    List<Map<String, dynamic>> callSummary,
-    int followUpCount,
-  ) {
+  Widget _buildDashboardSection(String callsTodayCount, int followUpCount) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -189,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: DashboardCard(
-                count: callSummary[0]['count'],
+                count: callsTodayCount,
                 title: 'Calls Today',
                 icon: Icons.phone,
                 bgColor: const Color(0xFFE3F2FD),

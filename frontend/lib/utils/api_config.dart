@@ -236,11 +236,16 @@ class ApiConfig {
   static String get reportsBaseUrl => reportsEndpoint;
 
   /// Get reports endpoint with filtering and pagination support
+  /// Supports both createdAt (creation date) and editedAt (edit date) filtering
   static String getReports({
     String? leadType,
     String? editedBy,
     String? dateFrom,
     String? dateTo,
+    String? createdAtFrom,
+    String? createdAtTo,
+    String? editedAtFrom,
+    String? editedAtTo,
     int? page,
     int? limit,
   }) {
@@ -255,12 +260,31 @@ class ApiConfig {
       queryParams.add("editedBy=${Uri.encodeComponent(editedBy)}");
     }
 
-    if (dateFrom != null && dateFrom.isNotEmpty) {
-      queryParams.add("dateFrom=${Uri.encodeComponent(dateFrom)}");
+    // Use createdAtFrom/createdAtTo if provided (preferred)
+    if (createdAtFrom != null && createdAtFrom.isNotEmpty) {
+      queryParams.add("createdAtFrom=${Uri.encodeComponent(createdAtFrom)}");
     }
 
-    if (dateTo != null && dateTo.isNotEmpty) {
-      queryParams.add("dateTo=${Uri.encodeComponent(dateTo)}");
+    if (createdAtTo != null && createdAtTo.isNotEmpty) {
+      queryParams.add("createdAtTo=${Uri.encodeComponent(createdAtTo)}");
+    }
+
+    // Use editedAtFrom/editedAtTo if provided
+    if (editedAtFrom != null && editedAtFrom.isNotEmpty) {
+      queryParams.add("editedAtFrom=${Uri.encodeComponent(editedAtFrom)}");
+    }
+
+    if (editedAtTo != null && editedAtTo.isNotEmpty) {
+      queryParams.add("editedAtTo=${Uri.encodeComponent(editedAtTo)}");
+    }
+
+    // Fallback to dateFrom/dateTo if createdAt parameters not provided
+    if (createdAtFrom == null && dateFrom != null && dateFrom.isNotEmpty) {
+      queryParams.add("createdAtFrom=${Uri.encodeComponent(dateFrom)}");
+    }
+
+    if (createdAtTo == null && dateTo != null && dateTo.isNotEmpty) {
+      queryParams.add("createdAtTo=${Uri.encodeComponent(dateTo)}");
     }
 
     // Add pagination parameters
@@ -273,7 +297,9 @@ class ApiConfig {
     if (limit != null) {
       queryParams.add("limit=$limit");
     } else {
-      queryParams.add("limit=50"); // Default to 50 items per page
+      queryParams.add(
+        "limit=100",
+      ); // Increased default limit to get more reports
     }
 
     if (queryParams.isNotEmpty) {

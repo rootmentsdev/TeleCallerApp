@@ -7,6 +7,7 @@ import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/call_report_list_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/booking_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/enquiry_detail_screen.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen/feedback_detail_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -34,13 +35,42 @@ class _ReportsScreenState extends State<ReportsScreen> {
         listen: false,
       );
       reportController.init(headerController);
-      // Fetch initial reports
-      reportController.fetchReportsWithCurrentFilters();
+      // Fetch initial reports - try without date filters first to see if data exists
+      reportController.fetchReportsFromApi(page: 1, limit: 100);
     });
   }
 
   List<String> _getTimeRanges() {
     return ['Last 7 Days', 'Today', 'This Month', 'Last Month'];
+  }
+
+  void _applyTimeRangeFilter(String range, HeaderController headerController) {
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate = now;
+
+    switch (range) {
+      case 'Today':
+        startDate = DateTime(now.year, now.month, now.day);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case 'Last 7 Days':
+        startDate = now.subtract(const Duration(days: 7));
+        break;
+      case 'This Month':
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      case 'Last Month':
+        final firstDayThisMonth = DateTime(now.year, now.month, 1);
+        endDate = firstDayThisMonth.subtract(const Duration(days: 1));
+        startDate = DateTime(endDate.year, endDate.month, 1);
+        break;
+      default:
+        startDate = now;
+    }
+
+    // Update header controller with date range
+    headerController.setDateRange(startDate, endDate);
   }
 
   Future<void> _showCustomDateRangePicker() async {
@@ -60,12 +90,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _customEndDate = picked.end;
         _selectedTimeRange = 'Custom';
       });
-      // Fetch reports with custom date range
+      // Update header controller with custom date range
       if (mounted) {
+        final headerController = Provider.of<HeaderController>(
+          context,
+          listen: false,
+        );
+        headerController.setDateRange(picked.start, picked.end);
+
         final reportController = Provider.of<ReportController>(
           context,
           listen: false,
         );
+        // Fetch reports with custom date range
         reportController.fetchReportsWithCurrentFilters();
       }
     }
@@ -134,38 +171,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
         builder: (context, reportController, headerController, _) {
           return Column(
             children: [
-              // Custom Header with back button and notification
+              // Custom Header with notification
               Container(
-                color: ColorConstant.primaryColor,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
+                ),
+                decoration: const BoxDecoration(
+                  color: ColorConstant.primaryColor,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
                 ),
                 child: SafeArea(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Reports',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              fontFamily: TextConstant.dmSansMedium,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Reports',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontFamily: TextConstant.dmSansMedium,
+                        ),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -238,6 +268,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         _customStartDate = null;
                                         _customEndDate = null;
                                       });
+                                      // Apply time range filter to header controller
+                                      _applyTimeRangeFilter(
+                                        range,
+                                        headerController,
+                                      );
                                       // Fetch reports with new time range
                                       reportController
                                           .fetchReportsWithCurrentFilters();
@@ -638,12 +673,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       name: name,
                       phone: phone,
                       callType: callType,
+                      reportData: report,
+                    );
+                  } else if (callType == 'Feedback') {
+                    detailScreen = FeedbackDetailScreen(
+                      name: name,
+                      phone: phone,
+                      callType: callType,
+                      reportData: report,
                     );
                   } else {
                     detailScreen = BookingDetailScreen(
                       name: name,
                       phone: phone,
                       callType: callType,
+                      reportData: report,
                     );
                   }
                   Navigator.push(

@@ -139,6 +139,74 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> getCallSummary() {
+    int getCalledLeadsCount({String? category}) {
+      DateTime? date;
+      DateTime? dateStart;
+      DateTime? dateEnd;
+
+      if (_headerController?.isRangeMode == true &&
+          _headerController?.dateRangeStart != null &&
+          _headerController?.dateRangeEnd != null) {
+        dateStart = _headerController!.dateRangeStart;
+        dateEnd = _headerController!.dateRangeEnd;
+      } else {
+        date = _headerController?.selectedDate ?? DateTime.now();
+      }
+
+      List<LeadModel> leads = _repository.allLeads;
+
+      if (dateStart != null && dateEnd != null) {
+        final start = dateStart;
+        final end = dateEnd;
+        leads =
+            leads.where((lead) {
+              final leadDate = lead.getEffectiveDate();
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
+      } else if (date != null) {
+        final selectedDate = date;
+        leads =
+            leads.where((lead) {
+              final leadDate = lead.getEffectiveDate();
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
+      }
+
+      if (category != null) {
+        leads = leads.where((lead) => lead.category == category).toList();
+      }
+
+      final storeFilter = _headerController?.selectedStore;
+      if (storeFilter != null && storeFilter != "All Stores") {
+        leads =
+            leads
+                .where((lead) => _repository.matchesStore(lead, storeFilter))
+                .toList();
+      }
+
+      // Filter for CALLED leads (opposite of uncalled)
+      leads =
+          leads
+              .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
+              .toList();
+
+      return leads.length;
+    }
+
     int getUncalledLeadsCount({String? category}) {
       DateTime? date;
       DateTime? dateStart;
@@ -275,8 +343,8 @@ class LeadScreenController extends ChangeNotifier {
 
     return [
       {
-        "title": "Feedback Calls",
-        "count": getUncalledLeadsCount().toString(),
+        "title": "Calls Today",
+        "count": getCalledLeadsCount().toString(),
         "bgColor": const Color(0xFFE8E3FF),
         "iconColor": const Color(0xFF7C5DFF),
         "icon": Icons.people_alt_outlined,

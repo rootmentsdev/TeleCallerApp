@@ -52,6 +52,7 @@ class FollowupController extends ChangeNotifier {
   int get selectedTabIndex => _selectedTabIndex;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  List<LeadModel> get allFollowUpLeads => _repository.followUpLeads;
 
   // Setters
   void setSelectedStore(String? store) {
