@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
@@ -185,6 +186,35 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')} Mins';
+  }
+
+  /// Format ISO date string to readable format (e.g., "29 Jan, 2026")
+  String _formatDateString(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return 'N/A';
+    }
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormatter.formatDate(date);
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  /// Get store display name in "Brand - Location" format
+  String _getStoreDisplayName() {
+    final brand = widget.lead.brand;
+    final location = widget.lead.location;
+
+    if (brand != null && location != null) {
+      return '$brand - $location';
+    } else if (brand != null) {
+      return brand;
+    } else if (location != null) {
+      return location;
+    } else {
+      return 'N/A';
+    }
   }
 
   Future<void> _saveReturnLead() async {
@@ -448,9 +478,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              widget.lead.location ??
-                                                  widget.lead.brand ??
-                                                  "N/A",
+                                              _getStoreDisplayName(),
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
@@ -515,7 +543,10 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              returnData['returnDate'] ?? "N/A",
+                                              _formatDateString(
+                                                returnData['returnDate'] ??
+                                                    returnData['return_date'],
+                                              ),
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
@@ -544,9 +575,10 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              returnData['created_at'] ??
-                                                  returnData['createdAt'] ??
-                                                  "N/A",
+                                              _formatDateString(
+                                                returnData['created_at'] ??
+                                                    returnData['createdAt'],
+                                              ),
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,

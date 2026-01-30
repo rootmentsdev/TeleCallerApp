@@ -596,73 +596,80 @@ class _AddLeadOutgoingCallBottomSheetState
                     // Mark As Follow Up
                     _buildFollowUpSection(),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 32),
                   ],
 
                   // Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: const BorderSide(
-                              color: Color(0xFFE0E0E0),
-                              width: 1.5,
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(
+                                color: Color(0xFFE0E0E0),
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF333333),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF333333),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed:
-                              (_isLoading || !_hasCalled || _callDuration == 0)
-                                  ? null
-                                  : _saveLead,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF003D7A),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed:
+                                (_isLoading ||
+                                        !_hasCalled ||
+                                        (_callDuration == 0 &&
+                                            !_markAsFollowUp))
+                                    ? null
+                                    : _saveLead,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF003D7A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              disabledBackgroundColor: const Color(0xFFCCCCCC),
                             ),
-                            disabledBackgroundColor: const Color(0xFFCCCCCC),
-                          ),
-                          child:
-                              _isLoading
-                                  ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
+                            child:
+                                _isLoading
+                                    ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                    : const Text(
+                                      'Save Lead',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                  )
-                                  : const Text(
-                                    'Save Lead',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -987,7 +994,8 @@ class _AddLeadOutgoingCallBottomSheetState
                 ? null
                 : _remarksController.text.trim(),
         followUpFlag: _markAsFollowUp,
-        functionDate: _markAsFollowUp ? _followUpDate?.toIso8601String() : null,
+        functionDate: _functionDate?.toIso8601String(),
+        createdAt: DateTime.now().toIso8601String(),
         callDuration: _callDuration,
         subCategory: _selectedSubCategory,
         itemCategory: _selectedItemCategory,
@@ -1060,6 +1068,10 @@ class _AddLeadOutgoingCallBottomSheetState
           createdAt: DateTime.now(),
           source: 'Outgoing Call',
           leadType: normalizedLeadType,
+          subCategory: _selectedSubCategory,
+          closingAction: _selectedCloseReason,
+          functionDate: _functionDate,
+          markAsComplaint: _markAsComplaint,
         );
 
         await leadRepository.addLead(lead);

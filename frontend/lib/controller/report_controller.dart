@@ -358,10 +358,8 @@ class ReportController extends ChangeNotifier {
               leadData['attendedBy']?.toString() ??
               leadData['attended_by']?.toString() ??
               report.editedBy?['name']?.toString();
-          final service =
-              leadData['service']?.toString();
-          final rating =
-              leadData['rating'] as int?;
+          final service = leadData['service']?.toString();
+          final rating = leadData['rating'] as int?;
           final markAsComplaint =
               leadData['markAsComplaint'] as bool? ??
               leadData['mark_as_complaint'] as bool? ??
@@ -372,8 +370,7 @@ class ReportController extends ChangeNotifier {
           final noOfAttires =
               leadData['noOfAttires']?.toString() ??
               leadData['no_of_attires']?.toString();
-          final competitor =
-              leadData['competitor']?.toString();
+          final competitor = leadData['competitor']?.toString();
 
           return {
             "id": report.originalId,
@@ -394,12 +391,10 @@ class ReportController extends ChangeNotifier {
                 functionDate != null
                     ? _formatDate(functionDate)
                     : "Not available",
-            "bookingDate": bookingDate != null
-                ? bookingDate.toIso8601String()
-                : null,
-            "returnDate": returnDate != null
-                ? returnDate.toIso8601String()
-                : null,
+            "bookingDate":
+                bookingDate != null ? bookingDate.toIso8601String() : null,
+            "returnDate":
+                returnDate != null ? returnDate.toIso8601String() : null,
             "storeName":
                 leadLocation.isNotEmpty ? leadLocation : "Not available",
             "type": _getTypeFromLeadType(report.leadType),

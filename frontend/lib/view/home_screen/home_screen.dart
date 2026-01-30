@@ -131,8 +131,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   .length;
         }
 
-        // Get calls today count from backend reports
-        final callsTodayCount = reportController.reports.length.toString();
+        // Get calls today count - calculate independently to avoid being overridden by reports screen
+        // Count leads created today with call duration > 0
+        final today = DateTime.now();
+        final todayStart = DateTime(today.year, today.month, today.day);
+        final todayEnd = DateTime(
+          today.year,
+          today.month,
+          today.day,
+          23,
+          59,
+          59,
+        );
+
+        final callsTodayCount =
+            _repository.allLeads
+                .where(
+                  (lead) =>
+                      lead.createdAt.isAfter(todayStart) &&
+                      lead.createdAt.isBefore(todayEnd) &&
+                      (lead.callDuration ?? 0) > 0,
+                )
+                .length
+                .toString();
 
         return Scaffold(
           backgroundColor: Colors.white,

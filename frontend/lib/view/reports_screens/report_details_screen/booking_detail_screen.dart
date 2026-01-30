@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/date_formatter.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final String name;
@@ -29,6 +30,19 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     return value.toString();
   }
 
+  /// Format ISO date string to readable format (e.g., "29 Jan, 2026")
+  String _formatDateString(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return 'Not available';
+    }
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormatter.formatDate(date);
+    } catch (e) {
+      return dateString;
+    }
+  }
+
   void _shareCallReport() {
     final data = widget.reportData ?? {};
     final shareText = '''
@@ -54,26 +68,61 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
   @override
   Widget build(BuildContext context) {
     final data = widget.reportData ?? {};
-    final callDate = _getDisplayValue(data['callDate'], 'Not available');
-    final location = _getDisplayValue(data['storeName'], 'Not available');
-    final functionDate = _getDisplayValue(
-      data['functionDate'],
+    final leadData = data['leadData'] ?? data;
+
+    final callDateRaw = _getDisplayValue(
+      data['callDate'] ??
+          data['date'] ??
+          leadData['created_at'] ??
+          leadData['createdAt'],
       'Not available',
     );
-    final subCategory = _getDisplayValue(data['subCategory'], 'Not available');
+    final callDate = _formatDateString(callDateRaw);
+    final location = _getDisplayValue(
+      data['storeName'] ?? leadData['store'] ?? leadData['storeName'],
+      'Not available',
+    );
+    final functionDateRaw = _getDisplayValue(
+      data['functionDate'] ??
+          data['function_date'] ??
+          leadData['functionDate'] ??
+          leadData['function_date'] ??
+          callDateRaw,
+      'Not available',
+    );
+    final functionDate = _formatDateString(functionDateRaw);
+    final subCategory = _getDisplayValue(
+      data['subCategory'] ??
+          data['sub_category'] ??
+          leadData['subCategory'] ??
+          leadData['sub_category'],
+      'Not available',
+    );
     final closingAction = _getDisplayValue(
-      data['closingAction'],
+      data['closingAction'] ??
+          data['closing_action'] ??
+          leadData['closingAction'] ??
+          leadData['closing_action'],
       'Not available',
     );
-    final remarks = _getDisplayValue(data['remarks'], 'Not available');
-    final followUpDate = _getDisplayValue(
-      data['followUpDate'],
+    final remarks = _getDisplayValue(
+      data['remarks'] ?? leadData['remarks'] ?? leadData['reason'],
       'Not available',
     );
+    final followUpDateRaw = _getDisplayValue(
+      data['followUpDate'] ??
+          data['follow_up_date'] ??
+          leadData['followUpDate'] ??
+          leadData['follow_up_date'],
+      'Not available',
+    );
+    final followUpDate = _formatDateString(followUpDateRaw);
     final callDuration =
         data['callDuration'] != null
             ? '${data['callDuration']}s'
-            : 'Not available';
+            : (data['call_duration'] != null
+                ? '${data['call_duration']}s'
+                : 'Not available');
 
     return Scaffold(
       backgroundColor: Colors.white,

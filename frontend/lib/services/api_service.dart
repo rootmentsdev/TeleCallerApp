@@ -514,6 +514,7 @@ class ApiService {
     String? remarks,
     bool followUpFlag = false,
     String? functionDate,
+    String? createdAt,
     String? bookingNumber,
     int securityAmount = 0,
     int? callDuration,
@@ -552,7 +553,8 @@ class ApiService {
         'reasons': remarks,
         'remarks': remarks,
         'lead_type': normalizedLeadType,
-        'function_date': functionDate,
+        'function_date': functionDate, // Only include if explicitly provided
+        'created_at': createdAt,
         'mark_as_complaint': markAsComplaint,
         'follow_up_flag': followUpFlag,
         'follow_up_date':
@@ -560,6 +562,9 @@ class ApiService {
         'call_duration':
             callDuration ?? 0, // Add call duration (0 if not provided)
       };
+  
+      print('ApiService: functionDate parameter received: $functionDate');
+      print('ApiService: functionDate is null: ${functionDate == null}');
 
       // Remove null values
       requestBody.removeWhere((key, value) => value == null);

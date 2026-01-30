@@ -293,7 +293,10 @@ class _FollowupDetailScreenState extends State<FollowupDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _formatCallDate(widget.lead.enquiryDate ?? widget.lead.createdAt),
+                              _formatCallDate(
+                                widget.lead.enquiryDate ??
+                                    widget.lead.createdAt,
+                              ),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
@@ -343,7 +346,12 @@ class _FollowupDetailScreenState extends State<FollowupDetailScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                widget.lead.location ?? 'Unknown',
+                                widget.lead.brand != null &&
+                                        widget.lead.location != null
+                                    ? '${widget.lead.brand} - ${widget.lead.location}'
+                                    : widget.lead.location ??
+                                        widget.lead.brand ??
+                                        'Unknown',
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
@@ -660,9 +668,7 @@ class _FollowupDetailScreenState extends State<FollowupDetailScreen> {
   String _formatCallDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final year = date.year;
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
-    return '$day Jan $year, $hour:$minute pm';
+    return '$day Jan $year';
   }
 
   String _formatDate(DateTime? date) {

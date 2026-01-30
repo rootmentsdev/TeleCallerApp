@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/date_formatter.dart';
 
 class FeedbackDetailScreen extends StatefulWidget {
   final String name;
@@ -35,6 +36,19 @@ class _FeedbackDetailScreenState extends State<FeedbackDetailScreen> {
       if (v != null && v.toString().isNotEmpty) return v.toString();
     }
     return defaultValue;
+  }
+
+  /// Format ISO date string to readable format (e.g., "29 Jan, 2026")
+  String _formatDateString(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return 'Not available';
+    }
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormatter.formatDate(date);
+    } catch (e) {
+      return dateString;
+    }
   }
 
   void _shareCallReport() {
@@ -98,7 +112,7 @@ Phone: ${widget.phone}
 Call Details:
 Location: $location
 Attended by: $attendedBy
-Booking Date: $bookingDate
+Function Date: $bookingDate
 Return Date: $returnDate
 Sub Category: $subCategory
 Service: $service
@@ -127,7 +141,7 @@ Follow Up Date: $followUpDate
       leadData['attendedBy'] ?? leadData['attended_by'],
       'Not available',
     );
-    final bookingDate = _getDisplayValue(
+    final bookingDateRaw = _getDisplayValue(
       leadData['bookingDate'] ??
           leadData['booking_date'] ??
           // Return report payloads often contain function_date instead of booking_date
@@ -135,10 +149,20 @@ Follow Up Date: $followUpDate
           leadData['function_date'],
       'Not available',
     );
-    final returnDate = _getDisplayValue(
+    final bookingDate = _formatDateString(bookingDateRaw);
+    final returnDateRaw = _getDisplayValue(
       leadData['returnDate'] ?? leadData['return_date'],
       'Not available',
     );
+    final returnDate = _formatDateString(returnDateRaw);
+    final callDateRaw = _getDisplayValue(
+      data['date'] ??
+          data['callDate'] ??
+          leadData['created_at'] ??
+          leadData['createdAt'],
+      'Not available',
+    );
+    final callDate = _formatDateString(callDateRaw);
     final subCategory = _getDisplayValue(
       leadData['subCategory'] ?? leadData['sub_category'],
       'Not available',
@@ -362,7 +386,32 @@ Follow Up Date: $followUpDate
                   ),
                   const SizedBox(height: 16),
 
-                  // Booking Date and Return Date
+                  // Call Date
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Call Date',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        callDate,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Function Date and Return Date
                   Row(
                     children: [
                       Expanded(
@@ -370,7 +419,7 @@ Follow Up Date: $followUpDate
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Booking Date',
+                              'Function Date',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],

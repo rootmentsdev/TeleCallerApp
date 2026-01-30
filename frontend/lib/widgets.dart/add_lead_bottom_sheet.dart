@@ -278,7 +278,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                     Row(
                       children: [
                         Expanded(
-                          child: InkWell(
+                          child: GestureDetector(
                             onTap: _selectFunctionDate,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -536,75 +536,84 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                     // Mark As Follow Up
                     _buildFollowUpSection(),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 32),
 
                     // Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(
-                                color: Color(0xFFE0E0E0),
-                                width: 1.5,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: const BorderSide(
+                                  color: Color(0xFFE0E0E0),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF333333),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF333333),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed:
-                                (_isLoading ||
-                                        _callDuration == null ||
-                                        _callDuration == 0)
-                                    ? null
-                                    : _saveLead,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF003D7A),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed:
+                                  (_isLoading ||
+                                          _callDuration == null ||
+                                          _callDuration == 0)
+                                      ? null
+                                      : _saveLead,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF003D7A),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                disabledBackgroundColor: const Color(
+                                  0xFFCCCCCC,
+                                ),
                               ),
-                              disabledBackgroundColor: const Color(0xFFCCCCCC),
+                              child:
+                                  _isLoading
+                                      ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                      : const Text(
+                                        'Save Lead',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                             ),
-                            child:
-                                _isLoading
-                                    ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                      ),
-                                    )
-                                    : const Text(
-                                      'Save Lead',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -823,13 +832,22 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     final date = await showDatePicker(
       context: context,
       initialDate: _functionDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
+      firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
+
+    print('AddLeadBottomSheet: Date picker returned: $date');
+    print('AddLeadBottomSheet: _functionDate before: $_functionDate');
 
     if (date != null) {
       setState(() {
         _functionDate = date;
+        print(
+          'AddLeadBottomSheet: _functionDate after setState: $_functionDate',
+        );
+        print(
+          'AddLeadBottomSheet: _functionDate ISO string: ${_functionDate?.toIso8601String()}',
+        );
       });
     }
   }
@@ -880,6 +898,21 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         normalizedLeadType = 'booked'; // Backend expects 'booked' not 'booking'
       }
 
+      print(
+        'AddLeadBottomSheet: Creating lead with functionDate: $_functionDate',
+      );
+      print(
+        'AddLeadBottomSheet: functionDate ISO string: ${_functionDate?.toIso8601String()}',
+      );
+      print(
+        'AddLeadBottomSheet: functionDate is null: ${_functionDate == null}',
+      );
+
+      final functionDateString = _functionDate?.toIso8601String();
+      print(
+        'AddLeadBottomSheet: functionDateString value: $functionDateString',
+      );
+
       final apiResponse = await apiService.createLead(
         leadName: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
@@ -891,7 +924,8 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                 ? null
                 : _remarksController.text.trim(),
         followUpFlag: _markAsFollowUp,
-        functionDate: _functionDate?.toIso8601String(),
+        functionDate: functionDateString,
+        createdAt: DateTime.now().toIso8601String(),
         callDuration: _callDuration,
         subCategory: _selectedSubCategory,
         itemCategory: _selectedItemCategory,

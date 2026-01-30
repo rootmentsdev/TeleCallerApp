@@ -100,11 +100,33 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
   List<Map<String, dynamic>> _getFilteredReports(
     List<Map<String, dynamic>> allReports,
   ) {
-    if (_selectedCallType == 'All') {
-      return allReports;
+    // First, filter out invalid lead types (only keep Enquiry, Feedback, Booking)
+    final validReports =
+        allReports.where((report) {
+          final callType = _getCallTypeDisplay(report['type']);
+          return callType != 'Call'; // Exclude unknown types
+        }).toList();
+
+    // Remove duplicates based on phone number and lead type
+    final seen = <String>{};
+    final deduplicatedReports = <Map<String, dynamic>>[];
+
+    for (final report in validReports) {
+      final phone = report['phone'] ?? '';
+      final type = report['type'] ?? '';
+      final key = '$phone-$type';
+
+      if (!seen.contains(key)) {
+        seen.add(key);
+        deduplicatedReports.add(report);
+      }
     }
 
-    return allReports.where((report) {
+    if (_selectedCallType == 'All') {
+      return deduplicatedReports;
+    }
+
+    return deduplicatedReports.where((report) {
       final callType = _getCallTypeDisplay(report['type']);
       return callType == _selectedCallType;
     }).toList();
@@ -121,7 +143,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
       case 'bookingconfirmation':
         return 'Booking';
       default:
-        return 'Call';
+        return 'Call'; // Unknown type - will be filtered out
     }
   }
 

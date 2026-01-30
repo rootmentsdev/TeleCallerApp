@@ -37,9 +37,8 @@ class ApiConfig {
     String url = "$leadsEndpoint?leadType=$lossOfSale";
 
     if (store != null && store.isNotEmpty) {
-      // Extract just the location from "Brand - Location" format
-      final location = store.contains(' - ') ? store.split(' - ').last : store;
-      url += "&store=${Uri.encodeComponent(location)}";
+      // Send the full store name in "Brand - Location" format
+      url += "&store=${Uri.encodeComponent(store)}";
     }
 
     if (enquiryFrom != null && enquiryTo != null) {
@@ -80,9 +79,8 @@ class ApiConfig {
     String url = "$leadsEndpoint?leadType=$bookingConfirmation";
 
     if (store != null && store.isNotEmpty) {
-      // Extract just the location from "Brand - Location" format
-      final location = store.contains(' - ') ? store.split(' - ').last : store;
-      url += "&store=${Uri.encodeComponent(location)}";
+      // Send the full store name in "Brand - Location" format
+      url += "&store=${Uri.encodeComponent(store)}";
     }
 
     // Add pagination parameters
@@ -103,9 +101,8 @@ class ApiConfig {
     String url = "$leadsEndpoint?leadType=$returnLead";
 
     if (store != null && store.isNotEmpty) {
-      // Extract just the location from "Brand - Location" format
-      final location = store.contains(' - ') ? store.split(' - ').last : store;
-      url += "&store=${Uri.encodeComponent(location)}";
+      // Send the full store name in "Brand - Location" format
+      url += "&store=${Uri.encodeComponent(store)}";
     }
 
     // Add pagination parameters
