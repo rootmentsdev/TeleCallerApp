@@ -4,6 +4,7 @@ import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/view/reports_screens/call_report_list_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/booking_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/enquiry_detail_screen.dart';
@@ -315,31 +316,65 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Store Dropdown
+                      // Store Dropdown - Same as Lead Screen
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        height: 50,
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey[300]!),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              headerController.selectedStore,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                                fontFamily: TextConstant.dmSansMedium,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: headerController.selectedStore,
+                                    isExpanded: true,
+                                    dropdownColor: Colors.white,
+                                    icon: const Icon(
+                                      Icons.keyboard_arrow_down,
+                                      color: Colors.grey,
+                                    ),
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 14,
+                                    ),
+                                    hint: const Text(
+                                      "Select Store",
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                    items:
+                                        StoreLocations.buildStoreOptions().map((
+                                          String store,
+                                        ) {
+                                          return DropdownMenuItem<String>(
+                                            value: store,
+                                            child: Text(
+                                              store,
+                                              style: const TextStyle(
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        headerController.setSelectedStore(
+                                          newValue,
+                                        );
+                                        // Fetch reports with new store filter
+                                        reportController
+                                            .fetchReportsWithCurrentFilters();
+                                      }
+                                    },
+                                  ),
+                                ),
                               ),
-                            ),
-                            Icon(Icons.expand_more, color: Colors.grey[600]),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
