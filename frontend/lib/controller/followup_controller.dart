@@ -327,6 +327,8 @@ class FollowupController extends ChangeNotifier {
       "location": lead.location, // Needed for display
       "callDuration": lead.callDuration, // Needed to display call duration
       "callCount": lead.callCount, // Needed to display call count
+      "leadType": lead.leadType ?? "Lead", // Lead type for display
+      "storeName": lead.brand ?? lead.location, // Store name for display
     };
   }
 

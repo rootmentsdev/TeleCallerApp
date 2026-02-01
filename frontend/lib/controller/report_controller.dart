@@ -600,9 +600,9 @@ class ReportController extends ChangeNotifier {
 
   /// Fetch reports filtered by current header settings (store and date)
   Future<void> fetchReportsWithCurrentFilters() async {
-    // Format date to YYYY-MM-DD for API
-    String formatDate(DateTime date) {
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    // Format date with time to ISO8601 for API (includes time component)
+    String formatDateWithTime(DateTime date) {
+      return date.toIso8601String();
     }
 
     // Use date range if available, otherwise use single selected date
@@ -612,14 +612,23 @@ class ReportController extends ChangeNotifier {
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
-      // Use date range
-      editedAtFromStr = formatDate(_headerController!.dateRangeStart!);
-      editedAtToStr = formatDate(_headerController!.dateRangeEnd!);
+      // Use date range - format with time to ensure full day coverage
+      editedAtFromStr = formatDateWithTime(_headerController!.dateRangeStart!);
+      editedAtToStr = formatDateWithTime(_headerController!.dateRangeEnd!);
     } else {
-      // Use single date
+      // Use single date - format with time to ensure full day coverage
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-      editedAtFromStr = formatDate(selectedDate);
-      editedAtToStr = formatDate(selectedDate);
+      editedAtFromStr = formatDateWithTime(selectedDate);
+      // For end date, use 23:59:59 of the same day
+      final endOfDay = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        23,
+        59,
+        59,
+      );
+      editedAtToStr = formatDateWithTime(endOfDay);
     }
 
     // Determine leadType based on selected call type index
@@ -654,8 +663,7 @@ class ReportController extends ChangeNotifier {
       'ReportController: Fetching reports with filters - leadType: $leadType, editedAtFrom: $editedAtFromStr, editedAtTo: $editedAtToStr',
     );
 
-    // Try fetching with date filters first
-    // If no results, fall back to fetching all reports and filtering client-side
+    // Fetch reports with date filters
     try {
       await fetchReportsFromApi(
         leadType: leadType,
@@ -664,17 +672,6 @@ class ReportController extends ChangeNotifier {
         page: 1,
         limit: 100,
       );
-
-      // If we got results, we're done
-      if (_reports.isNotEmpty) {
-        return;
-      }
-
-      // If no results with date filter, try without date filter
-      print(
-        'ReportController: No reports found with date filter, trying without date filter',
-      );
-      await fetchReportsFromApi(leadType: leadType, page: 1, limit: 100);
     } catch (e) {
       print('ReportController: Error fetching reports: $e');
       rethrow;

@@ -48,7 +48,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void _applyTimeRangeFilter(String range, HeaderController headerController) {
     final now = DateTime.now();
     DateTime startDate;
-    DateTime endDate = now;
+    DateTime endDate;
 
     switch (range) {
       case 'Today':
@@ -57,17 +57,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
         break;
       case 'Last 7 Days':
         startDate = now.subtract(const Duration(days: 7));
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
       case 'This Month':
         startDate = DateTime(now.year, now.month, 1);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
       case 'Last Month':
         final firstDayThisMonth = DateTime(now.year, now.month, 1);
         endDate = firstDayThisMonth.subtract(const Duration(days: 1));
+        endDate = DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          23,
+          59,
+          59,
+        );
         startDate = DateTime(endDate.year, endDate.month, 1);
         break;
       default:
         startDate = now;
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     }
 
     // Update header controller with date range
@@ -167,70 +178,232 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorConstant.primaryColor,
       body: Consumer2<ReportController, HeaderController>(
         builder: (context, reportController, headerController, _) {
           return Column(
             children: [
-              // Custom Header with notification
+              // Custom Header matching Follow-up Screen design
               Container(
+                color: ColorConstant.primaryColor,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
                 ),
-                decoration: const BoxDecoration(
-                  color: ColorConstant.primaryColor,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
-                  ),
-                ),
-                child: SafeArea(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Reports',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          fontFamily: TextConstant.dmSansMedium,
-                        ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 24,
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          // Handle notification tap
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.notifications,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
+                    ),
+                    const Text(
+                      "Reports",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
-                    ],
-                  ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        // Handle notification tap
+                      },
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Call Reports header with Custom Range
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18),
+                      ),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Call Reports header with Custom Range
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Call Reports',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                  fontFamily: TextConstant.dmSansMedium,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _showCustomDateRangePicker,
+                                child: Text(
+                                  'Custom Range',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2196F3),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Time Range Buttons
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children:
+                                  _getTimeRanges().map((range) {
+                                    final isSelected =
+                                        _selectedTimeRange == range;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedTimeRange = range;
+                                            _customStartDate = null;
+                                            _customEndDate = null;
+                                          });
+                                          // Apply time range filter to header controller
+                                          _applyTimeRangeFilter(
+                                            range,
+                                            headerController,
+                                          );
+                                          // Fetch reports with new time range
+                                          reportController
+                                              .fetchReportsWithCurrentFilters();
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                isSelected
+                                                    ? ColorConstant.primaryColor
+                                                    : Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color:
+                                                  isSelected
+                                                      ? ColorConstant
+                                                          .primaryColor
+                                                      : Colors.grey[300]!,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            range,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color:
+                                                  isSelected
+                                                      ? Colors.white
+                                                      : Colors.black87,
+                                              fontFamily:
+                                                  TextConstant.dmSansMedium,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Store Dropdown - Same as Lead Screen
+                          Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: headerController.selectedStore,
+                                        isExpanded: true,
+                                        dropdownColor: Colors.white,
+                                        icon: const Icon(
+                                          Icons.keyboard_arrow_down,
+                                          color: Colors.grey,
+                                        ),
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 14,
+                                        ),
+                                        hint: const Text(
+                                          "Select Store",
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                        items:
+                                            StoreLocations.buildStoreOptions()
+                                                .map((String store) {
+                                                  return DropdownMenuItem<
+                                                    String
+                                                  >(
+                                                    value: store,
+                                                    child: Text(
+                                                      store,
+                                                      style: const TextStyle(
+                                                        color: Colors.black87,
+                                                      ),
+                                                    ),
+                                                  );
+                                                })
+                                                .toList(),
+                                        onChanged: (String? newValue) {
+                                          if (newValue != null) {
+                                            headerController.setSelectedStore(
+                                              newValue,
+                                            );
+                                            // Fetch reports with new store filter
+                                            reportController
+                                                .fetchReportsWithCurrentFilters();
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Lead Report Section
                           Text(
-                            'Call Reports',
+                            'Lead Report',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -238,315 +411,172 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               fontFamily: TextConstant.dmSansMedium,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: _showCustomDateRangePicker,
-                            child: Text(
-                              'Custom Range',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF2196F3),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                          const SizedBox(height: 12),
 
-                      // Time Range Buttons
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children:
-                              _getTimeRanges().map((range) {
-                                final isSelected = _selectedTimeRange == range;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedTimeRange = range;
-                                        _customStartDate = null;
-                                        _customEndDate = null;
-                                      });
-                                      // Apply time range filter to header controller
-                                      _applyTimeRangeFilter(
-                                        range,
-                                        headerController,
-                                      );
-                                      // Fetch reports with new time range
-                                      reportController
-                                          .fetchReportsWithCurrentFilters();
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isSelected
-                                                ? ColorConstant.primaryColor
-                                                : Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color:
-                                              isSelected
-                                                  ? ColorConstant.primaryColor
-                                                  : Colors.grey[300]!,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        range,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color:
-                                              isSelected
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                          fontFamily: TextConstant.dmSansMedium,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Store Dropdown - Same as Lead Screen
-                      Container(
-                        height: 50,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Row(
+                          // Report Cards - Row Column Layout
+                          Column(
                             children: [
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: headerController.selectedStore,
-                                    isExpanded: true,
-                                    dropdownColor: Colors.white,
-                                    icon: const Icon(
-                                      Icons.keyboard_arrow_down,
-                                      color: Colors.grey,
+                              // First Row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildReportCard(
+                                      icon: Icons.phone,
+                                      count: _getReportCount(
+                                        reportController,
+                                        'total',
+                                      ),
+                                      title: 'Total Calls',
+                                      iconBgColor: const Color(0xFFE3F2FD),
                                     ),
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                    ),
-                                    hint: const Text(
-                                      "Select Store",
-                                      style: TextStyle(color: Colors.grey),
-                                    ),
-                                    items:
-                                        StoreLocations.buildStoreOptions().map((
-                                          String store,
-                                        ) {
-                                          return DropdownMenuItem<String>(
-                                            value: store,
-                                            child: Text(
-                                              store,
-                                              style: const TextStyle(
-                                                color: Colors.black87,
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                    onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        headerController.setSelectedStore(
-                                          newValue,
-                                        );
-                                        // Fetch reports with new store filter
-                                        reportController
-                                            .fetchReportsWithCurrentFilters();
-                                      }
-                                    },
                                   ),
-                                ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildReportCard(
+                                      icon: Icons.chat_bubble,
+                                      count: _getReportCount(
+                                        reportController,
+                                        'enquiry',
+                                      ),
+                                      title: 'Enquiry Calls',
+                                      iconBgColor: const Color(0xFFE3F2FD),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              // Second Row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildReportCard(
+                                      icon: Icons.feedback,
+                                      count: _getReportCount(
+                                        reportController,
+                                        'feedback',
+                                      ),
+                                      title: 'Feedback Calls',
+                                      iconBgColor: const Color(0xFFE3F2FD),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildReportCard(
+                                      icon: Icons.people,
+                                      count: _getReportCount(
+                                        reportController,
+                                        'booking',
+                                      ),
+                                      title: 'Booking Calls',
+                                      iconBgColor: const Color(0xFFE3F2FD),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                      // Lead Report Section
-                      Text(
-                        'Lead Report',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                          fontFamily: TextConstant.dmSansMedium,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Report Cards - Row Column Layout
-                      Column(
-                        children: [
-                          // First Row
+                          // Latest Call Report Section
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: _buildReportCard(
-                                  icon: Icons.phone,
-                                  count: _getReportCount(
-                                    reportController,
-                                    'total',
-                                  ),
-                                  title: 'Total Calls',
-                                  iconBgColor: const Color(0xFFE3F2FD),
+                              Text(
+                                'Latest Call Report',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                  fontFamily: TextConstant.dmSansMedium,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildReportCard(
-                                  icon: Icons.chat_bubble,
-                                  count: _getReportCount(
-                                    reportController,
-                                    'enquiry',
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const CallReportListScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'View All',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2196F3),
                                   ),
-                                  title: 'Enquiry Calls',
-                                  iconBgColor: const Color(0xFFE3F2FD),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          // Second Row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildReportCard(
-                                  icon: Icons.feedback,
-                                  count: _getReportCount(
-                                    reportController,
-                                    'feedback',
+
+                          // Call Report Cards - Show latest 3 reports
+                          if (reportController.isLoadingReports)
+                            const Center(child: CircularProgressIndicator())
+                          else if (reportController.reports.isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  'No reports available',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
                                   ),
-                                  title: 'Feedback Calls',
-                                  iconBgColor: const Color(0xFFE3F2FD),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildReportCard(
-                                  icon: Icons.people,
-                                  count: _getReportCount(
-                                    reportController,
-                                    'booking',
+                            )
+                          else
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) =>
+                                            const CallReportListScreen(),
                                   ),
-                                  title: 'Booking Calls',
-                                  iconBgColor: const Color(0xFFE3F2FD),
-                                ),
+                                );
+                              },
+                              child: Column(
+                                children:
+                                    _getLatestReports(
+                                      reportController,
+                                    ).take(3).map((report) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _buildCallReportCard(
+                                          name: report['name'] ?? 'Unknown',
+                                          phone: report['phone'] ?? 'N/A',
+                                          store:
+                                              report['storeName'] ??
+                                              'Not available',
+                                          date: report['date'] ?? 'N/A',
+                                          callType: _getCallTypeDisplay(
+                                            report['type'],
+                                          ),
+                                          callTypeColor: const Color(
+                                            0xFFE3F2FD,
+                                          ),
+                                          callTypeTextColor: const Color(
+                                            0xFF1976D2,
+                                          ),
+                                          report: report,
+                                        ),
+                                      );
+                                    }).toList(),
                               ),
-                            ],
-                          ),
+                            ),
+                          const SizedBox(height: 24),
                         ],
                       ),
-                      const SizedBox(height: 24),
-
-                      // Latest Call Report Section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Latest Call Report',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                              fontFamily: TextConstant.dmSansMedium,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => const CallReportListScreen(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              'View All',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF2196F3),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Call Report Cards - Show latest 3 reports
-                      if (reportController.isLoadingReports)
-                        const Center(child: CircularProgressIndicator())
-                      else if (reportController.reports.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              'No reports available',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => const CallReportListScreen(),
-                              ),
-                            );
-                          },
-                          child: Column(
-                            children:
-                                _getLatestReports(
-                                  reportController,
-                                ).take(3).map((report) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _buildCallReportCard(
-                                      name: report['name'] ?? 'Unknown',
-                                      phone: report['phone'] ?? 'N/A',
-                                      store:
-                                          report['storeName'] ??
-                                          'Not available',
-                                      date: report['date'] ?? 'N/A',
-                                      callType: _getCallTypeDisplay(
-                                        report['type'],
-                                      ),
-                                      callTypeColor: const Color(0xFFE3F2FD),
-                                      callTypeTextColor: const Color(
-                                        0xFF1976D2,
-                                      ),
-                                      report: report,
-                                    ),
-                                  );
-                                }).toList(),
-                          ),
-                        ),
-                      const SizedBox(height: 24),
-                    ],
+                    ),
                   ),
                 ),
               ),

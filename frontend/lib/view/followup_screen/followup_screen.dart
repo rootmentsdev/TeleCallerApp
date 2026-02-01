@@ -4,8 +4,6 @@ import 'package:telecaller_app/controller/followup_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/widgets.dart/app_header.dart';
-import 'package:telecaller_app/view/profile_screen.dart';
 import 'package:telecaller_app/view/followup_screen/followup_detail_screen.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 
@@ -52,18 +50,41 @@ class _FollowupScreenState extends State<FollowupScreen> {
       backgroundColor: ColorConstant.primaryColor,
       body: Column(
         children: [
-          AppHeader(
-            showDate: true,
-            showFilters: true,
-            onNotificationTap: () {
-              // Handle notification tap
-            },
-            onProfileTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
+          // Custom Header matching the image
+          Container(
+            color: ColorConstant.primaryColor,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const Text(
+                  "Follow Ups",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // Handle notification tap
+                  },
+                  child: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ],
+            ),
           ),
           Expanded(
             child: Padding(
@@ -231,29 +252,30 @@ class _FollowupScreenState extends State<FollowupScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: currentLeads.length,
       itemBuilder: (context, index) {
         final lead = currentLeads[index];
         final call = controller.leadToDisplayMap(lead);
-        return _buildCallItem(call, context);
+        return _buildCallItem(call, lead, context);
       },
     );
   }
 
-  Widget _buildCallItem(Map<String, dynamic> call, BuildContext context) {
+  Widget _buildCallItem(
+    Map<String, dynamic> call,
+    LeadModel lead,
+    BuildContext context,
+  ) {
     return GestureDetector(
       onTap: () {
         // Navigate to follow-up detail screen
-        final lead = call["lead"] as LeadModel?;
-        if (lead != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => FollowupDetailScreen(lead: lead),
-            ),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FollowupDetailScreen(lead: lead),
+          ),
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -288,15 +310,15 @@ class _FollowupScreenState extends State<FollowupScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: call["tagBgColor"] as Color,
+                      color: const Color(0xFFE3F2FD),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      call["tag"] as String,
-                      style: TextStyle(
+                      call["leadType"] as String? ?? "Lead",
+                      style: const TextStyle(
                         fontSize: 12,
                         fontFamily: TextConstant.dmSansMedium,
-                        color: call["tagColor"] as Color,
+                        color: Color(0xFF1976D2),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -338,6 +360,8 @@ class _FollowupScreenState extends State<FollowupScreen> {
                       fontFamily: TextConstant.dmSansRegular,
                       color: Colors.grey[700],
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

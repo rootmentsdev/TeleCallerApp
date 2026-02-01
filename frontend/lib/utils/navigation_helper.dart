@@ -3,7 +3,6 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
-import 'package:telecaller_app/view/details_screen.dart';
 import 'package:telecaller_app/view/lead_screen/return_lead_details_screen.dart';
 
 /// Helper class for navigation logic

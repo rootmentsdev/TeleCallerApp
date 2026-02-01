@@ -768,33 +768,73 @@ class LeadRepository extends ChangeNotifier {
 
       // Determine category - backend uses lead_type field
       String? category; // Default to null (will show in "All Calls" tab)
+      final leadTypeFieldForCategory =
+          leadData['lead_type']?.toString() ?? // Backend snake_case
+          leadData['leadType']?.toString(); // Individual endpoint camelCase
+
+      if (leadTypeFieldForCategory != null) {
+        final leadTypeValue = leadTypeFieldForCategory.toLowerCase();
+        if (leadTypeValue == 'lossofsale' || leadTypeValue == 'loss of sale') {
+          category = LeadConstants.categoryLossOfSales;
+        } else if (leadTypeValue == 'rentout' ||
+            leadTypeValue == 'rent out' ||
+            leadTypeValue == 'rentoutfeedback' ||
+            leadTypeValue == 'return') {
+          category = LeadConstants.categoryRentOut;
+        } else if (leadTypeValue == 'bookingconfirmation' ||
+            leadTypeValue == 'booking confirmation') {
+          category = LeadConstants.categoryBookingConfirmation;
+        } else if (leadTypeValue == 'justdial' ||
+            leadTypeValue == 'just dial') {
+          category = LeadConstants.categoryJustDial;
+        } else if (leadTypeValue == 'followup' ||
+            leadTypeValue == 'follow up') {
+          category = LeadConstants.categoryFollowUp;
+        } else if (leadTypeValue == 'general' ||
+            leadTypeValue == 'walkin' ||
+            leadTypeValue == 'walk-in') {
+          // General/Walk-in leads don't have a specific category - show in "All Calls"
+          category = null;
+        }
+        // If leadType doesn't match any known type, category remains null
+      }
+
+      // Extract lead type for display (e.g., "Enquiry", "Booking", "Feedback")
+      String? leadType;
       final leadTypeField =
           leadData['lead_type']?.toString() ?? // Backend snake_case
           leadData['leadType']?.toString(); // Individual endpoint camelCase
 
       if (leadTypeField != null) {
-        final leadType = leadTypeField.toLowerCase();
-        if (leadType == 'lossofsale' || leadType == 'loss of sale') {
-          category = LeadConstants.categoryLossOfSales;
-        } else if (leadType == 'rentout' ||
-            leadType == 'rent out' ||
-            leadType == 'rentoutfeedback' ||
-            leadType == 'return') {
-          category = LeadConstants.categoryRentOut;
-        } else if (leadType == 'bookingconfirmation' ||
-            leadType == 'booking confirmation') {
-          category = LeadConstants.categoryBookingConfirmation;
-        } else if (leadType == 'justdial' || leadType == 'just dial') {
-          category = LeadConstants.categoryJustDial;
-        } else if (leadType == 'followup' || leadType == 'follow up') {
-          category = LeadConstants.categoryFollowUp;
-        } else if (leadType == 'general' ||
-            leadType == 'walkin' ||
-            leadType == 'walk-in') {
-          // General/Walk-in leads don't have a specific category - show in "All Calls"
-          category = null;
+        final leadTypeLower = leadTypeField.toLowerCase();
+        if (leadTypeLower == 'lossofsale' || leadTypeLower == 'loss of sale') {
+          leadType = 'Loss of Sale';
+        } else if (leadTypeLower == 'rentout' ||
+            leadTypeLower == 'rent out' ||
+            leadTypeLower == 'rentoutfeedback' ||
+            leadTypeLower == 'return') {
+          leadType = 'Feedback';
+        } else if (leadTypeLower == 'bookingconfirmation' ||
+            leadTypeLower == 'booking confirmation') {
+          leadType = 'Booking';
+        } else if (leadTypeLower == 'justdial' ||
+            leadTypeLower == 'just dial') {
+          leadType = 'Just Dial';
+        } else if (leadTypeLower == 'followup' ||
+            leadTypeLower == 'follow up') {
+          leadType = 'Follow Up';
+        } else if (leadTypeLower == 'enquiry' ||
+            leadTypeLower == 'enquiry_booking_reports' ||
+            leadTypeLower == 'enquiry booking reports') {
+          leadType = 'Enquiry';
+        } else if (leadTypeLower == 'general' ||
+            leadTypeLower == 'walkin' ||
+            leadTypeLower == 'walk-in') {
+          leadType = 'Lead';
+        } else {
+          // Use the original value if it doesn't match known types
+          leadType = leadTypeField;
         }
-        // If leadType doesn't match any known type, category remains null
       }
 
       return LeadModel(
@@ -820,6 +860,7 @@ class LeadRepository extends ChangeNotifier {
                 ?.toString(), // Individual endpoint camelCase
         functionDate: functionDate, // Function date from API
         enquiryDate: enquiryDate, // Enquiry date from API
+        leadType: leadType, // Lead type for display
       );
     } catch (e) {
       print('Error parsing API lead: $e');
@@ -1147,6 +1188,7 @@ class LeadRepository extends ChangeNotifier {
               closingAction: lead.closingAction,
               functionDate: lead.functionDate,
               enquiryDate: lead.enquiryDate,
+              leadType: lead.leadType,
             );
             _leads.add(followUpLead);
             addedCount++;
