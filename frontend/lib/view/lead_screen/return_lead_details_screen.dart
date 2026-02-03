@@ -36,6 +36,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   DateTime? _followUpDate;
   bool _isSaving = false;
   String? _selectedService;
+  bool _isDetailsCollapsed = false;
 
   // New fields for redesigned form
   final TextEditingController _numberOfFunctionsController =
@@ -629,162 +630,170 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Call Status and Call Duration
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "Service",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                                fontFamily:
-                                                    TextConstant.dmSansRegular,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                  color: Colors.grey[300]!,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: DropdownButton<String>(
-                                                value: _selectedService,
-                                                hint: const Text("Select"),
-                                                isExpanded: true,
-                                                underline: const SizedBox(),
-                                                items:
-                                                    serviceOptions.map((
-                                                      String item,
-                                                    ) {
-                                                      return DropdownMenuItem<
-                                                        String
-                                                      >(
-                                                        value: item,
-                                                        child: Text(item),
-                                                      );
-                                                    }).toList(),
-                                                onChanged: (String? value) {
-                                                  setState(() {
-                                                    _selectedService = value;
-                                                  });
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "Call Duration",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                                fontFamily:
-                                                    TextConstant.dmSansRegular,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 12,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                  color: Colors.grey[300]!,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                _formatDuration(_callDuration),
+                                  if (!_isDetailsCollapsed) ...[
+                                    // Call Status and Call Duration
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Service",
                                                 style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey[800],
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
                                                   fontFamily:
                                                       TextConstant
                                                           .dmSansRegular,
                                                 ),
                                               ),
+                                              const SizedBox(height: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: Colors.grey[300]!,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: DropdownButton<String>(
+                                                  value: _selectedService,
+                                                  hint: const Text("Select"),
+                                                  isExpanded: true,
+                                                  underline: const SizedBox(),
+                                                  items:
+                                                      serviceOptions.map((
+                                                        String item,
+                                                      ) {
+                                                        return DropdownMenuItem<
+                                                          String
+                                                        >(
+                                                          value: item,
+                                                          child: Text(item),
+                                                        );
+                                                      }).toList(),
+                                                  onChanged: (String? value) {
+                                                    setState(() {
+                                                      _selectedService = value;
+                                                    });
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Call Duration",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                  fontFamily:
+                                                      TextConstant
+                                                          .dmSansRegular,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 12,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: Colors.grey[300]!,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  _formatDuration(
+                                                    _callDuration,
+                                                  ),
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[800],
+                                                    fontFamily:
+                                                        TextConstant
+                                                            .dmSansRegular,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 16),
+
+                                    // Call Status
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Call Status",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                            fontFamily:
+                                                TextConstant.dmSansRegular,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Call Status
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Call Status",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                          fontFamily:
-                                              TextConstant.dmSansRegular,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color: Colors.grey[300]!,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
+                                          child: DropdownButton<String>(
+                                            value: _selectedCallStatus,
+                                            hint: const Text("Select"),
+                                            isExpanded: true,
+                                            underline: const SizedBox(),
+                                            items:
+                                                callStatusOptions.map((
+                                                  String item,
+                                                ) {
+                                                  return DropdownMenuItem<
+                                                    String
+                                                  >(
+                                                    value: item,
+                                                    child: Text(item),
+                                                  );
+                                                }).toList(),
+                                            onChanged: (String? value) {
+                                              setState(() {
+                                                _selectedCallStatus = value;
+                                              });
+                                            },
                                           ),
                                         ),
-                                        child: DropdownButton<String>(
-                                          value: _selectedCallStatus,
-                                          hint: const Text("Select"),
-                                          isExpanded: true,
-                                          underline: const SizedBox(),
-                                          items:
-                                              callStatusOptions.map((
-                                                String item,
-                                              ) {
-                                                return DropdownMenuItem<String>(
-                                                  value: item,
-                                                  child: Text(item),
-                                                );
-                                              }).toList(),
-                                          onChanged: (String? value) {
-                                            setState(() {
-                                              _selectedCallStatus = value;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
 
-                                  const SizedBox(height: 16),
+                                    const SizedBox(height: 16),
+                                  ],
 
                                   // Mark as Complaint
                                   Row(
@@ -794,6 +803,8 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                         onChanged: (value) {
                                           setState(() {
                                             _markAsComplaint = value ?? false;
+                                            _isDetailsCollapsed =
+                                                _markAsComplaint;
                                             if (!_markAsComplaint) {
                                               _selectedComplaintSubCategory =
                                                   null;
@@ -871,216 +882,163 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                     ),
                                   ],
 
-                                  const SizedBox(height: 16),
+                                  if (!_isDetailsCollapsed) ...[
+                                    const SizedBox(height: 16),
 
-                                  // No. of functions and No. of attires
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "No. of functions",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                                fontFamily:
-                                                    TextConstant.dmSansRegular,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            TextField(
-                                              controller:
-                                                  _numberOfFunctionsController,
-                                              keyboardType:
-                                                  TextInputType.number,
-                                              decoration: InputDecoration(
-                                                hintText: "Eg. 2",
-                                                hintStyle: TextStyle(
-                                                  color: Colors.grey[400],
+                                    // No. of functions and No. of attires
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "No. of functions",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
                                                   fontFamily:
                                                       TextConstant
                                                           .dmSansRegular,
                                                 ),
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.grey[300]!,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              TextField(
+                                                controller:
+                                                    _numberOfFunctionsController,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                decoration: InputDecoration(
+                                                  hintText: "Eg. 2",
+                                                  hintStyle: TextStyle(
+                                                    color: Colors.grey[400],
+                                                    fontFamily:
+                                                        TextConstant
+                                                            .dmSansRegular,
                                                   ),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    borderSide: BorderSide(
+                                                      color: Colors.grey[300]!,
+                                                    ),
+                                                  ),
+                                                  enabledBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        borderSide: BorderSide(
+                                                          color:
+                                                              Colors.grey[300]!,
+                                                        ),
+                                                      ),
+                                                  focusedBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        borderSide: BorderSide(
+                                                          color:
+                                                              ColorConstant
+                                                                  .primaryColor,
+                                                          width: 2,
+                                                        ),
+                                                      ),
+                                                  contentPadding:
+                                                      const EdgeInsets.all(12),
                                                 ),
-                                                enabledBorder:
-                                                    OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      borderSide: BorderSide(
-                                                        color:
-                                                            Colors.grey[300]!,
-                                                      ),
-                                                    ),
-                                                focusedBorder:
-                                                    OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      borderSide: BorderSide(
-                                                        color:
-                                                            ColorConstant
-                                                                .primaryColor,
-                                                        width: 2,
-                                                      ),
-                                                    ),
-                                                contentPadding:
-                                                    const EdgeInsets.all(12),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "No. of attires",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                                fontFamily:
-                                                    TextConstant.dmSansRegular,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            TextField(
-                                              controller:
-                                                  _numberOfAttireController,
-                                              keyboardType:
-                                                  TextInputType.number,
-                                              decoration: InputDecoration(
-                                                hintText: "Eg. 4",
-                                                hintStyle: TextStyle(
-                                                  color: Colors.grey[400],
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "No. of attires",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
                                                   fontFamily:
                                                       TextConstant
                                                           .dmSansRegular,
                                                 ),
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.grey[300]!,
-                                                  ),
-                                                ),
-                                                enabledBorder:
-                                                    OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      borderSide: BorderSide(
-                                                        color:
-                                                            Colors.grey[300]!,
-                                                      ),
-                                                    ),
-                                                focusedBorder:
-                                                    OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                      borderSide: BorderSide(
-                                                        color:
-                                                            ColorConstant
-                                                                .primaryColor,
-                                                        width: 2,
-                                                      ),
-                                                    ),
-                                                contentPadding:
-                                                    const EdgeInsets.all(12),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Competitor (Optional)
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Competitor (Optional)",
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                          fontFamily:
-                                              TextConstant.dmSansRegular,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      TextField(
-                                        controller: _competitorController,
-                                        decoration: InputDecoration(
-                                          hintText: "Enter competitor name",
-                                          hintStyle: TextStyle(
-                                            color: Colors.grey[400],
-                                            fontFamily:
-                                                TextConstant.dmSansRegular,
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: Colors.grey[300]!,
-                                            ),
-                                          ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: Colors.grey[300]!,
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: ColorConstant.primaryColor,
-                                              width: 2,
-                                            ),
-                                          ),
-                                          contentPadding: const EdgeInsets.all(
-                                            12,
+                                              const SizedBox(height: 8),
+                                              TextField(
+                                                controller:
+                                                    _numberOfAttireController,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                decoration: InputDecoration(
+                                                  hintText: "Eg. 4",
+                                                  hintStyle: TextStyle(
+                                                    color: Colors.grey[400],
+                                                    fontFamily:
+                                                        TextConstant
+                                                            .dmSansRegular,
+                                                  ),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    borderSide: BorderSide(
+                                                      color: Colors.grey[300]!,
+                                                    ),
+                                                  ),
+                                                  enabledBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        borderSide: BorderSide(
+                                                          color:
+                                                              Colors.grey[300]!,
+                                                        ),
+                                                      ),
+                                                  focusedBorder:
+                                                      OutlineInputBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                        borderSide: BorderSide(
+                                                          color:
+                                                              ColorConstant
+                                                                  .primaryColor,
+                                                          width: 2,
+                                                        ),
+                                                      ),
+                                                  contentPadding:
+                                                      const EdgeInsets.all(12),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
 
-                                  const SizedBox(height: 16),
+                                    const SizedBox(height: 16),
 
-                                  // Rating (only show if not marked as complaint)
-                                  if (!_markAsComplaint)
+                                    // Competitor (Optional)
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Rating",
+                                          "Competitor (Optional)",
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.grey[600],
@@ -1089,31 +1047,147 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        Row(
-                                          children: List.generate(5, (index) {
-                                            return GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  _rating = index + 1;
-                                                });
-                                              },
-                                              child: Icon(
-                                                Icons.star,
-                                                size: 32,
-                                                color:
-                                                    index < _rating
-                                                        ? Colors.amber
-                                                        : Colors.grey[300],
+                                        TextField(
+                                          controller: _competitorController,
+                                          decoration: InputDecoration(
+                                            hintText: "Enter competitor name",
+                                            hintStyle: TextStyle(
+                                              color: Colors.grey[400],
+                                              fontFamily:
+                                                  TextConstant.dmSansRegular,
+                                            ),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color: Colors.grey[300]!,
                                               ),
-                                            );
-                                          }),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color: Colors.grey[300]!,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color:
+                                                    ColorConstant.primaryColor,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            contentPadding:
+                                                const EdgeInsets.all(12),
+                                          ),
                                         ),
                                       ],
                                     ),
 
-                                  const SizedBox(height: 16),
+                                    const SizedBox(height: 16),
 
-                                  // Call Remarks - Only show if Mark as Complaint is checked
+                                    // Rating (only show if not marked as complaint)
+                                    if (!_markAsComplaint)
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Rating",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                              fontFamily:
+                                                  TextConstant.dmSansRegular,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: List.generate(5, (index) {
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  setState(() {
+                                                    _rating = index + 1;
+                                                  });
+                                                },
+                                                child: Icon(
+                                                  Icons.star,
+                                                  size: 32,
+                                                  color:
+                                                      index < _rating
+                                                          ? Colors.amber
+                                                          : Colors.grey[300],
+                                                ),
+                                              );
+                                            }),
+                                          ),
+                                        ],
+                                      ),
+
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  if (!_isDetailsCollapsed) ...[
+                                    // Call Remarks - Show in expanded view
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Call Remarks / Notes",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                            fontFamily:
+                                                TextConstant.dmSansRegular,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextField(
+                                          controller: _remarksController,
+                                          maxLines: 3,
+                                          decoration: InputDecoration(
+                                            hintText: "Enter your remarks",
+                                            hintStyle: TextStyle(
+                                              color: Colors.grey[400],
+                                              fontFamily:
+                                                  TextConstant.dmSansRegular,
+                                            ),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color: Colors.grey[300]!,
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color: Colors.grey[300]!,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color:
+                                                    ColorConstant.primaryColor,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            contentPadding:
+                                                const EdgeInsets.all(12),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
+                                    ),
+                                  ],
+
+                                  // Call Remarks for Complaint - Show only when complaint is marked
                                   if (_markAsComplaint)
                                     Column(
                                       crossAxisAlignment:
@@ -1170,93 +1244,100 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                       ],
                                     ),
 
-                                  // Mark as Follow Up
-                                  Row(
-                                    children: [
-                                      Checkbox(
-                                        value: _markAsFollowUp,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _markAsFollowUp = value ?? false;
-                                            if (_markAsFollowUp &&
-                                                _followUpDate == null) {
-                                              _followUpDate = DateTime.now()
-                                                  .add(const Duration(days: 1));
-                                            }
-                                          });
+                                  if (!_isDetailsCollapsed) ...[
+                                    // Mark as Follow Up
+                                    Row(
+                                      children: [
+                                        Checkbox(
+                                          value: _markAsFollowUp,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _markAsFollowUp = value ?? false;
+                                              if (_markAsFollowUp &&
+                                                  _followUpDate == null) {
+                                                _followUpDate = DateTime.now()
+                                                    .add(
+                                                      const Duration(days: 1),
+                                                    );
+                                              }
+                                            });
+                                          },
+                                          activeColor:
+                                              ColorConstant.primaryColor,
+                                        ),
+                                        Text(
+                                          "Mark as Follow Up",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[800],
+                                            fontFamily:
+                                                TextConstant.dmSansMedium,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    if (_markAsFollowUp) ...[
+                                      const SizedBox(height: 12),
+                                      InkWell(
+                                        onTap: () async {
+                                          final date = await showDatePicker(
+                                            context: context,
+                                            initialDate:
+                                                _followUpDate ??
+                                                DateTime.now().add(
+                                                  const Duration(days: 1),
+                                                ),
+                                            firstDate: DateTime.now(),
+                                            lastDate: DateTime.now().add(
+                                              const Duration(days: 365),
+                                            ),
+                                          );
+                                          if (date != null) {
+                                            setState(() {
+                                              _followUpDate = date;
+                                            });
+                                          }
                                         },
-                                        activeColor: ColorConstant.primaryColor,
-                                      ),
-                                      Text(
-                                        "Mark as Follow Up",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[800],
-                                          fontFamily: TextConstant.dmSansMedium,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                _followUpDate != null
+                                                    ? "Follow-Ups Date (${_followUpDate!.day} ${_getMonthName(_followUpDate!.month)} ${_followUpDate!.year})"
+                                                    : "Follow-Ups Date",
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[600],
+                                                  fontFamily:
+                                                      TextConstant
+                                                          .dmSansRegular,
+                                                ),
+                                              ),
+                                              Icon(
+                                                Icons.calendar_today,
+                                                size: 18,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  ),
-
-                                  if (_markAsFollowUp) ...[
-                                    const SizedBox(height: 12),
-                                    InkWell(
-                                      onTap: () async {
-                                        final date = await showDatePicker(
-                                          context: context,
-                                          initialDate:
-                                              _followUpDate ??
-                                              DateTime.now().add(
-                                                const Duration(days: 1),
-                                              ),
-                                          firstDate: DateTime.now(),
-                                          lastDate: DateTime.now().add(
-                                            const Duration(days: 365),
-                                          ),
-                                        );
-                                        if (date != null) {
-                                          setState(() {
-                                            _followUpDate = date;
-                                          });
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color: Colors.grey[300]!,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              _followUpDate != null
-                                                  ? "Follow-Ups Date (${_followUpDate!.day} ${_getMonthName(_followUpDate!.month)} ${_followUpDate!.year})"
-                                                  : "Follow-Ups Date",
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[600],
-                                                fontFamily:
-                                                    TextConstant.dmSansRegular,
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.calendar_today,
-                                              size: 18,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
                                   ],
 
                                   const SizedBox(height: 24),

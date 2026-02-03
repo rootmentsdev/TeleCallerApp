@@ -394,4 +394,3 @@ class LeadListItem extends StatelessWidget {
     );
   }
 }
-

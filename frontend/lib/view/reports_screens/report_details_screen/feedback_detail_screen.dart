@@ -692,7 +692,8 @@ Follow Up Date: $followUpDate
                   ),
                   const SizedBox(height: 20),
 
-                  // Follow Up Section Header
+                  // 
+                  //Follow Up Section Header
                   Text(
                     'Follow Up',
                     style: TextStyle(

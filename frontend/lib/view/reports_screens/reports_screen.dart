@@ -18,7 +18,7 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  String _selectedTimeRange = 'Last 7 Days';
+  String _selectedTimeRange = 'Today';
   DateTime? _customStartDate;
   DateTime? _customEndDate;
 
@@ -36,8 +36,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
         listen: false,
       );
       reportController.init(headerController);
-      // Fetch initial reports - try without date filters first to see if data exists
-      reportController.fetchReportsFromApi(page: 1, limit: 100);
+
+      // Set default date range to TODAY
+      final now = DateTime.now();
+      final startDate = DateTime(now.year, now.month, now.day);
+      final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+      // Apply today's date range to header controller
+      headerController.setDateRange(startDate, endDate);
+
+      // Fetch reports only for today
+      reportController.fetchReportsWithCurrentFilters();
     });
   }
 

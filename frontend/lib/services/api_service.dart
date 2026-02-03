@@ -562,7 +562,7 @@ class ApiService {
         'call_duration':
             callDuration ?? 0, // Add call duration (0 if not provided)
       };
-  
+
       print('ApiService: functionDate parameter received: $functionDate');
       print('ApiService: functionDate is null: ${functionDate == null}');
 
