@@ -57,14 +57,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
+                const SizedBox(width: 24), // Placeholder for alignment
                 const Text(
                   "Follow Ups",
                   style: TextStyle(
@@ -122,7 +115,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
                               controller,
                               "Today",
                               1,
-                              controller.getCurrentLeads().length,
+                              controller.todayCount,
                               controller.selectedTabIndex == 1,
                             ),
                             const SizedBox(width: 8),

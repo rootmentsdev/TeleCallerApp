@@ -9,6 +9,7 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
+import 'package:telecaller_app/utils/responsive_helper.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/widgets.dart/common_widgets.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
@@ -140,6 +141,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize responsive helper
+    ResponsiveHelper.init(context);
+
     return Consumer3<HeaderController, LeadScreenController, ReportController>(
       builder: (
         context,
@@ -240,7 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: ResponsiveHelper.getResponsivePadding(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

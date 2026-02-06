@@ -168,11 +168,6 @@ class _FollowupDetailScreenState extends State<FollowupDetailScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                ),
-                const SizedBox(width: 16),
                 const Expanded(
                   child: Padding(
                     padding: EdgeInsets.only(top: 30, bottom: 10),
