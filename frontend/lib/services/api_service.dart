@@ -514,6 +514,7 @@ class ApiService {
     String? remarks,
     bool followUpFlag = false,
     String? functionDate,
+    String? followUpDate,
     String? createdAt,
     String? bookingNumber,
     int securityAmount = 0,
@@ -558,7 +559,7 @@ class ApiService {
         'mark_as_complaint': markAsComplaint,
         'follow_up_flag': followUpFlag,
         'follow_up_date':
-            followUpFlag && functionDate != null ? functionDate : null,
+            followUpFlag && followUpDate != null ? followUpDate : null,
         'call_duration':
             callDuration ?? 0, // Add call duration (0 if not provided)
       };

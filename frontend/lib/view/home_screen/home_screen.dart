@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
+import 'package:telecaller_app/controller/complaints_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
+import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
@@ -25,10 +27,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingFollowUps = false;
   final LeadRepository _repository = LeadRepository();
+  late ComplaintsController _complaintsController;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize complaints controller
+    _complaintsController = ComplaintsController();
 
     // Listen to repository changes to update UI when follow-ups are fetched
     _repository.addListener(_onRepositoryChanged);
@@ -55,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       Future.delayed(const Duration(milliseconds: 500), () {
         _fetchFollowUpLeads(headerController);
+        _fetchComplaints(headerController);
       });
     });
   }
@@ -68,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _repository.removeListener(_onRepositoryChanged);
+    _complaintsController.dispose();
     super.dispose();
   }
 
@@ -96,6 +104,37 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() => _isLoadingFollowUps = false);
       }
+    }
+  }
+
+  Future<void> _fetchComplaints(HeaderController headerController) async {
+    try {
+      final storeParam = _getStoreParam(headerController.selectedStore);
+      final today = DateTime.now();
+      final dateFrom =
+          DateTime(today.year, today.month, today.day).toIso8601String();
+      final dateTo =
+          DateTime(
+            today.year,
+            today.month,
+            today.day,
+            23,
+            59,
+            59,
+          ).toIso8601String();
+
+      await _complaintsController.fetchComplaints(
+        store: storeParam,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+      );
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('HomeScreen: Error fetching complaints: $e');
+      // Silently handle the error
     }
   }
 
@@ -132,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Get calls today count - calculate independently to avoid being overridden by reports screen
-        // Count leads created today with call duration > 0
+        // Count leads created today with call duration > 0 + complaint calls with duration > 0
         final today = DateTime.now();
         final todayStart = DateTime(today.year, today.month, today.day);
         final todayEnd = DateTime(
@@ -144,16 +183,45 @@ class _HomeScreenState extends State<HomeScreen> {
           59,
         );
 
-        final callsTodayCount =
+        // Filter by store if a specific store is selected
+        // IMPORTANT: Exclude leads marked as complaints to avoid duplicate counting
+        List<LeadModel> callsTodayLeads =
             _repository.allLeads
                 .where(
                   (lead) =>
                       lead.createdAt.isAfter(todayStart) &&
                       lead.createdAt.isBefore(todayEnd) &&
-                      (lead.callDuration ?? 0) > 0,
+                      (lead.callDuration ?? 0) > 0 &&
+                      (lead.markAsComplaint !=
+                          true), // Exclude complaint-marked leads
                 )
-                .length
-                .toString();
+                .toList();
+
+        if (selectedStore != 'All Stores') {
+          final storeLocation =
+              selectedStore.contains(' - ')
+                  ? selectedStore.split(' - ')[1].trim()
+                  : selectedStore;
+          callsTodayLeads =
+              callsTodayLeads
+                  .where(
+                    (lead) =>
+                        lead.location?.toLowerCase() ==
+                        storeLocation.toLowerCase(),
+                  )
+                  .toList();
+        }
+
+        // Add complaint calls with duration > 0
+        int complaintCallsCount = 0;
+        for (final complaint in _complaintsController.complaints) {
+          if ((complaint.callDuration ?? 0) > 0) {
+            complaintCallsCount++;
+          }
+        }
+
+        final callsTodayCount =
+            (callsTodayLeads.length + complaintCallsCount).toString();
 
         return Scaffold(
           backgroundColor: Colors.white,

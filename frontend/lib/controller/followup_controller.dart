@@ -32,11 +32,21 @@ class FollowupController extends ChangeNotifier {
       _headerController?.removeListener(_onHeaderChanged);
       _headerController = headerController;
       _headerController?.addListener(_onHeaderChanged);
+      // Set initial store from header controller
+      _selectedStore = _headerController?.selectedStore;
     }
   }
 
   void _onHeaderChanged() {
-    notifyListeners();
+    // When header changes (store selection), update the store filter and refresh
+    final newStore = _headerController?.selectedStore;
+    if (_selectedStore != newStore) {
+      _selectedStore = newStore;
+      // Refetch follow-up leads with new store filter
+      fetchFollowUpLeads();
+    } else {
+      notifyListeners();
+    }
   }
 
   @override

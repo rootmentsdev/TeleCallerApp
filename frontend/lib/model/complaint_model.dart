@@ -16,6 +16,7 @@ class ComplaintModel {
   final String leadStatus;
   final bool isExpanded;
   final Map<String, dynamic> rawData;
+  final int? callDuration; // Call duration in seconds
 
   ComplaintModel({
     required this.id,
@@ -31,6 +32,7 @@ class ComplaintModel {
     required this.leadStatus,
     this.isExpanded = false,
     required this.rawData,
+    this.callDuration,
   });
 
   /// Create ComplaintModel from API response
@@ -38,6 +40,10 @@ class ComplaintModel {
     // Normalize store name from backend
     final rawStore = json['store']?.toString() ?? '';
     final normalizedStore = StoreLocations.normalizeStoreName(rawStore);
+
+    // Extract call duration from API response
+    final callDuration =
+        json['callDuration'] as int? ?? json['call_duration'] as int?;
 
     return ComplaintModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
@@ -52,6 +58,7 @@ class ComplaintModel {
       callStatus: json['callStatus']?.toString() ?? 'Not Called',
       leadStatus: json['leadStatus']?.toString() ?? 'No Status',
       rawData: json,
+      callDuration: callDuration,
     );
   }
 
@@ -84,6 +91,7 @@ class ComplaintModel {
       'leadStatus': leadStatus,
       'isExpanded': isExpanded,
       'rawData': rawData,
+      'callDuration': callDuration,
     };
   }
 
@@ -102,6 +110,7 @@ class ComplaintModel {
     String? leadStatus,
     bool? isExpanded,
     Map<String, dynamic>? rawData,
+    int? callDuration,
   }) {
     return ComplaintModel(
       id: id ?? this.id,
@@ -117,7 +126,7 @@ class ComplaintModel {
       leadStatus: leadStatus ?? this.leadStatus,
       isExpanded: isExpanded ?? this.isExpanded,
       rawData: rawData ?? this.rawData,
+      callDuration: callDuration ?? this.callDuration,
     );
   }
 }
-
