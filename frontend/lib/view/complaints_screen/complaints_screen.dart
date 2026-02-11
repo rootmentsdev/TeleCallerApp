@@ -7,6 +7,7 @@ import 'package:telecaller_app/model/complaint_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/store_location.dart';
+import 'package:telecaller_app/view/complaints_screen/complaint_detail_screen.dart';
 
 class ComplaintsScreen extends StatefulWidget {
   const ComplaintsScreen({super.key});
@@ -491,6 +492,44 @@ Remarks: ${complaint.remarks}
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+
+              // Call Now Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ComplaintDetailScreen(
+                          complaint: complaint,
+                        ),
+                      ),
+                    );
+                    // Refresh complaints if detail screen returned true
+                    if (result == true) {
+                      _fetchComplaints();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ColorConstant.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    "Call Now",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: TextConstant.dmSansMedium,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -586,28 +625,69 @@ Remarks: ${complaint.remarks}
                     fontFamily: TextConstant.dmSansRegular,
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {
-                    _complaintsController.toggleExpansion(index);
-                  },
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Details',
+                Row(
+                  children: [
+                    // Call Now Button
+                    ElevatedButton(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ComplaintDetailScreen(
+                              complaint: complaint,
+                            ),
+                          ),
+                        );
+                        // Refresh complaints if detail screen returned true
+                        if (result == true) {
+                          _fetchComplaints();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ColorConstant.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Call Now",
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF2196F3),
+                          fontFamily: TextConstant.dmSansMedium,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Color(0xFF2196F3),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _complaintsController.toggleExpansion(index);
+                      },
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Details',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 12,
+                            color: Color(0xFF2196F3),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),

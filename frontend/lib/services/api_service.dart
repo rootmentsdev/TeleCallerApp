@@ -1545,6 +1545,11 @@ class ApiService {
   }
 
   /// Get authentication headers for API requests
+  /// Public method to get auth headers (for use in other screens)
+  Future<Map<String, String>> getAuthHeaders() async {
+    return await _getAuthHeaders();
+  }
+
   Future<Map<String, String>> _getAuthHeaders() async {
     final headers = <String, String>{
       'Content-Type': 'application/json',

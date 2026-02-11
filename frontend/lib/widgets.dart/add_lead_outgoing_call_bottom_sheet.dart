@@ -792,6 +792,7 @@ class _AddLeadOutgoingCallBottomSheetState
                 setState(() {
                   _markAsFollowUp = value ?? false;
                   if (_markAsFollowUp && _followUpDate == null) {
+                    // Set default 7-day follow-up date
                     _followUpDate = DateTime.now().add(const Duration(days: 7));
                   } else if (!_markAsFollowUp) {
                     _followUpDate = null;
@@ -842,10 +843,7 @@ class _AddLeadOutgoingCallBottomSheetState
                             : 'Select Date',
                         style: TextStyle(
                           fontSize: 14,
-                          color:
-                              _followUpDate != null
-                                  ? const Color(0xFF333333)
-                                  : const Color(0xFF999999),
+                          color: const Color(0xFF333333),
                           fontWeight: FontWeight.w600,
                         ),
                       ),

@@ -1,7 +1,6 @@
 import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 
-/// Model class for Complaint data
 class ComplaintModel {
   final String id;
   final String name;
@@ -16,7 +15,7 @@ class ComplaintModel {
   final String leadStatus;
   final bool isExpanded;
   final Map<String, dynamic> rawData;
-  final int? callDuration; // Call duration in seconds
+  final int? callDuration;
 
   ComplaintModel({
     required this.id,
@@ -35,13 +34,9 @@ class ComplaintModel {
     this.callDuration,
   });
 
-  /// Create ComplaintModel from API response
   factory ComplaintModel.fromJson(Map<String, dynamic> json) {
-    // Normalize store name from backend
     final rawStore = json['store']?.toString() ?? '';
     final normalizedStore = StoreLocations.normalizeStoreName(rawStore);
-
-    // Extract call duration from API response
     final callDuration =
         json['callDuration'] as int? ?? json['call_duration'] as int?;
 
@@ -62,7 +57,6 @@ class ComplaintModel {
     );
   }
 
-  /// Format date from ISO string
   static String _formatDate(dynamic dateValue) {
     if (dateValue == null) return 'N/A';
     try {
@@ -75,7 +69,6 @@ class ComplaintModel {
     }
   }
 
-  /// Convert to Map for UI display
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -95,7 +88,6 @@ class ComplaintModel {
     };
   }
 
-  /// Create a copy with updated fields
   ComplaintModel copyWith({
     String? id,
     String? name,
@@ -130,3 +122,4 @@ class ComplaintModel {
     );
   }
 }
+
