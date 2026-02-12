@@ -29,8 +29,22 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill remarks with existing complaint remarks
-    _remarksController.text = widget.complaint.remarks;
+    // Pre-fill remarks: if call was made, use complaint_remarks, otherwise use original remarks
+    if (widget.complaint.hasCallBeenMade && widget.complaint.complaintRemarks.isNotEmpty) {
+      _remarksController.text = widget.complaint.complaintRemarks;
+    } else {
+      _remarksController.text = widget.complaint.remarks;
+    }
+    
+    // Check if call was already made (from backend data)
+    // If callStatus is not "Not Called" or callDuration > 0, call was already made
+    if (widget.complaint.hasCallBeenMade) {
+      _hasCalled = true;
+      _hasSaved = true; // If call was made, it means it was already saved
+      if (widget.complaint.callDuration != null && widget.complaint.callDuration! > 0) {
+        _callDuration = widget.complaint.callDuration!;
+      }
+    }
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final callTrackingController = Provider.of<CallTrackingController>(
@@ -103,14 +117,11 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
       // Prepare request body for complaint call endpoint
       final requestBody = <String, dynamic>{
         'remarks': _remarksController.text.trim(), // Complaint remarks
+        'call_duration': _callDuration > 0 ? _callDuration : 0, // Call duration in seconds
+        // Update call_status to indicate call was made
+        // If call duration > 0, call was likely connected; otherwise use a default status
+        'call_status': _callDuration > 0 ? 'Connected' : 'Not Connected',
       };
-      
-      // Add call duration if available
-      if (_callDuration > 0) {
-        requestBody['call_duration'] = _callDuration;
-      } else {
-        requestBody['call_duration'] = 0; // Include 0 duration for report creation
-      }
       
       final requestBodyJson = json.encode(requestBody);
       
@@ -453,9 +464,13 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          widget.complaint.remarks.isEmpty 
-                              ? 'No remarks' 
-                              : widget.complaint.remarks,
+                          widget.complaint.hasCallBeenMade
+                              ? (widget.complaint.complaintRemarks.isNotEmpty 
+                                  ? widget.complaint.complaintRemarks 
+                                  : 'No complaint remarks')
+                              : (widget.complaint.remarks.isNotEmpty 
+                                  ? widget.complaint.remarks 
+                                  : 'No remarks'),
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,

@@ -353,7 +353,7 @@ Phone: ${complaint.phone}
 Store: ${complaint.store}
 Category: ${complaint.subCategory}
 Date: ${complaint.date}
-Remarks: ${complaint.remarks}
+Remarks: ${complaint.displayRemarks}
 ''';
     Share.share(shareText);
   }
@@ -468,12 +468,14 @@ Remarks: ${complaint.remarks}
               _buildDetailRow('Sub Category', complaint.subCategory),
               const SizedBox(height: 12),
 
-              // Call Remarks
+              // Remarks - Show complaint remarks only after call is made
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Call Remarks / Notes',
+                    complaint.hasCallBeenMade 
+                        ? 'Complaint Remarks' 
+                        : 'Call Remarks / Notes',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[600],
@@ -482,7 +484,7 @@ Remarks: ${complaint.remarks}
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    complaint.remarks,
+                    complaint.displayRemarks,
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.black87,
@@ -494,42 +496,73 @@ Remarks: ${complaint.remarks}
               ),
               const SizedBox(height: 16),
 
-              // Call Now Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ComplaintDetailScreen(
-                          complaint: complaint,
+              // Call Now Button - Only show if call hasn't been made yet
+              if (!complaint.hasCallBeenMade)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ComplaintDetailScreen(
+                            complaint: complaint,
+                          ),
+                        ),
+                      );
+                      // Refresh complaints if detail screen returned true
+                      if (result == true) {
+                        _fetchComplaints();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ColorConstant.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "Call Now",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: TextConstant.dmSansMedium,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                // Show call completed indicator if call was already made
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green[600],
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Call Completed',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green[700],
+                          fontFamily: TextConstant.dmSansMedium,
                         ),
                       ),
-                    );
-                    // Refresh complaints if detail screen returned true
-                    if (result == true) {
-                      _fetchComplaints();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ColorConstant.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    "Call Now",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: TextConstant.dmSansMedium,
-                    ),
+                    ],
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -604,7 +637,7 @@ Remarks: ${complaint.remarks}
             ),
             const SizedBox(height: 4),
             Text(
-              complaint.remarks,
+              complaint.displayRemarks,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -627,43 +660,44 @@ Remarks: ${complaint.remarks}
                 ),
                 Row(
                   children: [
-                    // Call Now Button
-                    ElevatedButton(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ComplaintDetailScreen(
-                              complaint: complaint,
+                    // Call Now Button - Only show if call hasn't been made yet
+                    if (!complaint.hasCallBeenMade)
+                      ElevatedButton(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ComplaintDetailScreen(
+                                complaint: complaint,
+                              ),
                             ),
+                          );
+                          // Refresh complaints if detail screen returned true
+                          if (result == true) {
+                            _fetchComplaints();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ColorConstant.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                        );
-                        // Refresh complaints if detail screen returned true
-                        if (result == true) {
-                          _fetchComplaints();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorConstant.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        child: const Text(
+                          "Call Now",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: TextConstant.dmSansMedium,
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        "Call Now",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: TextConstant.dmSansMedium,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
+                    if (!complaint.hasCallBeenMade) const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () {
                         _complaintsController.toggleExpansion(index);
