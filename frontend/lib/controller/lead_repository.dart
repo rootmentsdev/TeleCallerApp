@@ -201,42 +201,95 @@ class LeadRepository extends ChangeNotifier {
     return _bookingConfirmationData[leadId];
   }
 
+  // ========== Helper Methods ==========
+
+  /// Apply date filter to a list of leads
+  List<LeadModel> _applyDateFilter(List<LeadModel> leads, DateTime date) {
+    return leads.where((lead) {
+      final leadDate = lead.getEffectiveDate();
+      return leadDate.year == date.year &&
+          leadDate.month == date.month &&
+          leadDate.day == date.day;
+    }).toList();
+  }
+
+  /// Extract location from store string (handles "Brand - Location" format)
+  String _extractLocationFromStore(String? store) {
+    if (store == null || store == 'All Stores') return store ?? '';
+    return store.contains(' - ')
+        ? StoreLocations.resolveSelection(store).location
+        : store;
+  }
+
+  /// Parse API response to extract leads list
+  List<dynamic> _parseResponseData(Map<String, dynamic> response) {
+    if (response.containsKey('data')) {
+      final data = response['data'];
+      if (data is List) return data;
+      if (data is Map<String, dynamic> && data.containsKey('leads')) {
+        final leads = data['leads'];
+        if (leads is List) return leads;
+      }
+    }
+    if (response.containsKey('leads')) {
+      final leads = response['leads'];
+      if (leads is List) return leads;
+    }
+    if (response.containsKey('results')) {
+      final results = response['results'];
+      if (results is List) return results;
+    }
+    if (response.containsKey('starredCalls')) {
+      final starredCalls = response['starredCalls'];
+      if (starredCalls is List) return starredCalls;
+    }
+    // Fallback: find first list value
+    for (var entry in response.entries) {
+      if (entry.value is List) return entry.value as List;
+    }
+    return [];
+  }
+
+  /// Create lead with specific category
+  LeadModel _createLeadWithCategory(LeadModel lead, String category) {
+    return LeadModel(
+      id: lead.id,
+      name: lead.name,
+      phone: lead.phone,
+      brand: lead.brand,
+      location: lead.location,
+      leadStatus: lead.leadStatus,
+      callStatus: lead.callStatus,
+      followUpDate: lead.followUpDate,
+      reason: lead.reason,
+      category: category,
+      callDuration: lead.callDuration,
+      createdAt: lead.createdAt,
+      subCategory: lead.subCategory,
+      closingAction: lead.closingAction,
+      functionDate: lead.functionDate,
+      enquiryDate: lead.enquiryDate,
+      leadType: lead.leadType,
+    );
+  }
+
   // ========== Filtered Queries ==========
 
   List<LeadModel> getLeadsByCategory(String? category, {DateTime? date}) {
-    List<LeadModel> filtered = _leads;
-
-    // Apply date filter if provided
-    if (date != null) {
-      filtered =
-          filtered.where((lead) {
-            final leadDate = lead.getEffectiveDate();
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-
-    // Apply category filter
+    List<LeadModel> filtered =
+        date != null ? _applyDateFilter(_leads, date) : _leads;
     if (category == null || category == 'All') return filtered;
     return filtered.where((lead) => lead.category == category).toList();
   }
 
-  /// Helper method to check if a lead matches a store filter
-  /// Handles case-insensitive matching, extracts locations from "Brand - Location" formats,
-  /// and supports partial matching with brand-aware normalization
-  bool matchesStore(LeadModel lead, String store) {
-    if (store.isEmpty || store == 'All Stores') {
-      return true;
-    }
-
-    // Extract brand and location from "Brand - Location" format, or use as-is if already a location
-    String? filterBrand;
+  /// Extract brand and location from store string
+  Map<String, String?> _extractBrandAndLocation(String store) {
+    String? brand;
     String location;
     if (store.contains(' - ')) {
       final parts = store.split(' - ');
       if (parts.length >= 2) {
-        filterBrand = parts[0].trim();
+        brand = parts[0].trim();
         location = parts[1].trim();
       } else {
         location = store;
@@ -244,125 +297,75 @@ class LeadRepository extends ChangeNotifier {
     } else {
       location = store;
     }
+    return {'brand': brand, 'location': location};
+  }
 
-    // Normalize the filter location
-    location = StoreLocations.normalizeStoreName(location);
+  /// Check if brands match (handles variations)
+  bool _brandsMatch(String? brand1, String? brand2) {
+    if (brand1 == null || brand2 == null) return true;
+    final b1 = brand1.toLowerCase();
+    final b2 = brand2.toLowerCase();
+    final isSuitor1 = b1.contains('suitor');
+    final isSuitor2 = b2.contains('suitor');
+    final isZorucci1 = b1.contains('zorucci') || b1.contains('zurocci');
+    final isZorucci2 = b2.contains('zorucci') || b2.contains('zurocci');
+    return (isSuitor1 == isSuitor2) && (isZorucci1 == isZorucci2);
+  }
 
-    // Get lead brand and location
+  /// Helper method to check if a lead matches a store filter
+  bool matchesStore(LeadModel lead, String store) {
+    if (store.isEmpty || store == 'All Stores') return true;
+
+    final filter = _extractBrandAndLocation(store);
     String? leadBrand = lead.brand;
     String leadLocation = lead.location ?? '';
 
-    // Extract brand from lead location if it's in "Brand - Location" format
     if (leadLocation.contains(' - ')) {
       final parts = leadLocation.split(' - ');
       if (parts.length >= 2) {
-        if (leadBrand == null || leadBrand.isEmpty) {
-          leadBrand = parts[0].trim();
-        }
+        if (leadBrand == null || leadBrand.isEmpty) leadBrand = parts[0].trim();
         leadLocation = parts[1].trim();
       }
     }
 
-    // Normalize lead location
     leadLocation = StoreLocations.normalizeStoreName(leadLocation);
+    String location = StoreLocations.normalizeStoreName(filter['location']!);
 
-    // Brand-aware normalization: "Kottakkal" -> "Kottakal" for Suitor Guy stores only
-    final isFilterSuitor =
-        filterBrand != null && filterBrand.toLowerCase().contains('suitor');
-    final isLeadSuitor =
-        leadBrand != null && leadBrand.toLowerCase().contains('suitor');
-
-    if (isFilterSuitor && isLeadSuitor) {
-      // Both are Suitor Guy - normalize "Kottakkal" to "Kottakal"
-      if (leadLocation.toLowerCase() == 'kottakkal') {
-        leadLocation = 'Kottakal';
-      }
-      if (location.toLowerCase() == 'kottakkal') {
-        location = 'Kottakal';
-      }
+    // Brand-aware normalization for Suitor Guy
+    final isSuitor =
+        (filter['brand']?.toLowerCase().contains('suitor') ?? false) &&
+        (leadBrand?.toLowerCase().contains('suitor') ?? false);
+    if (isSuitor) {
+      if (leadLocation.toLowerCase() == 'kottakkal') leadLocation = 'Kottakal';
+      if (location.toLowerCase() == 'kottakkal') location = 'Kottakal';
     }
 
-    // Check brand match if both have brands
-    if (filterBrand != null && leadBrand != null) {
-      final normalizedFilterBrand = filterBrand.toLowerCase().trim();
-      final normalizedLeadBrand = leadBrand.toLowerCase().trim();
+    if (!_brandsMatch(filter['brand'], leadBrand)) return false;
 
-      // Brand must match (handle variations like "Suitor Guy" vs "Suitor")
-      final isFilterSuitorCheck = normalizedFilterBrand.contains('suitor');
-      final isLeadSuitorCheck = normalizedLeadBrand.contains('suitor');
-      final isFilterZorucci =
-          normalizedFilterBrand.contains('zorucci') ||
-          normalizedFilterBrand.contains('zurocci');
-      final isLeadZorucci =
-          normalizedLeadBrand.contains('zorucci') ||
-          normalizedLeadBrand.contains('zurocci');
-
-      // Brand mismatch check
-      if (isFilterSuitorCheck && !isLeadSuitorCheck) {
-        return false; // Filter is Suitor but lead is not
-      }
-      if (isLeadSuitorCheck && !isFilterSuitorCheck) {
-        return false; // Lead is Suitor but filter is not
-      }
-      if (isFilterZorucci && !isLeadZorucci) {
-        return false; // Filter is Zorucci but lead is not
-      }
-      if (isLeadZorucci && !isFilterZorucci) {
-        return false; // Lead is Zorucci but filter is not
-      }
-    }
-
-    // Case-insensitive location matching
-    final normalizedLeadLocation = leadLocation.toLowerCase().trim();
-    final normalizedFilterLocation = location.toLowerCase().trim();
-
-    // Exact match
-    if (normalizedLeadLocation == normalizedFilterLocation) {
-      return true;
-    }
-
-    // Partial match (check if filter location is contained in lead location or vice versa)
-    if (normalizedLeadLocation.contains(normalizedFilterLocation) ||
-        normalizedFilterLocation.contains(normalizedLeadLocation)) {
-      return true;
-    }
-
-    return false;
+    final normalizedLead = leadLocation.toLowerCase().trim();
+    final normalizedFilter = location.toLowerCase().trim();
+    return normalizedLead == normalizedFilter ||
+        normalizedLead.contains(normalizedFilter) ||
+        normalizedFilter.contains(normalizedLead);
   }
 
   List<LeadModel> getLeadsByStore(String? store, {DateTime? date}) {
-    List<LeadModel> filtered = _leads;
-
-    // Apply date filter if provided
-    if (date != null) {
-      filtered =
-          filtered.where((lead) {
-            final leadDate = lead.createdAt;
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-
-    // Apply store filter
+    List<LeadModel> filtered =
+        date != null
+            ? _leads.where((lead) {
+              final leadDate = lead.createdAt;
+              return leadDate.year == date.year &&
+                  leadDate.month == date.month &&
+                  leadDate.day == date.day;
+            }).toList()
+            : _leads;
     if (store == null || store == 'All Stores') return filtered;
-    // Extract location from "Brand - Location" format, or use as-is if already a location
-    final location =
-        store.contains(' - ')
-            ? StoreLocations.resolveSelection(store).location
-            : store;
+    final location = _extractLocationFromStore(store);
     return filtered.where((lead) => lead.location == location).toList();
   }
 
-  List<LeadModel> getLeadsByDate(DateTime date) {
-    // Filter leads by selected date only
-    return _leads.where((lead) {
-      final leadDate = lead.getEffectiveDate();
-      return leadDate.year == date.year &&
-          leadDate.month == date.month &&
-          leadDate.day == date.day;
-    }).toList();
-  }
+  List<LeadModel> getLeadsByDate(DateTime date) =>
+      _applyDateFilter(_leads, date);
 
   /// Get leads within a date range (inclusive)
   List<LeadModel> getLeadsByDateRange(DateTime startDate, DateTime endDate) {
@@ -384,99 +387,53 @@ class LeadRepository extends ChangeNotifier {
   }
 
   List<LeadModel> getLeadsByStoreAndDate(String? store, DateTime date) {
-    // Apply store filter first
     List<LeadModel> baseList = _leads;
-
     if (store != null && store != 'All Stores') {
-      final location =
-          store.contains(' - ')
-              ? StoreLocations.resolveSelection(store).location
-              : store;
-
+      final location = _extractLocationFromStore(store);
       baseList = baseList.where((lead) => lead.location == location).toList();
     }
-
-    // Apply date filter to show only selected date
-    return baseList.where((lead) {
-      final leadDate = lead.getEffectiveDate();
-      return leadDate.year == date.year &&
-          leadDate.month == date.month &&
-          leadDate.day == date.day;
-    }).toList();
+    return _applyDateFilter(baseList, date);
   }
 
   int getCountByCategory(String category, {String? store, DateTime? date}) {
-    List<LeadModel> filtered = _leads;
-
-    if (date != null) {
-      filtered =
-          filtered.where((lead) {
-            final leadDate = lead.getEffectiveDate();
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-
+    List<LeadModel> filtered =
+        date != null ? _applyDateFilter(_leads, date) : _leads;
     if (store != null && store != 'All Stores') {
-      // Extract location from "Brand - Location" format, or use as-is if already a location
-      final location =
-          store.contains(' - ')
-              ? StoreLocations.resolveSelection(store).location
-              : store;
-      filtered = filtered.where((lead) => lead.location == location).toList();
+      filtered =
+          filtered
+              .where(
+                (lead) => lead.location == _extractLocationFromStore(store),
+              )
+              .toList();
     }
-
     return filtered.where((lead) => lead.category == category).length;
   }
 
   int getCountByCallStatus(String callStatus, {String? store, DateTime? date}) {
-    List<LeadModel> filtered = _leads;
-
-    if (date != null) {
-      filtered =
-          filtered.where((lead) {
-            final leadDate = lead.getEffectiveDate();
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-
+    List<LeadModel> filtered =
+        date != null ? _applyDateFilter(_leads, date) : _leads;
     if (store != null && store != 'All Stores') {
-      // Extract location from "Brand - Location" format, or use as-is if already a location
-      final location =
-          store.contains(' - ')
-              ? StoreLocations.resolveSelection(store).location
-              : store;
-      filtered = filtered.where((lead) => lead.location == location).toList();
+      filtered =
+          filtered
+              .where(
+                (lead) => lead.location == _extractLocationFromStore(store),
+              )
+              .toList();
     }
-
     return filtered.where((lead) => lead.callStatus == callStatus).length;
   }
 
   int getTotalLeadsCount({String? store, DateTime? date}) {
-    List<LeadModel> filtered = _leads;
-
-    if (date != null) {
-      filtered =
-          filtered.where((lead) {
-            final leadDate = lead.getEffectiveDate();
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-
+    List<LeadModel> filtered =
+        date != null ? _applyDateFilter(_leads, date) : _leads;
     if (store != null && store != 'All Stores') {
-      // Extract location from "Brand - Location" format, or use as-is if already a location
-      final location =
-          store.contains(' - ')
-              ? StoreLocations.resolveSelection(store).location
-              : store;
-      filtered = filtered.where((lead) => lead.location == location).toList();
+      filtered =
+          filtered
+              .where(
+                (lead) => lead.location == _extractLocationFromStore(store),
+              )
+              .toList();
     }
-
     return filtered.length;
   }
 
@@ -485,26 +442,15 @@ class LeadRepository extends ChangeNotifier {
   int getFollowUpLeadsCount({String? store, DateTime? date}) {
     List<LeadModel> filtered =
         _leads.where((lead) => lead.needsFollowUp).toList();
-
-    if (date != null) {
-      filtered =
-          filtered.where((lead) {
-            final leadDate = lead.getEffectiveDate();
-            return leadDate.year == date.year &&
-                leadDate.month == date.month &&
-                leadDate.day == date.day;
-          }).toList();
-    }
-
+    if (date != null) filtered = _applyDateFilter(filtered, date);
     if (store != null && store != 'All Stores') {
-      // Extract location from "Brand - Location" format, or use as-is if already a location
-      final location =
-          store.contains(' - ')
-              ? StoreLocations.resolveSelection(store).location
-              : store;
-      filtered = filtered.where((lead) => lead.location == location).toList();
+      filtered =
+          filtered
+              .where(
+                (lead) => lead.location == _extractLocationFromStore(store),
+              )
+              .toList();
     }
-
     return filtered.length;
   }
 
@@ -530,120 +476,114 @@ class LeadRepository extends ChangeNotifier {
   /// Parse date string from API - handles multiple date formats
   DateTime? _parseDate(dynamic dateValue) {
     if (dateValue == null) return null;
-
     final dateStr = dateValue.toString().trim();
     if (dateStr.isEmpty) return null;
 
-    // List of common date formats to try
-    final dateFormats = [
-      'yyyy-MM-dd', // 2024-01-15
-      'yyyy-MM-ddTHH:mm:ss', // 2024-01-15T10:30:00
-      'yyyy-MM-ddTHH:mm:ssZ', // 2024-01-15T10:30:00Z
-      'yyyy-MM-ddTHH:mm:ss.SSSZ', // 2024-01-15T10:30:00.000Z
-      'yyyy-MM-dd HH:mm:ss', // 2024-01-15 10:30:00
-      'yyyy/MM/dd', // 2024/01/15
-      'dd-MM-yyyy', // 15-01-2024
-      'dd/MM/yyyy', // 15/01/2024
-      'MM/dd/yyyy', // 01/15/2024
-    ];
-
-    // First try DateTime.parse (handles ISO 8601 and most standard formats)
     try {
       return DateTime.parse(dateStr);
     } catch (e) {
-      // If standard parse fails, try custom formats
-      for (final format in dateFormats) {
+      // Try manual parsing for non-ISO formats
+      final parts = dateStr.split(RegExp(r'[-/]'));
+      if (parts.length == 3) {
         try {
-          // For simple date formats like yyyy-MM-dd, we need to handle them manually
-          if (format == 'yyyy-MM-dd') {
-            final parts = dateStr.split('-');
-            if (parts.length == 3) {
-              final year = int.parse(parts[0]);
-              final month = int.parse(parts[1]);
-              final day = int.parse(parts[2]);
-              return DateTime(year, month, day);
-            }
-          } else if (format == 'yyyy/MM/dd') {
-            final parts = dateStr.split('/');
-            if (parts.length == 3) {
-              final year = int.parse(parts[0]);
-              final month = int.parse(parts[1]);
-              final day = int.parse(parts[2]);
-              return DateTime(year, month, day);
-            }
-          } else if (format == 'dd-MM-yyyy') {
-            final parts = dateStr.split('-');
-            if (parts.length == 3) {
-              final day = int.parse(parts[0]);
-              final month = int.parse(parts[1]);
-              final year = int.parse(parts[2]);
-              return DateTime(year, month, day);
-            }
-          } else if (format == 'dd/MM/yyyy') {
-            final parts = dateStr.split('/');
-            if (parts.length == 3) {
-              final day = int.parse(parts[0]);
-              final month = int.parse(parts[1]);
-              final year = int.parse(parts[2]);
-              return DateTime(year, month, day);
-            }
-          } else if (format == 'MM/dd/yyyy') {
-            final parts = dateStr.split('/');
-            if (parts.length == 3) {
-              final month = int.parse(parts[0]);
-              final day = int.parse(parts[1]);
-              final year = int.parse(parts[2]);
-              return DateTime(year, month, day);
-            }
-          }
+          final nums = parts.map((p) => int.parse(p)).toList();
+          // Try different orderings: yyyy-MM-dd, dd-MM-yyyy, MM/dd/yyyy
+          if (nums[0] > 31)
+            return DateTime(nums[0], nums[1], nums[2]); // yyyy-MM-dd
+          if (nums[2] > 31)
+            return DateTime(nums[2], nums[1], nums[0]); // dd-MM-yyyy
+          return DateTime(nums[2], nums[0], nums[1]); // MM/dd/yyyy
         } catch (e) {
-          // Continue to next format
-          continue;
+          return null;
         }
       }
-
       return null;
     }
   }
 
+  /// Extract field from API response (tries multiple key variations)
+  String? _extractField(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key]?.toString();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  /// Map lead type value to category
+  String? _mapLeadTypeToCategory(String? leadType) {
+    if (leadType == null) return null;
+    final value = leadType.toLowerCase();
+    if (value == 'lossofsale' || value == 'loss of sale')
+      return LeadConstants.categoryLossOfSales;
+    if (value == 'rentout' ||
+        value == 'rent out' ||
+        value == 'rentoutfeedback' ||
+        value == 'return') {
+      return LeadConstants.categoryRentOut;
+    }
+    if (value == 'bookingconfirmation' || value == 'booking confirmation')
+      return LeadConstants.categoryBookingConfirmation;
+    if (value == 'justdial' || value == 'just dial')
+      return LeadConstants.categoryJustDial;
+    if (value == 'followup' || value == 'follow up')
+      return LeadConstants.categoryFollowUp;
+    if (value == 'general' || value == 'walkin' || value == 'walk-in')
+      return null;
+    return null;
+  }
+
+  /// Map lead type value to display name
+  String? _mapLeadTypeToDisplay(String? leadType) {
+    if (leadType == null) return null;
+    final value = leadType.toLowerCase();
+    if (value == 'lossofsale' || value == 'loss of sale') return 'Loss of Sale';
+    if (value == 'rentout' ||
+        value == 'rent out' ||
+        value == 'rentoutfeedback' ||
+        value == 'return')
+      return 'Feedback';
+    if (value == 'bookingconfirmation' || value == 'booking confirmation')
+      return 'Booking';
+    if (value == 'justdial' || value == 'just dial') return 'Just Dial';
+    if (value == 'followup' || value == 'follow up') return 'Follow Up';
+    if (value == 'enquiry' ||
+        value == 'enquiry_booking_reports' ||
+        value == 'enquiry booking reports')
+      return 'Enquiry';
+    if (value == 'general' || value == 'walkin' || value == 'walk-in')
+      return 'Lead';
+    return leadType;
+  }
+
   /// Parse API lead data to LeadModel
-  /// Handles different possible API response formats
-  /// Supports both snake_case (backend list endpoints) and camelCase (individual endpoints)
   LeadModel? _parseApiLeadToLeadModel(dynamic leadData) {
     try {
-      if (leadData is! Map<String, dynamic>) {
-        return null;
-      }
+      if (leadData is! Map<String, dynamic>) return null;
 
-      // Extract fields from API response
-      // Supports both snake_case and camelCase field names
       final id =
-          leadData['id']?.toString() ??
-          leadData['_id']?.toString() ??
-          leadData['leadId']?.toString() ??
-          leadData['lead_id']?.toString() ??
+          _extractField(leadData, ['id', '_id', 'leadId', 'lead_id']) ??
           DateTime.now().millisecondsSinceEpoch.toString();
-
-      // Name field - try both snake_case and camelCase
       final name =
-          leadData['lead_name']?.toString() ?? // Backend snake_case
-          leadData['leadName']?.toString() ?? // Individual endpoint camelCase
-          leadData['name']?.toString() ??
-          leadData['customerName']?.toString() ??
-          leadData['customer_name']?.toString() ??
-          leadData['customer']?.toString() ??
-          leadData['clientName']?.toString() ??
+          _extractField(leadData, [
+            'lead_name',
+            'leadName',
+            'name',
+            'customerName',
+            'customer_name',
+            'customer',
+            'clientName',
+          ]) ??
           '';
-
-      // Phone field - try both snake_case and camelCase
       final phone =
-          leadData['phone_number']?.toString() ?? // Backend snake_case
-          leadData['phoneNumber']
-              ?.toString() ?? // Individual endpoint camelCase
-          leadData['phone']?.toString() ??
-          leadData['mobile']?.toString() ??
-          leadData['contactNumber']?.toString() ??
-          leadData['contact']?.toString() ??
+          _extractField(leadData, [
+            'phone_number',
+            'phoneNumber',
+            'phone',
+            'mobile',
+            'contactNumber',
+            'contact',
+          ]) ??
           '';
 
       // Extract brand and location from store field if available
@@ -698,144 +638,47 @@ class LeadRepository extends ChangeNotifier {
         brand = leadData['brand']?.toString();
       }
 
-      // Lead status - try both snake_case and camelCase
-      final leadStatus =
-          leadData['lead_status']?.toString() ?? // Backend snake_case
-          leadData['leadStatus']?.toString() ?? // Individual endpoint camelCase
-          leadData['status']?.toString();
+      if (name.isEmpty || phone.isEmpty) return null;
 
-      // Call status - try both snake_case and camelCase
+      final leadStatus = _extractField(leadData, [
+        'lead_status',
+        'leadStatus',
+        'status',
+      ]);
       final callStatus =
-          leadData['call_status']?.toString() ?? // Backend snake_case
-          leadData['callStatus']?.toString() ?? // Individual endpoint camelCase
+          _extractField(leadData, ['call_status', 'callStatus']) ??
           LeadConstants.callStatusNotCalled;
-
-      // Reason/remarks - try multiple field names (optional field)
-      final reason =
-          leadData['remarks']?.toString() ??
-          leadData['reason']?.toString() ??
-          leadData['reason_collected_from_store']?.toString() ??
-          leadData['notes']?.toString();
-
-      // Note: reason/remarks/notes are optional fields for return leads
-      // They may not be present in the API response, which is fine
-
+      final reason = _extractField(leadData, [
+        'remarks',
+        'reason',
+        'reason_collected_from_store',
+        'notes',
+      ]);
       final callDuration =
           leadData['callDuration'] as int? ?? leadData['call_duration'] as int?;
-
-      // Parse dates using the helper function that handles multiple formats
-      // Backend uses: follow_up_date for follow-up date, function_date for function date
-      // Individual endpoint may use camelCase: followUpDate, functionDate
-      // IMPORTANT: Only set followUpDate if there's an actual follow_up_date field
-      // Do NOT use function_date as a fallback for followUpDate
-      DateTime? followUpDate =
-          _parseDate(leadData['follow_up_date']) ?? // Backend snake_case
-          _parseDate(leadData['followUpDate']); // Individual endpoint camelCase
-
-      // Parse function_date separately (for Function Date display)
-      DateTime? functionDate =
-          _parseDate(leadData['function_date']) ?? // Backend snake_case
-          _parseDate(leadData['functionDate']); // Individual endpoint camelCase
-
-      // Parse enquiry_date separately (for Call Date/Enquiry Date display)
-      DateTime? enquiryDate =
-          _parseDate(leadData['enquiry_date']) ?? // Backend snake_case
-          _parseDate(leadData['enquiryDate']); // Individual endpoint camelCase
-
-      DateTime createdAt = DateTime.now();
-      // Try multiple date field names for created date
-      final parsedCreatedAt =
-          _parseDate(leadData['created_at']) ?? // Backend snake_case
-          _parseDate(leadData['createdAt']) ?? // Individual endpoint camelCase
-          _parseDate(
-            leadData['enquiry_date'],
-          ) ?? // Backend snake_case (fallback)
-          _parseDate(
-            leadData['enquiryDate'],
-          ) ?? // Individual endpoint camelCase (fallback)
-          _parseDate(leadData['visit_date']) ?? // Backend snake_case
-          _parseDate(leadData['visitDate']) ?? // Individual endpoint camelCase
-          _parseDate(leadData['return_date']) ?? // Backend snake_case
-          _parseDate(leadData['returnDate']) ?? // Individual endpoint camelCase
+      final followUpDate =
+          _parseDate(leadData['follow_up_date']) ??
+          _parseDate(leadData['followUpDate']);
+      final functionDate =
+          _parseDate(leadData['function_date']) ??
+          _parseDate(leadData['functionDate']);
+      final enquiryDate =
+          _parseDate(leadData['enquiry_date']) ??
+          _parseDate(leadData['enquiryDate']);
+      final createdAt =
+          _parseDate(leadData['created_at']) ??
+          _parseDate(leadData['createdAt']) ??
+          _parseDate(leadData['enquiry_date']) ??
+          _parseDate(leadData['enquiryDate']) ??
+          _parseDate(leadData['visit_date']) ??
+          _parseDate(leadData['visitDate']) ??
+          _parseDate(leadData['return_date']) ??
+          _parseDate(leadData['returnDate']) ??
           DateTime.now();
 
-      createdAt = parsedCreatedAt;
-
-      // Validate required fields
-      if (name.isEmpty || phone.isEmpty) {
-        return null;
-      }
-
-      // Determine category - backend uses lead_type field
-      String? category; // Default to null (will show in "All Calls" tab)
-      final leadTypeFieldForCategory =
-          leadData['lead_type']?.toString() ?? // Backend snake_case
-          leadData['leadType']?.toString(); // Individual endpoint camelCase
-
-      if (leadTypeFieldForCategory != null) {
-        final leadTypeValue = leadTypeFieldForCategory.toLowerCase();
-        if (leadTypeValue == 'lossofsale' || leadTypeValue == 'loss of sale') {
-          category = LeadConstants.categoryLossOfSales;
-        } else if (leadTypeValue == 'rentout' ||
-            leadTypeValue == 'rent out' ||
-            leadTypeValue == 'rentoutfeedback' ||
-            leadTypeValue == 'return') {
-          category = LeadConstants.categoryRentOut;
-        } else if (leadTypeValue == 'bookingconfirmation' ||
-            leadTypeValue == 'booking confirmation') {
-          category = LeadConstants.categoryBookingConfirmation;
-        } else if (leadTypeValue == 'justdial' ||
-            leadTypeValue == 'just dial') {
-          category = LeadConstants.categoryJustDial;
-        } else if (leadTypeValue == 'followup' ||
-            leadTypeValue == 'follow up') {
-          category = LeadConstants.categoryFollowUp;
-        } else if (leadTypeValue == 'general' ||
-            leadTypeValue == 'walkin' ||
-            leadTypeValue == 'walk-in') {
-          // General/Walk-in leads don't have a specific category - show in "All Calls"
-          category = null;
-        }
-        // If leadType doesn't match any known type, category remains null
-      }
-
-      // Extract lead type for display (e.g., "Enquiry", "Booking", "Feedback")
-      String? leadType;
-      final leadTypeField =
-          leadData['lead_type']?.toString() ?? // Backend snake_case
-          leadData['leadType']?.toString(); // Individual endpoint camelCase
-
-      if (leadTypeField != null) {
-        final leadTypeLower = leadTypeField.toLowerCase();
-        if (leadTypeLower == 'lossofsale' || leadTypeLower == 'loss of sale') {
-          leadType = 'Loss of Sale';
-        } else if (leadTypeLower == 'rentout' ||
-            leadTypeLower == 'rent out' ||
-            leadTypeLower == 'rentoutfeedback' ||
-            leadTypeLower == 'return') {
-          leadType = 'Feedback';
-        } else if (leadTypeLower == 'bookingconfirmation' ||
-            leadTypeLower == 'booking confirmation') {
-          leadType = 'Booking';
-        } else if (leadTypeLower == 'justdial' ||
-            leadTypeLower == 'just dial') {
-          leadType = 'Just Dial';
-        } else if (leadTypeLower == 'followup' ||
-            leadTypeLower == 'follow up') {
-          leadType = 'Follow Up';
-        } else if (leadTypeLower == 'enquiry' ||
-            leadTypeLower == 'enquiry_booking_reports' ||
-            leadTypeLower == 'enquiry booking reports') {
-          leadType = 'Enquiry';
-        } else if (leadTypeLower == 'general' ||
-            leadTypeLower == 'walkin' ||
-            leadTypeLower == 'walk-in') {
-          leadType = 'Lead';
-        } else {
-          // Use the original value if it doesn't match known types
-          leadType = leadTypeField;
-        }
-      }
+      final leadTypeField = _extractField(leadData, ['lead_type', 'leadType']);
+      final category = _mapLeadTypeToCategory(leadTypeField);
+      final leadType = _mapLeadTypeToDisplay(leadTypeField);
 
       return LeadModel(
         id: id,
@@ -883,38 +726,7 @@ class LeadRepository extends ChangeNotifier {
           (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getReturnLeads(store: storeFilter);
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // Fallback: take first list in map
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
+      final leadsData = _parseResponseData(response);
 
       // Remove existing return leads (to avoid duplicates)
       // BUT: Preserve return leads that have follow-up dates set
@@ -933,22 +745,9 @@ class LeadRepository extends ChangeNotifier {
           // Parse the lead data from list endpoint
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
-            // Ensure category is Return
-            final returnLead = LeadModel(
-              id: lead.id,
-              name: lead.name,
-              phone: lead.phone,
-              brand: lead.brand,
-              location: lead.location,
-              leadStatus: lead.leadStatus,
-              callStatus: lead.callStatus,
-              followUpDate: lead.followUpDate,
-              reason: lead.reason,
-              category: LeadConstants.categoryRentOut,
-              callDuration: lead.callDuration,
-              createdAt: lead.createdAt,
-              subCategory: lead.subCategory,
-              closingAction: lead.closingAction,
+            final returnLead = _createLeadWithCategory(
+              lead,
+              LeadConstants.categoryRentOut,
             );
             _leads.add(returnLead);
             successCount++;
@@ -1072,38 +871,7 @@ class LeadRepository extends ChangeNotifier {
           (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getFollowUpLeads(store: storeFilter);
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // If no recognized key, check if any value is a list
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
+      final leadsData = _parseResponseData(response);
 
       // Debug: Log current state before fetch
       final leadsBeforeFetch = _leads.length;
@@ -1170,7 +938,6 @@ class LeadRepository extends ChangeNotifier {
         try {
           final lead = _parseApiLeadToLeadModel(leadData);
           if (lead != null) {
-            // Ensure category is set to Follow-Up
             final followUpLead = LeadModel(
               id: lead.id,
               name: lead.name,
@@ -1336,38 +1103,7 @@ class LeadRepository extends ChangeNotifier {
         createdAt: createdAt,
       );
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // If no recognized key, check if any value is a list
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
+      final leadsData = _parseResponseData(response);
 
       // Debug: Print how many leads were received
       print('LeadRepository: Received ${leadsData.length} leads from API');
@@ -1544,43 +1280,7 @@ class LeadRepository extends ChangeNotifier {
           (store == null || store == 'All Stores') ? null : store;
       final response = await _apiService.getStarredCalls(store: storeFilter);
 
-      // Parse response - handle different response formats
-      List<dynamic> leadsData = [];
-
-      if (response.containsKey('starredCalls')) {
-        final starredCalls = response['starredCalls'];
-        if (starredCalls is List) {
-          leadsData = starredCalls;
-        }
-      } else if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          leadsData = data;
-        } else if (data is Map<String, dynamic> && data.containsKey('leads')) {
-          final leads = data['leads'];
-          if (leads is List) {
-            leadsData = leads;
-          }
-        }
-      } else if (response.containsKey('leads')) {
-        final leads = response['leads'];
-        if (leads is List) {
-          leadsData = leads;
-        }
-      } else if (response.containsKey('results')) {
-        final results = response['results'];
-        if (results is List) {
-          leadsData = results;
-        }
-      } else {
-        // If no recognized key, check if any value is a list
-        for (var entry in response.entries) {
-          if (entry.value is List) {
-            leadsData = entry.value as List;
-            break;
-          }
-        }
-      }
+      final leadsData = _parseResponseData(response);
 
       print(
         'LeadRepository: Fetched ${leadsData.length} starred calls from API',
@@ -1603,7 +1303,6 @@ class LeadRepository extends ChangeNotifier {
         try {
           final lead = LeadModel.fromApiJson(leadData);
 
-          // Mark as starred since it came from the starred calls endpoint
           final starredLead = LeadModel(
             id: lead.id,
             name: lead.name,
@@ -1621,7 +1320,7 @@ class LeadRepository extends ChangeNotifier {
             returnDate: lead.returnDate,
             source: lead.source,
             leadType: lead.leadType,
-            isStarred: true, // Explicitly mark as starred
+            isStarred: true,
             subCategory: lead.subCategory,
             closingAction: lead.closingAction,
           );
