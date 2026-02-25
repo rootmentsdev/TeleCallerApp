@@ -828,6 +828,7 @@ class ApiService {
     String? numberOfAttires,
     String? competitor,
     String? service,
+    String? refundStatus,
   }) async {
     final url = Uri.parse(ApiConfig.updateReturn(id));
 
@@ -904,6 +905,9 @@ class ApiService {
       }
       if (service != null && service.isNotEmpty) {
         requestBody['service'] = service;
+      }
+      if (refundStatus != null && refundStatus.isNotEmpty) {
+        requestBody['refund_status'] = refundStatus;
       }
 
       final requestBodyJson = json.encode(requestBody);

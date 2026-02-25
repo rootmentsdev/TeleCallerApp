@@ -36,6 +36,8 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   DateTime? _followUpDate;
   bool _isSaving = false;
   String? _selectedService;
+  String?
+  _securityAmountRefundStatus; // New field for security amount refund status
   bool _isDetailsCollapsed = false;
 
   // New fields for redesigned form
@@ -54,6 +56,12 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   ];
 
   final List<String> serviceOptions = ["Excellent", "Average", "Not satisfied"];
+
+  final List<String> securityAmountRefundOptions = [
+    "Security Amount Refunded",
+    "Security Amount Not Refunded",
+    "Customer Not Checked",
+  ];
 
   final List<String> complaintSubCategoryOptions = [
     "Product Changed",
@@ -264,6 +272,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                 ? _competitorController.text
                 : null,
         service: _selectedService,
+        refundStatus: _securityAmountRefundStatus,
       );
 
       if (mounted) {
@@ -793,6 +802,61 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                     ),
 
                                     const SizedBox(height: 16),
+
+                                    // Security Amount Refund Status (hidden when complaint is marked)
+                                    if (!_markAsComplaint)
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Security Amount Refund Status",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                              fontFamily:
+                                                  TextConstant.dmSansRegular,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: Colors.grey[300]!,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: DropdownButton<String>(
+                                              value:
+                                                  _securityAmountRefundStatus,
+                                              hint: const Text("Select"),
+                                              isExpanded: true,
+                                              underline: const SizedBox(),
+                                              items:
+                                                  securityAmountRefundOptions
+                                                      .map((String item) {
+                                                        return DropdownMenuItem<
+                                                          String
+                                                        >(
+                                                          value: item,
+                                                          child: Text(item),
+                                                        );
+                                                      })
+                                                      .toList(),
+                                              onChanged: (String? value) {
+                                                setState(() {
+                                                  _securityAmountRefundStatus =
+                                                      value;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                   ],
 
                                   // Mark as Complaint
@@ -807,6 +871,10 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                                 _markAsComplaint;
                                             if (!_markAsComplaint) {
                                               _selectedComplaintSubCategory =
+                                                  null;
+                                            } else {
+                                              // Clear refund status when complaint is marked
+                                              _securityAmountRefundStatus =
                                                   null;
                                             }
                                           });

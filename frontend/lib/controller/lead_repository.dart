@@ -803,6 +803,7 @@ class LeadRepository extends ChangeNotifier {
     String? numberOfAttires,
     String? competitor,
     String? service,
+    String? refundStatus,
   }) async {
     try {
       await ensureInitialized();
@@ -827,6 +828,7 @@ class LeadRepository extends ChangeNotifier {
         numberOfAttires: numberOfAttires,
         competitor: competitor,
         service: service,
+        refundStatus: refundStatus,
       );
 
       // Update local lead if it exists

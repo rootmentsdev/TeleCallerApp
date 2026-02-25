@@ -551,6 +551,9 @@ class LeadScreenController extends ChangeNotifier {
       clearShowOnlyNewLead();
     }
 
+    // Sort leads alphabetically by name
+    filteredLeads.sort((a, b) => a.name.compareTo(b.name));
+
     return filteredLeads
         .map((lead) => LeadDisplayModel.fromLead(lead))
         .toList();
@@ -712,6 +715,7 @@ class LeadScreenController extends ChangeNotifier {
     String? numberOfAttires,
     String? competitor,
     String? service,
+    String? refundStatus,
   }) async {
     try {
       await _repository.updateReturnLeadFromApi(
@@ -734,6 +738,7 @@ class LeadScreenController extends ChangeNotifier {
         numberOfAttires: numberOfAttires,
         competitor: competitor,
         service: service,
+        refundStatus: refundStatus,
       );
       _removeLeadFromActiveLists(id);
       notifyListeners();

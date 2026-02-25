@@ -562,7 +562,7 @@ Remarks: ${complaint.displayRemarks}
                       ),
                     ],
                   ),
-                ),
+              ),
             ],
           ),
         ),
@@ -698,28 +698,28 @@ Remarks: ${complaint.displayRemarks}
                         ),
                       ),
                     if (!complaint.hasCallBeenMade) const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        _complaintsController.toggleExpansion(index);
-                      },
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Details',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF2196F3),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 12,
-                            color: Color(0xFF2196F3),
-                          ),
-                        ],
+                GestureDetector(
+                  onTap: () {
+                    _complaintsController.toggleExpansion(index);
+                  },
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Details',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2196F3),
+                        ),
                       ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Color(0xFF2196F3),
+                      ),
+                    ],
+                  ),
                     ),
                   ],
                 ),
