@@ -6,7 +6,6 @@ import 'package:telecaller_app/model/call_model.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/services/api_service.dart';
-import 'package:telecaller_app/view/home_screen/bottomnavigation_bar.dart';
 
 class AddLeadBottomSheet extends StatefulWidget {
   final String? prefilledPhoneNumber;
@@ -36,9 +35,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
   String? _selectedSubCategory;
   String? _selectedCloseReason;
   String? _selectedItemCategory;
-  DateTime? _followUpDate;
   DateTime? _functionDate;
-  bool _markAsFollowUp = false;
   bool _markAsComplaint = false;
   int? _callDuration;
 
@@ -531,11 +528,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                       keyboardType: TextInputType.multiline,
                     ),
 
-                    const SizedBox(height: 16),
-
-                    // Mark As Follow Up
-                    _buildFollowUpSection(),
-
                     const SizedBox(height: 32),
 
                     // Buttons
@@ -727,105 +719,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
     );
   }
 
-  Widget _buildFollowUpSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: _markAsFollowUp,
-              onChanged: (value) {
-                setState(() {
-                  _markAsFollowUp = value ?? false;
-                  if (_markAsFollowUp && _followUpDate == null) {
-                    // Set default 7-day follow-up date
-                    _followUpDate = DateTime.now().add(const Duration(days: 7));
-                  } else if (!_markAsFollowUp) {
-                    _followUpDate = null;
-                  }
-                });
-              },
-              activeColor: const Color(0xFF003D7A),
-            ),
-            const Text(
-              "Mark as Follow Up",
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF333333),
-              ),
-            ),
-          ],
-        ),
-
-        if (_markAsFollowUp) ...[
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: _selectFollowUpDate,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF003D7A)),
-                borderRadius: BorderRadius.circular(12),
-                color: const Color(0xFF003D7A).withValues(alpha: 0.05),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Follow Up Date',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF666666),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _followUpDate != null
-                            ? _formatDate(_followUpDate!)
-                            : 'Select Date',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: const Color(0xFF333333),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Icon(
-                    Icons.calendar_today,
-                    color: Color(0xFF003D7A),
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Future<void> _selectFollowUpDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _followUpDate ?? DateTime.now().add(const Duration(days: 7)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-
-    if (date != null) {
-      setState(() {
-        _followUpDate = date;
-      });
-    }
-  }
-
   Future<void> _selectFunctionDate() async {
     final date = await showDatePicker(
       context: context,
@@ -862,16 +755,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
 
   Future<void> _saveLead() async {
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_markAsFollowUp && _followUpDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select follow-up date'),
-          backgroundColor: Colors.red,
-        ),
-      );
       return;
     }
 
@@ -921,12 +804,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
             _remarksController.text.trim().isEmpty
                 ? null
                 : _remarksController.text.trim(),
-        followUpFlag: _markAsFollowUp,
         functionDate: functionDateString,
-        followUpDate:
-            _markAsFollowUp && _followUpDate != null
-                ? _followUpDate!.toIso8601String()
-                : null,
         createdAt: DateTime.now().toIso8601String(),
         callDuration: _callDuration,
         subCategory: _selectedSubCategory,
@@ -992,7 +870,6 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
               _callDuration != null && _callDuration! > 0
                   ? 'Connected'
                   : 'Not Called',
-          followUpDate: _markAsFollowUp ? _followUpDate : null,
           reason:
               _remarksController.text.trim().isEmpty
                   ? null
@@ -1015,15 +892,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         setState(() {
           _isLoading = false;
         });
-
-        if (_markAsFollowUp && _followUpDate != null) {
-          Navigator.pop(context);
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            BottomNavState.navigateToFollowUp();
-          });
-        } else {
-          Navigator.pop(context);
-        }
+        Navigator.pop(context);
       }
     } catch (e) {
       print('AddLeadBottomSheet: Error saving lead: $e');

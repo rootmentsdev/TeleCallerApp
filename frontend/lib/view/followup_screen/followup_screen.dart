@@ -66,7 +66,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
                     color: Colors.white,
                   ),
                 ),
-                GestureDetector(
+               GestureDetector(
                   onTap: () {
                     // Handle notification tap
                   },

@@ -4,6 +4,7 @@ import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/view/lead_screen/return_lead_details_screen.dart';
+import 'package:telecaller_app/view/lead_screen/booking_confirmation_detail_screen.dart';
 
 /// Helper class for navigation logic
 class NavigationHelper {
@@ -36,6 +37,18 @@ class NavigationHelper {
         context,
         MaterialPageRoute(
           builder: (context) => ReturnLeadDetailsScreen(lead: lead),
+        ),
+      );
+      return;
+    }
+
+    // Special handling for Booking Confirmation
+    if (category == LeadConstants.categoryBookingConfirmation ||
+        category == "Booking Confirmation") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BookingConfirmationDetailScreen(lead: lead),
         ),
       );
       return;

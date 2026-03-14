@@ -32,8 +32,6 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
   String? _selectedComplaintSubCategory;
   int _rating = 0;
   final TextEditingController _remarksController = TextEditingController();
-  bool _markAsFollowUp = false;
-  DateTime? _followUpDate;
   bool _isSaving = false;
   String? _selectedService;
   String?
@@ -173,24 +171,6 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
     super.dispose();
   }
 
-  String _getMonthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
-  }
-
   String _formatDuration(int seconds) {
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
@@ -256,9 +236,6 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
         callDuration: _callDuration > 0 ? _callDuration : null,
         markAsComplaint: _markAsComplaint ? true : null,
         subCategory: _selectedComplaintSubCategory,
-        followUpFlag: _markAsFollowUp ? true : null,
-        followUpDate: _markAsFollowUp ? _followUpDate : null,
-        clearFollowUpDate: !_markAsFollowUp ? true : null,
         numberOfFunctions:
             _numberOfFunctionsController.text.isNotEmpty
                 ? _numberOfFunctionsController.text
@@ -1313,102 +1290,8 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                     ),
 
                                   if (!_isDetailsCollapsed) ...[
-                                    // Mark as Follow Up
-                                    Row(
-                                      children: [
-                                        Checkbox(
-                                          value: _markAsFollowUp,
-                                          onChanged: (value) {
-                                            setState(() {
-                                              _markAsFollowUp = value ?? false;
-                                              if (_markAsFollowUp &&
-                                                  _followUpDate == null) {
-                                                _followUpDate = DateTime.now()
-                                                    .add(
-                                                      const Duration(days: 1),
-                                                    );
-                                              }
-                                            });
-                                          },
-                                          activeColor:
-                                              ColorConstant.primaryColor,
-                                        ),
-                                        Text(
-                                          "Mark as Follow Up",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[800],
-                                            fontFamily:
-                                                TextConstant.dmSansMedium,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-
-                                    if (_markAsFollowUp) ...[
-                                      const SizedBox(height: 12),
-                                      InkWell(
-                                        onTap: () async {
-                                          final date = await showDatePicker(
-                                            context: context,
-                                            initialDate:
-                                                _followUpDate ??
-                                                DateTime.now().add(
-                                                  const Duration(days: 1),
-                                                ),
-                                            firstDate: DateTime.now(),
-                                            lastDate: DateTime.now().add(
-                                              const Duration(days: 365),
-                                            ),
-                                          );
-                                          if (date != null) {
-                                            setState(() {
-                                              _followUpDate = date;
-                                            });
-                                          }
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                              color: Colors.grey[300]!,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                _followUpDate != null
-                                                    ? "Follow-Ups Date (${_followUpDate!.day} ${_getMonthName(_followUpDate!.month)} ${_followUpDate!.year})"
-                                                    : "Follow-Ups Date",
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey[600],
-                                                  fontFamily:
-                                                      TextConstant
-                                                          .dmSansRegular,
-                                                ),
-                                              ),
-                                              Icon(
-                                                Icons.calendar_today,
-                                                size: 18,
-                                                color: Colors.grey[600],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                    const SizedBox(height: 24),
                                   ],
-
-                                  const SizedBox(height: 24),
 
                                   // Action Buttons
                                   Row(

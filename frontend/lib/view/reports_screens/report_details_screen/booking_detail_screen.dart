@@ -23,6 +23,31 @@ class BookingDetailScreen extends StatefulWidget {
 }
 
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  late String _selectedService;
+  late bool _billReceivedYes;
+  late bool _billReceivedNo;
+  late bool _amountMismatch;
+  late TextEditingController _remarksController;
+  bool _isSaving = false;
+
+  final List<String> serviceOptions = ["Excellent", "Average", "Not satisfied"];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedService = "Average";
+    _billReceivedYes = false;
+    _billReceivedNo = false;
+    _amountMismatch = false;
+    _remarksController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _remarksController.dispose();
+    super.dispose();
+  }
+
   String _getDisplayValue(dynamic value, String defaultValue) {
     if (value == null || value.toString().isEmpty) {
       return defaultValue;
@@ -43,26 +68,88 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     }
   }
 
+  String _formatDuration(dynamic duration) {
+    if (duration == null) return '00:00 Mins';
+
+    int seconds = 0;
+    if (duration is int) {
+      seconds = duration;
+    } else if (duration is String) {
+      seconds = int.tryParse(duration) ?? 0;
+    }
+
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')} Mins';
+  }
+
   void _shareCallReport() {
     final data = widget.reportData ?? {};
     final shareText = '''
-Call Report - ${widget.callType}
+Booking Confirmation - ${widget.callType}
 
 Customer: ${widget.name}
 Phone: ${widget.phone}
 
-Call Details:
-Call Date: ${_getDisplayValue(data['callDate'], 'Not available')}
-Location: ${_getDisplayValue(data['storeName'], 'Not available')}
-Function Date: ${_getDisplayValue(data['functionDate'], 'Not available')}
-Sub Category: ${_getDisplayValue(data['subCategory'], 'Not available')}
-Close Action: ${_getDisplayValue(data['closingAction'], 'Not available')}
-Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
+Service: $_selectedService
+Bill Received: ${_billReceivedYes ? 'Yes' : (_billReceivedNo ? 'No' : 'Not specified')}
+Amount Mismatch: ${_amountMismatch ? 'Yes' : 'No'}
 
-Follow Up:
-Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
+Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'No remarks'}
 ''';
     Share.share(shareText);
+  }
+
+  Future<void> _saveCallUpdate() async {
+    if (_selectedService == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a service'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // TODO: Add API call to save booking confirmation update
+      // await apiService.updateBookingConfirmation(
+      //   id: widget.reportData?['id'],
+      //   service: _selectedService,
+      //   billReceived: _billReceivedYes,
+      //   amountMismatch: _amountMismatch,
+      //   remarks: _remarksController.text,
+      // );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Call update saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving call update: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
@@ -70,59 +157,43 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
     final data = widget.reportData ?? {};
     final leadData = data['leadData'] ?? data;
 
-    final callDateRaw = _getDisplayValue(
-      data['callDate'] ??
-          data['date'] ??
-          leadData['created_at'] ??
-          leadData['createdAt'],
-      'Not available',
-    );
-    final callDate = _formatDateString(callDateRaw);
     final location = _getDisplayValue(
       data['storeName'] ?? leadData['store'] ?? leadData['storeName'],
       'Not available',
     );
-    final functionDateRaw = _getDisplayValue(
-      data['functionDate'] ??
-          data['function_date'] ??
-          leadData['functionDate'] ??
-          leadData['function_date'] ??
-          callDateRaw,
-      'Not available',
+    final attendedBy = _getDisplayValue(
+      data['attendedBy'] ?? leadData['attendedBy'],
+      'N/A',
     );
-    final functionDate = _formatDateString(functionDateRaw);
-    final subCategory = _getDisplayValue(
-      data['subCategory'] ??
-          data['sub_category'] ??
-          leadData['subCategory'] ??
-          leadData['sub_category'],
-      'Not available',
+    final bookingDate = _formatDateString(
+      data['bookingDate'] ??
+          data['booking_date'] ??
+          leadData['bookingDate'] ??
+          leadData['booking_date'],
     );
-    final closingAction = _getDisplayValue(
-      data['closingAction'] ??
-          data['closing_action'] ??
-          leadData['closingAction'] ??
-          leadData['closing_action'],
-      'Not available',
+    final pickUpDate = _formatDateString(
+      data['pickUpDate'] ??
+          data['pick_up_date'] ??
+          leadData['pickUpDate'] ??
+          leadData['pick_up_date'],
     );
-    final remarks = _getDisplayValue(
-      data['remarks'] ?? leadData['remarks'] ?? leadData['reason'],
-      'Not available',
+    final advanceAmount = _getDisplayValue(
+      data['advanceAmount'] ??
+          data['advance_amount'] ??
+          leadData['advanceAmount'] ??
+          leadData['advance_amount'],
+      'N/A',
     );
-    final followUpDateRaw = _getDisplayValue(
-      data['followUpDate'] ??
-          data['follow_up_date'] ??
-          leadData['followUpDate'] ??
-          leadData['follow_up_date'],
-      'Not available',
+    final totalAmount = _getDisplayValue(
+      data['totalAmount'] ??
+          data['total_amount'] ??
+          leadData['totalAmount'] ??
+          leadData['total_amount'],
+      'N/A',
     );
-    final followUpDate = _formatDateString(followUpDateRaw);
-    final callDuration =
-        data['callDuration'] != null
-            ? '${data['callDuration']}s'
-            : (data['call_duration'] != null
-                ? '${data['call_duration']}s'
-                : 'Not available');
+    final callDuration = _formatDuration(
+      data['callDuration'] ?? data['call_duration'],
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -148,7 +219,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Reports',
+                        'Booking Confirmation Leads',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -157,21 +228,6 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                         ),
                       ),
                     ],
-                  ),
-                  GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.notifications,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -183,63 +239,6 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Customer Info Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE3F2FD),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                widget.phone,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[700],
-                                  fontFamily: TextConstant.dmSansRegular,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: ColorConstant.primaryColor,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            widget.callType,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
                   // Call Details Section
                   Text(
                     'Call Details',
@@ -252,55 +251,32 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                   ),
                   const SizedBox(height: 12),
 
-                  // Call Date with badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Customer Info
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Call Date',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontFamily: TextConstant.dmSansRegular,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            callDate,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        widget.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          callDuration,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1976D2),
-                          ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '+91 ${widget.phone}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
-                  // Location and Function Date
+                  // Location and Attended By
                   Row(
                     children: [
                       Expanded(
@@ -333,7 +309,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Function Date',
+                              'Attended by',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -342,7 +318,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              functionDate,
+                              attendedBy,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -356,7 +332,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                   ),
                   const SizedBox(height: 16),
 
-                  // Sub Category and Close Action
+                  // Booking Date and Pick Up Date
                   Row(
                     children: [
                       Expanded(
@@ -364,7 +340,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Sub Category',
+                              'Booking Date',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -373,7 +349,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              subCategory,
+                              bookingDate,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -389,7 +365,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Close Action',
+                              'Pick Up Date',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -398,7 +374,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              closingAction,
+                              pickUpDate,
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -412,164 +388,331 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                   ),
                   const SizedBox(height: 16),
 
-                  // Remarks / Notes
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Advance Amount and Total Amount
+                  Row(
                     children: [
-                      Text(
-                        'Remarks / Notes',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontFamily: TextConstant.dmSansRegular,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Advance Amount',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontFamily: TextConstant.dmSansRegular,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              advanceAmount,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        remarks,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total Amount',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontFamily: TextConstant.dmSansRegular,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              totalAmount,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // Follow Up Section
-                  Text(
-                    'Follow Up',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                      fontFamily: TextConstant.dmSansMedium,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Follow Up Call Date with badge
+                  // Service and Call Duration
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Service',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontFamily: TextConstant.dmSansRegular,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: DropdownButton<String>(
+                                value: _selectedService,
+                                hint: const Text("Select"),
+                                isExpanded: true,
+                                underline: const SizedBox(),
+                                items:
+                                    serviceOptions.map((String item) {
+                                      return DropdownMenuItem<String>(
+                                        value: item,
+                                        child: Text(item),
+                                      );
+                                    }).toList(),
+                                onChanged: (String? value) {
+                                  setState(() {
+                                    _selectedService = value ?? "Average";
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Call Duration',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontFamily: TextConstant.dmSansRegular,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                callDuration,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Bill Received
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bill Received',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          Text(
-                            'Call Date',
+                          Checkbox(
+                            value: _billReceivedYes,
+                            onChanged: (value) {
+                              setState(() {
+                                _billReceivedYes = value ?? false;
+                                if (_billReceivedYes) {
+                                  _billReceivedNo = false;
+                                }
+                              });
+                            },
+                          ),
+                          const Text(
+                            'Yes',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontFamily: TextConstant.dmSansRegular,
+                              fontSize: 14,
+                              color: Colors.black87,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            followUpDate,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(width: 48),
+                          Checkbox(
+                            value: _billReceivedNo,
+                            onChanged: (value) {
+                              setState(() {
+                                _billReceivedNo = value ?? false;
+                                if (_billReceivedNo) {
+                                  _billReceivedYes = false;
+                                }
+                              });
+                            },
+                          ),
+                          const Text(
+                            'No',
+                            style: TextStyle(
+                              fontSize: 14,
                               color: Colors.black87,
                             ),
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          callDuration,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1976D2),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
-                  // Closing Action in Follow Up
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Amount Mismatch
+                  Row(
                     children: [
-                      Text(
-                        'Closing Action',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontFamily: TextConstant.dmSansRegular,
-                        ),
+                      Checkbox(
+                        value: _amountMismatch,
+                        onChanged: (value) {
+                          setState(() {
+                            _amountMismatch = value ?? false;
+                          });
+                        },
                       ),
-                      const SizedBox(height: 4),
                       Text(
-                        closingAction,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                        'Amount Mismatch',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.red[400],
+                          fontFamily: TextConstant.dmSansMedium,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
 
-                  // Remarks in Follow Up
+                  // Call Remarks
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Remarks / Notes',
+                        'Call Remarks / Notes',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
                           fontFamily: TextConstant.dmSansRegular,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        remarks,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _remarksController,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your remarks',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: ColorConstant.primaryColor,
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.all(12),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
 
-                  // Share Call Report Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _shareCallReport,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE3F2FD),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
+                              fontFamily: TextConstant.dmSansMedium,
+                            ),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'Share Call Report',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: ColorConstant.primaryColor,
-                          fontFamily: TextConstant.dmSansMedium,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _saveCallUpdate,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ColorConstant.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            disabledBackgroundColor: Colors.grey[400],
+                          ),
+                          child:
+                              _isSaving
+                                  ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : Text(
+                                    'Save Call Update',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: TextConstant.dmSansMedium,
+                                    ),
+                                  ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                 ],

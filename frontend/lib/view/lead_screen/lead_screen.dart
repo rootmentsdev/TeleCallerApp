@@ -17,14 +17,14 @@ class LeadScreen extends StatefulWidget {
 
 class _LeadScreenState extends State<LeadScreen> {
   // Tab indices constants
-  static const int _tabIndexReturn = 0;
-  static const int _tabIndexStarred = 1;
+  static const int _tabIndexBookingConfirmation = 0;
+  static const int _tabIndexReturn = 1;
 
   // Initialization delay to allow UI to settle
   static const Duration _initializationDelay = Duration(milliseconds: 500);
 
+  bool _isLoadingBookingConfirmation = false;
   bool _isLoadingReturn = false;
-  bool _isLoadingStarred = false;
 
   @override
   void initState() {
@@ -44,9 +44,9 @@ class _LeadScreenState extends State<LeadScreen> {
       leadController.refresh();
 
       Future.delayed(_initializationDelay, () {
-        // Fetch only Feedback Calls and Marked Calls
+        // Fetch Booking Confirmation and Feedback Calls
+        _fetchBookingConfirmationLeads(leadController, headerController);
         _fetchReturnLeads(leadController, headerController);
-        _fetchStarredCalls(leadController, headerController);
       });
     });
   }
@@ -57,6 +57,31 @@ class _LeadScreenState extends State<LeadScreen> {
   }
 
   // ====================== FETCH FUNCTIONS ======================
+
+  Future<void> _fetchBookingConfirmationLeads(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingBookingConfirmation) return;
+
+    setState(() => _isLoadingBookingConfirmation = true);
+
+    try {
+      final storeParam = _getStoreParam(headerController.selectedStore);
+      await controller.fetchBookingConfirmationLeadsFromApi(store: storeParam);
+
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexBookingConfirmation) {
+        _showError("Failed to load Booking Confirmation calls", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingBookingConfirmation = false);
+    }
+  }
 
   Future<void> _fetchReturnLeads(
     LeadScreenController controller,
@@ -80,31 +105,6 @@ class _LeadScreenState extends State<LeadScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoadingReturn = false);
-    }
-  }
-
-  Future<void> _fetchStarredCalls(
-    LeadScreenController controller,
-    HeaderController headerController,
-  ) async {
-    if (_isLoadingStarred) return;
-
-    setState(() => _isLoadingStarred = true);
-
-    try {
-      final storeParam = _getStoreParam(headerController.selectedStore);
-      await controller.fetchStarredCallsFromApi(store: storeParam);
-
-      if (mounted) {
-        controller.refresh();
-        setState(() {});
-      }
-    } catch (e) {
-      if (mounted && controller.selectedCallTypeIndex == _tabIndexStarred) {
-        _showError("Failed to load Marked calls", e);
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingStarred = false);
     }
   }
 
@@ -136,19 +136,19 @@ class _LeadScreenState extends State<LeadScreen> {
 
       leadController.refresh();
 
+      if (!_isLoadingBookingConfirmation) {
+        _fetchBookingConfirmationLeads(leadController, headerController);
+      }
       if (!_isLoadingReturn) {
         _fetchReturnLeads(leadController, headerController);
-      }
-      if (!_isLoadingStarred) {
-        _fetchStarredCalls(leadController, headerController);
       }
     });
   }
 
   /// Helper method to check if a category is currently loading
   bool _isLoadingCategory(int selectedIndex) {
-    return (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
-        (_isLoadingStarred && selectedIndex == _tabIndexStarred);
+    return (_isLoadingBookingConfirmation && selectedIndex == _tabIndexBookingConfirmation) ||
+        (_isLoadingReturn && selectedIndex == _tabIndexReturn);
   }
 
   // ============================ UI =============================
@@ -158,7 +158,6 @@ class _LeadScreenState extends State<LeadScreen> {
     return Consumer2<HeaderController, LeadScreenController>(
       builder: (context, headerController, controller, child) {
         final filteredLeads = controller.getFilteredLeads();
-        final currentTitle = controller.getCurrentTitle();
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -176,33 +175,82 @@ class _LeadScreenState extends State<LeadScreen> {
                 },
               ),
 
-              // ==================== List Header ====================
+              // ==================== Tabs ====================
               Padding(
-                padding: const EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 16,
-                  bottom: 16,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      currentTitle,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: TextConstant.dmSansMedium,
-                        color: Colors.black87,
+                    // Booking Confirmation Tab
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(_tabIndexBookingConfirmation);
+                          _fetchBookingConfirmationLeads(controller, headerController);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: controller.selectedCallTypeIndex == _tabIndexBookingConfirmation
+                                ? ColorConstant.primaryColor
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: controller.selectedCallTypeIndex == _tabIndexBookingConfirmation
+                                  ? ColorConstant.primaryColor
+                                  : Colors.grey[300]!,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              "Booking Confirmation (${controller.getBookingConfirmationCount()})",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: TextConstant.dmSansMedium,
+                                color: controller.selectedCallTypeIndex == _tabIndexBookingConfirmation
+                                    ? Colors.white
+                                    : const Color(0xFFFFA500),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    Text(
-                      "(${filteredLeads.length} Calls)",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: TextConstant.dmSansMedium,
-                        color: const Color(0xFFFFA500),
+                    const SizedBox(width: 12),
+                    // Feedback Calls Tab
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(_tabIndexReturn);
+                          _fetchReturnLeads(controller, headerController);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: controller.selectedCallTypeIndex == _tabIndexReturn
+                                ? ColorConstant.primaryColor
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: controller.selectedCallTypeIndex == _tabIndexReturn
+                                  ? ColorConstant.primaryColor
+                                  : Colors.grey[300]!,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              "Feedback Calls (${filteredLeads.length})",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: TextConstant.dmSansMedium,
+                                color: controller.selectedCallTypeIndex == _tabIndexReturn
+                                    ? Colors.white
+                                    : const Color(0xFFFFA500),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -218,11 +266,10 @@ class _LeadScreenState extends State<LeadScreen> {
                       listen: false,
                     );
 
-                    if (controller.selectedCallTypeIndex == _tabIndexReturn) {
+                    if (controller.selectedCallTypeIndex == _tabIndexBookingConfirmation) {
+                      await _fetchBookingConfirmationLeads(controller, headerController);
+                    } else if (controller.selectedCallTypeIndex == _tabIndexReturn) {
                       await _fetchReturnLeads(controller, headerController);
-                    } else if (controller.selectedCallTypeIndex ==
-                        _tabIndexStarred) {
-                      await _fetchStarredCalls(controller, headerController);
                     }
                   },
                   child:
@@ -264,11 +311,10 @@ class _LeadScreenState extends State<LeadScreen> {
                     listen: false,
                   );
 
-                  if (controller.selectedCallTypeIndex == _tabIndexReturn) {
+                  if (controller.selectedCallTypeIndex == _tabIndexBookingConfirmation) {
+                    _fetchBookingConfirmationLeads(controller, headerController);
+                  } else if (controller.selectedCallTypeIndex == _tabIndexReturn) {
                     _fetchReturnLeads(controller, headerController);
-                  } else if (controller.selectedCallTypeIndex ==
-                      _tabIndexStarred) {
-                    _fetchStarredCalls(controller, headerController);
                   }
                 },
                 child: const Text('Tap to refresh'),
@@ -318,7 +364,7 @@ class LeadListItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -328,65 +374,67 @@ class LeadListItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
+              // Icon on left (speech bubble with heart)
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: ColorConstant.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.chat_bubble_outline,
+                  color: ColorConstant.primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Customer information
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      lead["name"] as String,
+                      lead["name"] as String? ?? "N/A",
                       style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: Colors.black87,
+                        fontFamily: TextConstant.dmSansMedium,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.phone,
-                          size: 16,
-                          fontWeight: FontWeight.w600,
-                          color: ColorConstant.primaryColor,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          lead["phone"] as String,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: ColorConstant.primaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 16,
-                          fontWeight: FontWeight.w600,
-                          color: ColorConstant.primaryColor,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            lead["location"] as String? ?? "N/A",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: ColorConstant.primaryColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      lead["phone"] as String? ?? "N/A",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontFamily: TextConstant.dmSansRegular,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Icon(Icons.arrow_forward_ios, size: 20, color: Colors.grey[400]),
+              // Date on right
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    lead["date"] as String? ?? "N/A",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontFamily: TextConstant.dmSansRegular,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: Colors.grey[400],
+                  ),
+                ],
+              ),
             ],
           ),
         ),

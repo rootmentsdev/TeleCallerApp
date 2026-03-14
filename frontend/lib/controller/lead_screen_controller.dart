@@ -435,14 +435,14 @@ class LeadScreenController extends ChangeNotifier {
             }).toList();
       }
     } else if (_selectedCallTypeIndex == 0) {
-      // Feedback Calls tab - show return leads with date filtering
+      // Booking Confirmation tab - show booking confirmation leads with date filtering
       filteredLeads =
           _repository.allLeads
-              .where((lead) => lead.category == LeadConstants.categoryRentOut)
+              .where((lead) => lead.category == LeadConstants.categoryBookingConfirmation)
               .toList();
 
       print(
-        'LeadScreenController: Tab 0 - Total leads in repo: ${_repository.allLeads.length}, Return leads: ${filteredLeads.length}',
+        'LeadScreenController: Tab 0 - Total leads in repo: ${_repository.allLeads.length}, Booking Confirmation leads: ${filteredLeads.length}',
       );
 
       // Apply date filter based on selected date or date range
@@ -468,7 +468,7 @@ class LeadScreenController extends ChangeNotifier {
             }).toList();
 
         print(
-          'LeadScreenController: After date range filter - Return leads: ${filteredLeads.length}',
+          'LeadScreenController: After date range filter - Booking Confirmation leads: ${filteredLeads.length}',
         );
       } else if (date != null) {
         final selectedDate = date;
@@ -481,7 +481,7 @@ class LeadScreenController extends ChangeNotifier {
             }).toList();
 
         print(
-          'LeadScreenController: After date filter - Return leads: ${filteredLeads.length}',
+          'LeadScreenController: After date filter - Booking Confirmation leads: ${filteredLeads.length}',
         );
       }
 
@@ -489,7 +489,7 @@ class LeadScreenController extends ChangeNotifier {
       filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
 
       print(
-        'LeadScreenController: After excluding starred - Return leads: ${filteredLeads.length}',
+        'LeadScreenController: After excluding starred - Booking Confirmation leads: ${filteredLeads.length}',
       );
 
       // Exclude leads with follow-up dates (they belong in Follow-Up screen)
@@ -497,8 +497,53 @@ class LeadScreenController extends ChangeNotifier {
           filteredLeads.where((lead) => lead.followUpDate == null).toList();
 
       print(
-        'LeadScreenController: After excluding follow-up dates - Return leads: ${filteredLeads.length}',
+        'LeadScreenController: After excluding follow-up dates - Booking Confirmation leads: ${filteredLeads.length}',
       );
+    } else if (_selectedCallTypeIndex == 1) {
+      // Feedback Calls tab - show return leads with date filtering
+      filteredLeads =
+          _repository.allLeads
+              .where((lead) => lead.category == LeadConstants.categoryRentOut)
+              .toList();
+
+      // Apply date filter based on selected date or date range
+      if (dateStart != null && dateEnd != null) {
+        final start = dateStart;
+        final end = dateEnd;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.getEffectiveDate();
+              final normalizedLeadDate = DateTime.utc(
+                leadDate.year,
+                leadDate.month,
+                leadDate.day,
+              );
+              final normalizedStart = DateTime.utc(
+                start.year,
+                start.month,
+                start.day,
+              );
+              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+            }).toList();
+      } else if (date != null) {
+        final selectedDate = date;
+        filteredLeads =
+            filteredLeads.where((lead) {
+              final leadDate = lead.getEffectiveDate();
+              return leadDate.year == selectedDate.year &&
+                  leadDate.month == selectedDate.month &&
+                  leadDate.day == selectedDate.day;
+            }).toList();
+      }
+
+      // Exclude starred leads
+      filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
+
+      // Exclude leads with follow-up dates (they belong in Follow-Up screen)
+      filteredLeads =
+          filteredLeads.where((lead) => lead.followUpDate == null).toList();
     } else {
       if (dateStart != null && dateEnd != null) {
         filteredLeads = _repository.getLeadsByDateRange(dateStart, dateEnd);
@@ -562,16 +607,75 @@ class LeadScreenController extends ChangeNotifier {
   String getCurrentTitle() {
     switch (_selectedCallTypeIndex) {
       case 0:
-        return "Feedback Calls";
+        return "Booking Confirmation";
       case 1:
-        return "Loss of Sale";
-      case 2:
         return "Feedback Calls";
+      case 2:
+        return "Loss of Sale";
       case 3:
         return "Marked Calls";
       default:
         return "Feedback Calls";
     }
+  }
+
+  int getBookingConfirmationCount() {
+    final store = _headerController?.selectedStore;
+    DateTime? date;
+    DateTime? dateStart;
+    DateTime? dateEnd;
+
+    if (_headerController?.isRangeMode == true &&
+        _headerController?.dateRangeStart != null &&
+        _headerController?.dateRangeEnd != null) {
+      dateStart = _headerController!.dateRangeStart;
+      dateEnd = _headerController!.dateRangeEnd;
+    } else {
+      date = _headerController?.selectedDate ?? DateTime.now();
+    }
+
+    List<LeadModel> leads = _repository.allLeads
+        .where((lead) => lead.category == LeadConstants.categoryBookingConfirmation)
+        .where((lead) => !lead.isStarred)
+        .where((lead) => lead.followUpDate == null)
+        .toList();
+
+    // Apply date filter
+    if (dateStart != null && dateEnd != null) {
+      final start = dateStart;
+      final end = dateEnd;
+      leads = leads.where((lead) {
+        final leadDate = lead.getEffectiveDate();
+        final normalizedLeadDate = DateTime.utc(
+          leadDate.year,
+          leadDate.month,
+          leadDate.day,
+        );
+        final normalizedStart = DateTime.utc(
+          start.year,
+          start.month,
+          start.day,
+        );
+        final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
+        return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
+            normalizedLeadDate.compareTo(normalizedEnd) <= 0;
+      }).toList();
+    } else if (date != null) {
+      final selectedDate = date;
+      leads = leads.where((lead) {
+        final leadDate = lead.getEffectiveDate();
+        return leadDate.year == selectedDate.year &&
+            leadDate.month == selectedDate.month &&
+            leadDate.day == selectedDate.day;
+      }).toList();
+    }
+
+    // Apply store filter
+    if (store != null && store != 'All Stores') {
+      leads = leads.where((lead) => _repository.matchesStore(lead, store)).toList();
+    }
+
+    return leads.length;
   }
 
   int getFollowUpLeadsCount() {
@@ -805,6 +909,76 @@ class LeadScreenController extends ChangeNotifier {
         e,
         s,
         reason: 'fetchStarredCallsFromApi failed',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
+    try {
+      // Fetch all leads and filter for booking confirmation
+      await _repository.fetchAllLeadsFromApi(store: store);
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchBookingConfirmationLeadsFromApi failed',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> updateBookingConfirmationLead({
+    required String id,
+    String? callStatus,
+    String? leadStatus,
+    String? service,
+    bool? billReceived,
+    bool? amountMismatch,
+    String? advancePaid,
+    String? securityPaid,
+    String? remarks,
+    int? callDuration,
+    bool? followUpFlag,
+    DateTime? followUpDate,
+    bool? clearFollowUpDate,
+  }) async {
+    try {
+      // Get the lead to preserve existing data
+      final lead = _repository.getLeadById(id);
+      if (lead == null) {
+        throw Exception('Lead not found');
+      }
+
+      await _repository.updateBookingConfirmationLeadFromApi(
+        id: id,
+        leadName: lead.name,
+        phoneNumber: lead.phone,
+        store: lead.location ?? lead.brand ?? 'N/A',
+        source: 'Manual Entry', // Default or get from lead if available
+        leadType: lead.leadType ?? 'enquiry',
+        callStatus: callStatus ?? lead.callStatus ?? 'Not Called',
+        leadStatus: leadStatus ?? lead.leadStatus ?? 'No Status',
+        service: service,
+        billReceived: billReceived,
+        amountMismatch: amountMismatch,
+        advancePaid: advancePaid,
+        securityPaid: securityPaid,
+        remarks: remarks,
+        followUpFlag: followUpFlag ?? false,
+        followUpDate: followUpDate != null ? followUpDate.toIso8601String() : null,
+        callDuration: callDuration,
+        clearFollowUpDate: clearFollowUpDate ?? false,
+      );
+
+      _removeLeadFromActiveLists(id);
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateBookingConfirmationLead failed',
       );
       rethrow;
     }

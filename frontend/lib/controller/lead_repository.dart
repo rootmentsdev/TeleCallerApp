@@ -74,6 +74,7 @@ class LeadRepository extends ChangeNotifier {
   Future<void> _initialize() async {
     if (_isInitialized) return;
     await _loadLeads();
+    await _addTestBookingConfirmationDataIfNeeded();
     _isInitialized = true;
   }
 
@@ -199,6 +200,49 @@ class LeadRepository extends ChangeNotifier {
   /// Get booking confirmation specific data for a lead
   Map<String, dynamic>? getBookingConfirmationData(String leadId) {
     return _bookingConfirmationData[leadId];
+  }
+
+  /// Test lead ID for UI checking (used when kDebugMode)
+  static const String _testBookingConfirmationLeadId = 'test_booking_confirmation_lead_001';
+
+  /// Add test booking confirmation lead data for UI checking (debug mode only)
+  Future<void> _addTestBookingConfirmationDataIfNeeded() async {
+    if (!kDebugMode) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Check if test lead already exists
+    final existingTestLead = _leads.any((l) => l.id == _testBookingConfirmationLeadId);
+    if (!existingTestLead) {
+      final testLead = LeadModel(
+        id: _testBookingConfirmationLeadId,
+        name: 'Abhiram S Kumar',
+        phone: '9876543210',
+        brand: 'Zorucci',
+        location: 'Edappally',
+        category: LeadConstants.categoryBookingConfirmation,
+        callStatus: 'Not called yet',
+        leadStatus: 'New Lead',
+        enquiryDate: DateTime(2025, 10, 30),
+        functionDate: DateTime(2026, 11, 2),
+        createdAt: today,
+        isStarred: false,
+      );
+      _leads.add(testLead);
+      await _saveLeads();
+      print('LeadRepository: Added test booking confirmation lead for UI check');
+    }
+
+    // Always ensure booking data is available for test lead (not persisted)
+    _bookingConfirmationData[_testBookingConfirmationLeadId] = {
+      'attendedBy': 'Arjun GS',
+      'attended_by': 'Arjun GS',
+      'advance': 5500,
+      'totalAmount': 7500,
+      'productAmount': 7500,
+      'product_amount': 7500,
+    };
   }
 
   // ========== Helper Methods ==========
@@ -996,6 +1040,96 @@ class LeadRepository extends ChangeNotifier {
   }
 
   /// Update Follow-Up lead via API
+  Future<void> updateBookingConfirmationLeadFromApi({
+    required String id,
+    required String leadName,
+    required String phoneNumber,
+    required String store,
+    required String source,
+    required String leadType,
+    required String callStatus,
+    required String leadStatus,
+    String? service,
+    bool? billReceived,
+    bool? amountMismatch,
+    String? advancePaid,
+    String? securityPaid,
+    String? remarks,
+    bool followUpFlag = false,
+    String? followUpDate,
+    int? callDuration,
+    bool clearFollowUpDate = false,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      // Handle follow-up date clearing
+      String? finalFollowUpDate = followUpDate;
+      bool finalFollowUpFlag = followUpFlag;
+
+      if (clearFollowUpDate) {
+        finalFollowUpFlag = false;
+        finalFollowUpDate = null;
+      }
+
+      // Combine remarks with additional booking confirmation fields
+      String? finalRemarks = remarks;
+      if (service != null ||
+          billReceived == true ||
+          amountMismatch == true ||
+          advancePaid != null ||
+          securityPaid != null) {
+        final List<String> remarkParts = [];
+        if (remarks != null && remarks.isNotEmpty) {
+          remarkParts.add(remarks);
+        }
+        if (service != null) {
+          remarkParts.add('Service: $service');
+        }
+        if (billReceived == true) {
+          remarkParts.add('Bill Received: Yes');
+        }
+        if (amountMismatch == true) {
+          remarkParts.add('Amount Mismatch: Yes');
+          if (advancePaid != null && advancePaid.isNotEmpty) {
+            remarkParts.add('Advance Paid: $advancePaid');
+          }
+          if (securityPaid != null && securityPaid.isNotEmpty) {
+            remarkParts.add('Security Paid: $securityPaid');
+          }
+        }
+        if (remarkParts.isNotEmpty) {
+          finalRemarks = remarkParts.join('\n');
+        }
+      }
+
+      await _apiService.updateLead(
+        id: id,
+        leadName: leadName,
+        phoneNumber: phoneNumber,
+        store: store,
+        source: source,
+        leadType: leadType,
+        callStatus: callStatus,
+        leadStatus: leadStatus,
+        remarks: finalRemarks,
+        followUpFlag: finalFollowUpFlag,
+        followUpDate: finalFollowUpDate,
+        callDuration: callDuration,
+      );
+
+      // Refresh leads to get updated data
+      await fetchAllLeadsFromApi();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateBookingConfirmationLeadFromApi failed',
+      );
+      rethrow;
+    }
+  }
+
   Future<void> updateFollowUpLeadFromApi({
     required String id,
     String? callStatus,
@@ -1117,6 +1251,7 @@ class LeadRepository extends ChangeNotifier {
       if (page == null || page == 1) {
         // Store called leads and follow-up leads before clearing
         // Exclude called return leads and booking confirmation leads (moved to reports)
+        // In debug mode, also preserve test booking confirmation lead for UI checking
         final preservedLeads =
             _leads.where((lead) {
               final isReturnLead =
@@ -1124,6 +1259,11 @@ class LeadRepository extends ChangeNotifier {
               final isBookingConfirmationLead =
                   lead.category == LeadConstants.categoryBookingConfirmation;
               final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
+
+              // Preserve test lead in debug mode for UI checking
+              if (kDebugMode && lead.id == _testBookingConfirmationLeadId) {
+                return true;
+              }
 
               // Don't preserve called return leads or booking confirmation leads
               if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
