@@ -7,6 +7,7 @@ import 'package:telecaller_app/controller/complaints_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
+import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/responsive_helper.dart';
@@ -80,8 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  String? _getStoreParam(String? store) {
-    return (store == null || store == 'All Stores') ? null : store;
+  String? _getStoreParam(Store? store) {
+    return (store == null || store.normalizedName == 'All Stores')
+        ? null
+        : store.normalizedName;
   }
 
   Future<void> _fetchFollowUpLeads(HeaderController headerController) async {
@@ -163,11 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
         int totalFollowUpCount = _repository.followUpLeads.length;
 
         // Filter by store if a specific store is selected
-        if (selectedStore != 'All Stores') {
-          final storeLocation =
-              selectedStore.contains(' - ')
-                  ? selectedStore.split(' - ')[1].trim()
-                  : selectedStore;
+        if (selectedStore.normalizedName != 'All Stores') {
+          final storeLocation = selectedStore.location;
           totalFollowUpCount =
               _repository.followUpLeads
                   .where((lead) => lead.location == storeLocation)
@@ -201,11 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
                 .toList();
 
-        if (selectedStore != 'All Stores') {
-          final storeLocation =
-              selectedStore.contains(' - ')
-                  ? selectedStore.split(' - ')[1].trim()
-                  : selectedStore;
+        if (selectedStore.normalizedName != 'All Stores') {
+          final storeLocation = selectedStore.location;
           callsTodayLeads =
               callsTodayLeads
                   .where(

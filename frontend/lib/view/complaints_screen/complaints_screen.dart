@@ -6,7 +6,6 @@ import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/complaint_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
-import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/view/complaints_screen/complaint_detail_screen.dart';
 
 class ComplaintsScreen extends StatefulWidget {
@@ -35,18 +34,28 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
   Future<void> _fetchComplaints() async {
     String? storeParam;
 
-    if (_headerController.selectedStore != 'All Stores') {
-      // Send the full store name (Brand - Location) to the API for exact matching
-      storeParam = _headerController.selectedStore;
+    if (_headerController.selectedStore.normalizedName != 'All Stores') {
+      // Send the normalizedName to the API for exact matching
+      storeParam = _headerController.selectedStore.normalizedName;
     }
 
     final startDate = _headerController.dateRangeStart ?? DateTime.now();
     final endDate = _headerController.dateRangeEnd ?? DateTime.now();
 
+    // Set end date to end of day (23:59:59) to include all leads from that day
+    final endDateEndOfDay = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      23,
+      59,
+      59,
+    );
+
     await _complaintsController.fetchComplaints(
       store: storeParam,
       dateFrom: startDate.toIso8601String(),
-      dateTo: endDate.toIso8601String(),
+      dateTo: endDateEndOfDay.toIso8601String(),
     );
   }
 
@@ -153,7 +162,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    headerController.selectedStore,
+                                    headerController
+                                        .selectedStore
+                                        .normalizedName,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -317,7 +328,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
     BuildContext context,
     HeaderController headerController,
   ) {
-    final storeOptions = StoreLocations.buildStoreOptions();
+    final storeOptions = headerController.availableStores;
 
     showDialog(
       context: context,
@@ -330,7 +341,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
               children:
                   storeOptions.map((store) {
                     return ListTile(
-                      title: Text(store),
+                      title: Text(store.normalizedName),
                       onTap: () {
                         headerController.setSelectedStore(store);
                         _fetchComplaints();
@@ -473,8 +484,8 @@ Remarks: ${complaint.displayRemarks}
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    complaint.hasCallBeenMade 
-                        ? 'Complaint Remarks' 
+                    complaint.hasCallBeenMade
+                        ? 'Complaint Remarks'
                         : 'Call Remarks / Notes',
                     style: TextStyle(
                       fontSize: 12,
@@ -505,9 +516,9 @@ Remarks: ${complaint.displayRemarks}
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ComplaintDetailScreen(
-                            complaint: complaint,
-                          ),
+                          builder:
+                              (context) =>
+                                  ComplaintDetailScreen(complaint: complaint),
                         ),
                       );
                       // Refresh complaints if detail screen returned true
@@ -562,7 +573,7 @@ Remarks: ${complaint.displayRemarks}
                       ),
                     ],
                   ),
-              ),
+                ),
             ],
           ),
         ),
@@ -667,9 +678,10 @@ Remarks: ${complaint.displayRemarks}
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ComplaintDetailScreen(
-                                complaint: complaint,
-                              ),
+                              builder:
+                                  (context) => ComplaintDetailScreen(
+                                    complaint: complaint,
+                                  ),
                             ),
                           );
                           // Refresh complaints if detail screen returned true
@@ -698,28 +710,28 @@ Remarks: ${complaint.displayRemarks}
                         ),
                       ),
                     if (!complaint.hasCallBeenMade) const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () {
-                    _complaintsController.toggleExpansion(index);
-                  },
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Details',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2196F3),
-                        ),
+                    GestureDetector(
+                      onTap: () {
+                        _complaintsController.toggleExpansion(index);
+                      },
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Details',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 12,
+                            color: Color(0xFF2196F3),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Color(0xFF2196F3),
-                      ),
-                    ],
-                  ),
                     ),
                   ],
                 ),

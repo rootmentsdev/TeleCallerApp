@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/followup_controller.dart';
+import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
-import 'package:telecaller_app/utils/store_location.dart';
 
 class AppHeader extends StatelessWidget {
   final String? userName; // Made optional - will load from AuthService if null
@@ -183,7 +183,7 @@ class AppHeader extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
+                        child: DropdownButton<Store>(
                           value: headerController.selectedStore,
                           isExpanded: true,
                           dropdownColor: ColorConstant.primaryColor,
@@ -200,18 +200,18 @@ class AppHeader extends StatelessWidget {
                             style: TextStyle(color: Colors.white70),
                           ),
                           items:
-                              StoreLocations.buildStoreOptions().map((
-                                String store,
+                              headerController.availableStores.map((
+                                Store store,
                               ) {
-                                return DropdownMenuItem<String>(
+                                return DropdownMenuItem<Store>(
                                   value: store,
                                   child: Text(
-                                    store,
+                                    store.normalizedName,
                                     style: const TextStyle(color: Colors.white),
                                   ),
                                 );
                               }).toList(),
-                          onChanged: (String? newValue) {
+                          onChanged: (Store? newValue) {
                             if (newValue != null) {
                               headerController.setSelectedStore(newValue);
                             }
@@ -239,7 +239,7 @@ class AppHeader extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
+                                    child: DropdownButton<Store>(
                                       value: headerController.selectedStore,
                                       isExpanded: true,
                                       dropdownColor: ColorConstant.primaryColor,
@@ -256,20 +256,20 @@ class AppHeader extends StatelessWidget {
                                         style: TextStyle(color: Colors.white70),
                                       ),
                                       items:
-                                          StoreLocations.buildStoreOptions()
-                                              .map((String store) {
-                                                return DropdownMenuItem<String>(
-                                                  value: store,
-                                                  child: Text(
-                                                    store,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                );
-                                              })
-                                              .toList(),
-                                      onChanged: (String? newValue) {
+                                          headerController.availableStores.map((
+                                            Store store,
+                                          ) {
+                                            return DropdownMenuItem<Store>(
+                                              value: store,
+                                              child: Text(
+                                                store.normalizedName,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                      onChanged: (Store? newValue) {
                                         if (newValue != null) {
                                           headerController.setSelectedStore(
                                             newValue,

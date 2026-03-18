@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:telecaller_app/model/store_model.dart';
 
 /// Shared controller for header state (store and date/date range)
 /// This is used across Home Screen, Lead Screen, and Report Screen
@@ -8,10 +9,16 @@ class HeaderController extends ChangeNotifier {
   DateTime? _dateRangeStart;
   DateTime? _dateRangeEnd;
   bool _isRangeMode = false;
-  late String _selectedStore;
+  late Store _selectedStore;
+  List<Store> _availableStores = [];
 
   HeaderController() {
-    _selectedStore = 'All Stores';
+    // Initialize with a default "All Stores" option
+    _selectedStore = Store(
+      brand: 'All',
+      location: 'Stores',
+      normalizedName: 'All Stores',
+    );
   }
 
   // Getters
@@ -19,7 +26,8 @@ class HeaderController extends ChangeNotifier {
   DateTime? get dateRangeStart => _dateRangeStart;
   DateTime? get dateRangeEnd => _dateRangeEnd;
   bool get isRangeMode => _isRangeMode;
-  String get selectedStore => _selectedStore;
+  Store get selectedStore => _selectedStore;
+  List<Store> get availableStores => _availableStores;
 
   // Setters
   void setSelectedDate(DateTime date) {
@@ -50,20 +58,32 @@ class HeaderController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setSelectedStore(String store) {
+  void setSelectedStore(Store store) {
     if (_selectedStore != store) {
       _selectedStore = store;
       // Set store as custom key in Firebase Crashlytics
-      if (store != 'All Stores') {
-        FirebaseCrashlytics.instance.setCustomKey("store", store);
+      if (store.normalizedName != 'All Stores') {
+        FirebaseCrashlytics.instance.setCustomKey(
+          "store",
+          store.normalizedName,
+        );
       }
       notifyListeners();
     }
   }
 
+  void setAvailableStores(List<Store> stores) {
+    _availableStores = stores;
+    notifyListeners();
+  }
+
   void reset() {
     _selectedDate = DateTime.now();
-    _selectedStore = 'All Stores';
+    _selectedStore = Store(
+      brand: 'All',
+      location: 'Stores',
+      normalizedName: 'All Stores',
+    );
     _isRangeMode = false;
     _dateRangeStart = null;
     _dateRangeEnd = null;

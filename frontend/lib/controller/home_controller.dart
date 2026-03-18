@@ -3,7 +3,6 @@ import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
-import 'package:telecaller_app/utils/store_location.dart';
 
 /// Controller for Home Screen
 class HomeController extends ChangeNotifier {
@@ -49,7 +48,9 @@ class HomeController extends ChangeNotifier {
 
       // Pass store in "Brand - Location" format if not "All Stores"
       final storeParam =
-          (store == null || store == 'All Stores') ? null : store;
+          (store == null || store.normalizedName == 'All Stores')
+              ? null
+              : store.normalizedName;
 
       final response = await _repository.fetchCallSummaryFromApi(
         store: storeParam,
@@ -75,9 +76,9 @@ class HomeController extends ChangeNotifier {
 
     // Filter by store (brand + location)
     final storeFilter =
-        (store == null || store == 'All Stores')
+        (store == null || store.normalizedName == 'All Stores')
             ? null
-            : StoreLocations.resolveSelection(store).location;
+            : store.location;
 
     List<T> filterStore<T extends LeadModel>(List<T> leads) {
       if (storeFilter == null) return leads;
@@ -138,9 +139,9 @@ class HomeController extends ChangeNotifier {
 
     // Handle "All Stores" case and extract location from "Brand - Location" format
     final storeFilter =
-        (store == null || store == 'All Stores')
+        (store == null || store.normalizedName == 'All Stores')
             ? null
-            : StoreLocations.resolveSelection(store).location;
+            : store.location;
 
     final allLeads = _repository.getLeadsByDate(date);
 
@@ -218,9 +219,9 @@ class HomeController extends ChangeNotifier {
 
     // Handle "All Stores" case and extract location from "Brand - Location" format
     final storeFilter =
-        (store == null || store == 'All Stores')
+        (store == null || store.normalizedName == 'All Stores')
             ? null
-            : StoreLocations.resolveSelection(store).location;
+            : store.location;
 
     return [
       {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/lead_model.dart';
-import 'package:telecaller_app/utils/store_location.dart';
+import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/utils/category_style.dart';
 import 'package:telecaller_app/services/notification_service.dart';
 
@@ -10,9 +10,9 @@ import 'package:telecaller_app/services/notification_service.dart';
 class FollowupController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
   HeaderController? _headerController;
-  String? _selectedStore;
+  Store? _selectedStore;
   String? _selectedCategory;
-  int _selectedTabIndex = 0; // 0: Today, 1: Upcoming, 2: Overdue
+  int _selectedTabIndex = 0; // 0: Overdue, 1: Today, 2: Tomorrow, 3: Upcoming
   bool _isLoading = false;
   String? _error;
 
@@ -57,7 +57,7 @@ class FollowupController extends ChangeNotifier {
   }
 
   // Getters
-  String? get selectedStore => _selectedStore;
+  Store? get selectedStore => _selectedStore;
   String? get selectedCategory => _selectedCategory;
   int get selectedTabIndex => _selectedTabIndex;
   bool get isLoading => _isLoading;
@@ -65,7 +65,7 @@ class FollowupController extends ChangeNotifier {
   List<LeadModel> get allFollowUpLeads => _repository.followUpLeads;
 
   // Setters
-  void setSelectedStore(String? store) {
+  void setSelectedStore(Store? store) {
     _selectedStore = store;
     notifyListeners();
   }
@@ -78,96 +78,112 @@ class FollowupController extends ChangeNotifier {
   void setSelectedTabIndex(int index) {
     _selectedTabIndex = index;
     notifyListeners();
+    // Fetch reports when tab changes
+    _fetchReportsForCurrentFilters();
+  }
+
+  void _fetchReportsForCurrentFilters() {
+    notifyListeners();
   }
 
   // Get follow-up leads based on selected tab and date filter
-  // Backend-driven: No local filtering - backend returns only follow-up leads from /api/pages/follow-ups
+  // Local filtering: Filter all follow-up leads by their followUpDate relative to today
   List<LeadModel> getCurrentLeads() {
-    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final tomorrowDate = todayDate.add(const Duration(days: 1));
 
-    // Get all leads from backend (already filtered to follow-up leads)
+    // Get all leads from repository
     final allFollowUpLeads = _repository.followUpLeads;
-
-    List<LeadModel> currentLeads = [];
 
     print(
       'FollowupController: getCurrentLeads called (tab=$_selectedTabIndex) - total follow-up leads available=${allFollowUpLeads.length}',
     );
-    // Filter by follow-up date relative to selected date
-    // IMPORTANT: Normalize all dates to UTC midnight for accurate date-only comparison
-    // Backend returns dates in UTC, so we normalize both API dates and filter dates to UTC
-    final selectedDateUtc = DateTime.utc(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day,
-    );
-    final tomorrowUtc = selectedDateUtc.add(const Duration(days: 1));
+
+    // Debug: Log all follow-up leads with their dates
+    for (var lead in allFollowUpLeads) {
+      print(
+        'FollowupController: Lead - name=${lead.name}, followUpDate=${lead.followUpDate}, category=${lead.category}',
+      );
+    }
+
+    print('FollowupController: Today=$todayDate, Tomorrow=$tomorrowDate');
+
+    List<LeadModel> currentLeads = [];
 
     switch (_selectedTabIndex) {
       case 0:
-        // Overdue: follow-up date is before selected date
+        // Overdue: follow-up date is before today
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
-              // Normalize follow-up date to UTC midnight for date-only comparison
-              final followUpUtc = DateTime.utc(
+              final followUpDate = DateTime(
                 lead.followUpDate!.year,
                 lead.followUpDate!.month,
                 lead.followUpDate!.day,
               );
-              // Compare normalized UTC dates - overdue means followUpDate < selectedDate
-              final isOverdue = followUpUtc.compareTo(selectedDateUtc) < 0;
+              final isOverdue = followUpDate.isBefore(todayDate);
+              print(
+                'FollowupController: Tab 0 (Overdue) - Lead ${lead.name}: followUpDate=$followUpDate, isOverdue=$isOverdue',
+              );
               return isOverdue;
             }).toList();
         break;
+
       case 1:
-        // Today: follow-up date equals selected date
+        // Today: follow-up date equals today
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
-              // Normalize follow-up date to UTC midnight for date-only comparison
-              final followUpUtc = DateTime.utc(
+              final followUpDate = DateTime(
                 lead.followUpDate!.year,
                 lead.followUpDate!.month,
                 lead.followUpDate!.day,
               );
-              // Compare normalized UTC dates
-              final isToday = followUpUtc.compareTo(selectedDateUtc) == 0;
+              final isToday = followUpDate.compareTo(todayDate) == 0;
+              print(
+                'FollowupController: Tab 1 (Today) - Lead ${lead.name}: followUpDate=$followUpDate, isToday=$isToday',
+              );
               return isToday;
             }).toList();
         break;
+
       case 2:
         // Tomorrow: follow-up date equals tomorrow
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
-              // Normalize follow-up date to UTC midnight for date-only comparison
-              final followUpUtc = DateTime.utc(
+              final followUpDate = DateTime(
                 lead.followUpDate!.year,
                 lead.followUpDate!.month,
                 lead.followUpDate!.day,
               );
-              // Compare normalized UTC dates - tomorrow means followUpDate == tomorrowUtc
-              final isTomorrow = followUpUtc.compareTo(tomorrowUtc) == 0;
+              final isTomorrow = followUpDate.compareTo(tomorrowDate) == 0;
+              print(
+                'FollowupController: Tab 2 (Tomorrow) - Lead ${lead.name}: followUpDate=$followUpDate, isTomorrow=$isTomorrow',
+              );
               return isTomorrow;
             }).toList();
         break;
+
       case 3:
         // Upcoming: follow-up date is after tomorrow
         currentLeads =
             allFollowUpLeads.where((lead) {
               if (lead.followUpDate == null) return false;
-              // Normalize follow-up date to UTC midnight for date-only comparison
-              final followUpUtc = DateTime.utc(
+              final followUpDate = DateTime(
                 lead.followUpDate!.year,
                 lead.followUpDate!.month,
                 lead.followUpDate!.day,
               );
-              // Compare normalized UTC dates - upcoming means followUpDate > tomorrowUtc
-              final isUpcoming = followUpUtc.compareTo(tomorrowUtc) > 0;
+              final isUpcoming = followUpDate.isAfter(tomorrowDate);
+              print(
+                'FollowupController: Tab 3 (Upcoming) - Lead ${lead.name}: followUpDate=$followUpDate, isUpcoming=$isUpcoming',
+              );
               return isUpcoming;
             }).toList();
         break;
+
       default:
         // Default: show only leads that actually have a followUpDate
         currentLeads =
@@ -177,28 +193,15 @@ class FollowupController extends ChangeNotifier {
     }
 
     // Sort by followUpDate ascending (earliest first)
-    // Normalize to UTC for consistent sorting regardless of timezone
     currentLeads.sort((a, b) {
       if (a.followUpDate == null && b.followUpDate == null) return 0;
       if (a.followUpDate == null) return 1;
       if (b.followUpDate == null) return -1;
-
-      final aUtc = DateTime.utc(
-        a.followUpDate!.year,
-        a.followUpDate!.month,
-        a.followUpDate!.day,
-      );
-      final bUtc = DateTime.utc(
-        b.followUpDate!.year,
-        b.followUpDate!.month,
-        b.followUpDate!.day,
-      );
-      return aUtc.compareTo(bUtc);
+      return a.followUpDate!.compareTo(b.followUpDate!);
     });
 
     // Debug: show first and last followUpDate after sorting if any
     if (currentLeads.isNotEmpty) {
-      // ignore: avoid_print
       print(
         'FollowupController: Sorted lead range for tab=$_selectedTabIndex => first=${currentLeads.first.followUpDate}, last=${currentLeads.last.followUpDate}',
       );
@@ -217,8 +220,9 @@ class FollowupController extends ChangeNotifier {
     }
 
     // Filter by store if selected - extract location from "Brand - Location" format
-    if (_selectedStore != null && _selectedStore != 'All Stores') {
-      final location = StoreLocations.resolveSelection(_selectedStore).location;
+    if (_selectedStore != null &&
+        _selectedStore!.normalizedName != 'All Stores') {
+      final location = _selectedStore!.location;
       currentLeads =
           currentLeads.where((lead) => lead.location == location).toList();
     }
@@ -226,9 +230,10 @@ class FollowupController extends ChangeNotifier {
     return currentLeads;
   }
 
-  // Get overdue count for badge based on selected date
+  // Get overdue count for badge based on today's date
   int get overdueCount {
-    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
     final allFollowUpLeads = _repository.followUpLeads;
 
     return allFollowUpLeads.where((lead) {
@@ -238,18 +243,14 @@ class FollowupController extends ChangeNotifier {
         lead.followUpDate!.month,
         lead.followUpDate!.day,
       );
-      final today = DateTime(
-        selectedDate.year,
-        selectedDate.month,
-        selectedDate.day,
-      );
-      return followUpDate.isBefore(today);
+      return followUpDate.isBefore(todayDate);
     }).length;
   }
 
-  // Get today count for badge based on selected date
+  // Get today count for badge based on today's date
   int get todayCount {
-    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
     final allFollowUpLeads = _repository.followUpLeads;
 
     return allFollowUpLeads.where((lead) {
@@ -259,24 +260,16 @@ class FollowupController extends ChangeNotifier {
         lead.followUpDate!.month,
         lead.followUpDate!.day,
       );
-      final today = DateTime(
-        selectedDate.year,
-        selectedDate.month,
-        selectedDate.day,
-      );
-      return followUpDate.compareTo(today) == 0;
+      return followUpDate.compareTo(todayDate) == 0;
     }).length;
   }
 
-  // Get tomorrow count for badge based on selected date
+  // Get tomorrow count for badge based on today's date
   int get tomorrowCount {
-    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final tomorrowDate = todayDate.add(const Duration(days: 1));
     final allFollowUpLeads = _repository.followUpLeads;
-    final tomorrow = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day + 1,
-    );
 
     return allFollowUpLeads.where((lead) {
       if (lead.followUpDate == null) return false;
@@ -285,19 +278,16 @@ class FollowupController extends ChangeNotifier {
         lead.followUpDate!.month,
         lead.followUpDate!.day,
       );
-      return followUpDate.compareTo(tomorrow) == 0;
+      return followUpDate.compareTo(tomorrowDate) == 0;
     }).length;
   }
 
-  // Get upcoming count for badge based on selected date
+  // Get upcoming count for badge based on today's date
   int get upcomingCount {
-    final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final tomorrowDate = todayDate.add(const Duration(days: 1));
     final allFollowUpLeads = _repository.followUpLeads;
-    final tomorrow = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day + 1,
-    );
 
     return allFollowUpLeads.where((lead) {
       if (lead.followUpDate == null) return false;
@@ -306,7 +296,7 @@ class FollowupController extends ChangeNotifier {
         lead.followUpDate!.month,
         lead.followUpDate!.day,
       );
-      return followUpDate.isAfter(tomorrow);
+      return followUpDate.isAfter(tomorrowDate);
     }).length;
   }
 
@@ -349,18 +339,24 @@ class FollowupController extends ChangeNotifier {
 
   /// Fetch follow-up leads from backend to populate follow-up data
   /// This should be called when the follow-up screen is first loaded
-  /// Fetches from /api/pages/follow-ups collection
+  /// Fetches from /api/leads/followups endpoint
   Future<void> fetchFollowUpLeads() async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
+      final storeParam =
+          (_selectedStore == null ||
+                  _selectedStore!.normalizedName == 'All Stores')
+              ? null
+              : _selectedStore!.normalizedName;
+
       print(
-        'FollowupController: Fetching follow-up leads (store=${_selectedStore ?? 'All'})',
+        'FollowupController: Fetching follow-up leads (store=${storeParam ?? 'All'})',
       );
-      // Fetch follow-up leads from backend (/api/pages/follow-ups)
-      await _repository.fetchFollowUpLeadsFromApi(store: _selectedStore);
+      // Fetch follow-up leads from backend (/api/leads/followups)
+      await _repository.fetchFollowUpLeadsFromApi(store: storeParam);
 
       print(
         'FollowupController: Fetch completed - total follow-up leads in repository: ${_repository.followUpLeads.length}',
@@ -388,9 +384,9 @@ class FollowupController extends ChangeNotifier {
     try {
       print('FollowupController: Starting notification check...');
       final today = DateTime.now();
-      final todayUtc = DateTime.utc(today.year, today.month, today.day);
+      final todayDate = DateTime(today.year, today.month, today.day);
 
-      print('FollowupController: Today UTC: $todayUtc');
+      print('FollowupController: Today: $todayDate');
       print(
         'FollowupController: Total follow-up leads: ${_repository.followUpLeads.length}',
       );
@@ -399,28 +395,28 @@ class FollowupController extends ChangeNotifier {
       final todayFollowUps =
           _repository.followUpLeads.where((lead) {
             if (lead.followUpDate == null) return false;
-            final followUpUtc = DateTime.utc(
+            final followUpDate = DateTime(
               lead.followUpDate!.year,
               lead.followUpDate!.month,
               lead.followUpDate!.day,
             );
-            return followUpUtc.compareTo(todayUtc) == 0;
+            return followUpDate.compareTo(todayDate) == 0;
           }).length;
 
       print('FollowupController: Today follow-ups count: $todayFollowUps');
 
       // Get upcoming follow-ups (next 7 days)
+      final sevenDaysFromNow = todayDate.add(const Duration(days: 7));
       final upcomingFollowUps =
           _repository.followUpLeads.where((lead) {
             if (lead.followUpDate == null) return false;
-            final followUpUtc = DateTime.utc(
+            final followUpDate = DateTime(
               lead.followUpDate!.year,
               lead.followUpDate!.month,
               lead.followUpDate!.day,
             );
-            final sevenDaysFromNow = todayUtc.add(const Duration(days: 7));
-            return followUpUtc.isAfter(todayUtc) &&
-                followUpUtc.isBefore(sevenDaysFromNow);
+            return followUpDate.isAfter(todayDate) &&
+                followUpDate.isBefore(sevenDaysFromNow);
           }).length;
 
       print(

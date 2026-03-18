@@ -1,16 +1,11 @@
 class ApiConfig {
   // Base URL
-  static const String baseUrl = "https://telecallerappbackend.onrender.com";
+  static const String baseUrl = "https://rootstele.onrender.com";
 
   // API endpoints paths
-  static const String leadsEndpoint = "$baseUrl/api/pages/leads";
+  static const String leadsEndpoint = "$baseUrl/api/leads";
   static const String authEndpoint = "$baseUrl/api/auth";
-  static const String pagesEndpoint = "$baseUrl/api/pages";
-  static const String reportsEndpoint = "$baseUrl/api/reports";
-  // Follow-ups endpoint (fetch follow-up leads)
-  static const String followUpsEndpoint = "$baseUrl/api/pages/follow-ups";
-  // Starred calls endpoint
-  static const String starredCallsEndpoint = "$baseUrl/api/pages/starred-calls";
+  static const String storesEndpoint = "$baseUrl/api/stores";
 
   // Lead types
   static const String lossOfSale = "lossOfSale";
@@ -21,219 +16,210 @@ class ApiConfig {
   // Sources
   static const String sourceWalkIn = "Walk-in";
 
-  // API Endpoints (with optional query parameters)
-
-  static String lossOfSaleLeads({
-    String? store,
-    String? enquiryFrom,
-    String? enquiryTo,
-    String? functionFrom,
-    String? functionTo,
-    String? visitFrom,
-    String? visitTo,
-    int? page,
-    int? limit,
-  }) {
-    String url = "$leadsEndpoint?leadType=$lossOfSale";
-
-    if (store != null && store.isNotEmpty) {
-      // Send the full store name in "Brand - Location" format
-      url += "&store=${Uri.encodeComponent(store)}";
-    }
-
-    if (enquiryFrom != null && enquiryTo != null) {
-      url += "&enquiryDateFrom=$enquiryFrom&enquiryDateTo=$enquiryTo";
-    }
-
-    if (functionFrom != null && functionTo != null) {
-      url += "&functionDateFrom=$functionFrom&functionDateTo=$functionTo";
-    }
-
-    if (visitFrom != null && visitTo != null) {
-      url += "&visitDateFrom=$visitFrom&visitDateTo=$visitTo";
-    }
-
-    // Add pagination parameters
-    if (page != null) {
-      url += "&page=$page";
-    }
-    if (limit != null) {
-      url += "&limit=$limit";
-    } else {
-      // Default to high limit to get all records
-      url += "&limit=1000";
-    }
-
-    return url;
-  }
-
-  static String walkInLeads() {
-    return "$leadsEndpoint?leadType=$walkIn&source=$sourceWalkIn";
-  }
-
-  static String bookingConfirmationLeads({
-    String? store,
-    int? page,
-    int? limit,
-  }) {
-    String url = "$leadsEndpoint?leadType=$bookingConfirmation";
-
-    if (store != null && store.isNotEmpty) {
-      // Send the full store name in "Brand - Location" format
-      url += "&store=${Uri.encodeComponent(store)}";
-    }
-
-    // Add pagination parameters
-    if (page != null) {
-      url += "&page=$page";
-    }
-    if (limit != null) {
-      url += "&limit=$limit";
-    } else {
-      // Default to high limit to get all records
-      url += "&limit=1000";
-    }
-
-    return url;
-  }
-
-  static String returnLeads({String? store, int? page, int? limit}) {
-    String url = "$leadsEndpoint?leadType=$returnLead";
-
-    if (store != null && store.isNotEmpty) {
-      // Send the full store name in "Brand - Location" format
-      url += "&store=${Uri.encodeComponent(store)}";
-    }
-
-    // Add pagination parameters
-    if (page != null) {
-      url += "&page=$page";
-    }
-    if (limit != null) {
-      url += "&limit=$limit";
-    } else {
-      // Default to high limit to get all records
-      url += "&limit=1000";
-    }
-
-    return url;
-  }
-
-  /// Get all leads endpoint with pagination, store filter, and date filter support
-  /// Format: /api/pages/leads?store=Suitor Guy - Edappal
-  /// Or: /api/pages/leads?page=1&store=Suitor Guy - Edappal&createdAt=2025-12-04
-  static String getAllLeads({
-    String? store,
-    int? page,
-    String? enquiryDateFrom,
-    String? enquiryDateTo,
-    String? functionDateFrom,
-    String? functionDateTo,
-    String? visitDateFrom,
-    String? visitDateTo,
-    String? dateFrom,
-    String? dateTo,
-    String? dateField,
-    String? createdAt,
-  }) {
-    String url = "$leadsEndpoint";
-    List<String> queryParams = [];
-
-    // Add page parameter if provided
-    if (page != null) {
-      queryParams.add("page=$page");
-    }
-
-    // Add store filter if provided
-    if (store != null && store.isNotEmpty) {
-      queryParams.add("store=${Uri.encodeComponent(store)}");
-    }
-
-    // Add createdAt date filter (primary date filter)
-    if (createdAt != null && createdAt.isNotEmpty) {
-      queryParams.add("createdAt=${Uri.encodeComponent(createdAt)}");
-    }
-
-    // Add enquiry date filters
-    if (enquiryDateFrom != null && enquiryDateFrom.isNotEmpty) {
-      queryParams.add(
-        "enquiryDateFrom=${Uri.encodeComponent(enquiryDateFrom)}",
-      );
-    }
-    if (enquiryDateTo != null && enquiryDateTo.isNotEmpty) {
-      queryParams.add("enquiryDateTo=${Uri.encodeComponent(enquiryDateTo)}");
-    }
-
-    // Add function date filters
-    if (functionDateFrom != null && functionDateFrom.isNotEmpty) {
-      queryParams.add(
-        "functionDateFrom=${Uri.encodeComponent(functionDateFrom)}",
-      );
-    }
-    if (functionDateTo != null && functionDateTo.isNotEmpty) {
-      queryParams.add("functionDateTo=${Uri.encodeComponent(functionDateTo)}");
-    }
-
-    // Add visit date filters (for Loss of Sale)
-    if (visitDateFrom != null && visitDateFrom.isNotEmpty) {
-      queryParams.add("visitDateFrom=${Uri.encodeComponent(visitDateFrom)}");
-    }
-    if (visitDateTo != null && visitDateTo.isNotEmpty) {
-      queryParams.add("visitDateTo=${Uri.encodeComponent(visitDateTo)}");
-    }
-
-    // Add generic date filters with dateField parameter
-    if (dateFrom != null && dateFrom.isNotEmpty) {
-      queryParams.add("dateFrom=${Uri.encodeComponent(dateFrom)}");
-    }
-    if (dateTo != null && dateTo.isNotEmpty) {
-      queryParams.add("dateTo=${Uri.encodeComponent(dateTo)}");
-    }
-    if (dateField != null && dateField.isNotEmpty) {
-      queryParams.add("dateField=${Uri.encodeComponent(dateField)}");
-    }
-
-    // Build URL with query parameters
-    if (queryParams.isNotEmpty) {
-      url += "?${queryParams.join('&')}";
-    }
-
-    return url;
-  }
-
+  // ===== Authentication =====
   static String login() {
-    return "$authEndpoint/login";
+    return "$authEndpoint/telecaller-login";
   }
 
   static String refreshToken() {
     return "$authEndpoint/refresh-token";
   }
 
-  static String updateLossOfSale(String id) {
-    return "$pagesEndpoint/loss-of-sale/$id";
+  // ===== Return Leads =====
+  static String getReturnLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) {
+    String url = "$leadsEndpoint/returns";
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParams.add("fromDate=${Uri.encodeComponent(fromDate)}");
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParams.add("toDate=${Uri.encodeComponent(toDate)}");
+    }
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+    return url;
   }
 
+  static String updateReturnLead(String id) {
+    return "$leadsEndpoint/returns/$id";
+  }
+
+  // ===== Booking Confirmation Leads =====
+  static String getBookingConfirmationLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) {
+    String url = "$leadsEndpoint/booking-confirmation";
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParams.add("fromDate=${Uri.encodeComponent(fromDate)}");
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParams.add("toDate=${Uri.encodeComponent(toDate)}");
+    }
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+    return url;
+  }
+
+  static String updateBookingConfirmationLead(String id) {
+    return "$leadsEndpoint/booking-confirmation/$id";
+  }
+
+  // ===== Followup Leads =====
+  static String getFollowupLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) {
+    String url = "$leadsEndpoint/followups";
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParams.add("fromDate=${Uri.encodeComponent(fromDate)}");
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParams.add("toDate=${Uri.encodeComponent(toDate)}");
+    }
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+    return url;
+  }
+
+  static String updateFollowupLead(String id) {
+    return "$leadsEndpoint/followups/$id";
+  }
+
+  // ===== Complaint Leads =====
+  static String getComplaintLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) {
+    String url = "$leadsEndpoint/complaints";
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParams.add("fromDate=${Uri.encodeComponent(fromDate)}");
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParams.add("toDate=${Uri.encodeComponent(toDate)}");
+    }
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+    return url;
+  }
+
+  // ===== Completed Leads (Reports) =====
+  static String getCompletedLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    String? leadtype,
+    int? page,
+    int? limit,
+  }) {
+    String url = "$leadsEndpoint/completed";
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParams.add("fromDate=${Uri.encodeComponent(fromDate)}");
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParams.add("toDate=${Uri.encodeComponent(toDate)}");
+    }
+    if (leadtype != null && leadtype.isNotEmpty) {
+      queryParams.add("leadtype=${Uri.encodeComponent(leadtype)}");
+    }
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+    return url;
+  }
+
+  // ===== Stores =====
+  static String getStores() {
+    return storesEndpoint;
+  }
+
+  // ===== Legacy Methods (for backward compatibility) =====
   static String addLead() {
-    return "$pagesEndpoint/add-lead";
+    return "$leadsEndpoint/add-lead";
   }
 
-  static String updateReturn(String id) {
-    return "$pagesEndpoint/return/$id";
+  static String walkInLeads() {
+    return "$leadsEndpoint/walk-in";
   }
 
-  static String updateBookingConfirmation(String id) {
-    return "$pagesEndpoint/booking-confirmation/$id";
-  }
-
-  static String getReturn(String id) {
-    return "$pagesEndpoint/return/$id";
-  }
-
-  /// Reports API endpoint
-  static String get reportsBaseUrl => reportsEndpoint;
-
-  /// Get reports endpoint with filtering and pagination support
-  /// Supports both createdAt (creation date) and editedAt (edit date) filtering
   static String getReports({
     String? leadType,
     String? editedBy,
@@ -246,80 +232,25 @@ class ApiConfig {
     int? page,
     int? limit,
   }) {
-    String url = reportsBaseUrl;
-    List<String> queryParams = [];
-
-    if (leadType != null && leadType.isNotEmpty) {
-      queryParams.add("leadType=${Uri.encodeComponent(leadType)}");
-    }
-
-    if (editedBy != null && editedBy.isNotEmpty) {
-      queryParams.add("editedBy=${Uri.encodeComponent(editedBy)}");
-    }
-
-    // Use createdAtFrom/createdAtTo if provided (preferred)
-    if (createdAtFrom != null && createdAtFrom.isNotEmpty) {
-      queryParams.add("createdAtFrom=${Uri.encodeComponent(createdAtFrom)}");
-    }
-
-    if (createdAtTo != null && createdAtTo.isNotEmpty) {
-      queryParams.add("createdAtTo=${Uri.encodeComponent(createdAtTo)}");
-    }
-
-    // Use editedAtFrom/editedAtTo if provided
-    if (editedAtFrom != null && editedAtFrom.isNotEmpty) {
-      queryParams.add("editedAtFrom=${Uri.encodeComponent(editedAtFrom)}");
-    }
-
-    if (editedAtTo != null && editedAtTo.isNotEmpty) {
-      queryParams.add("editedAtTo=${Uri.encodeComponent(editedAtTo)}");
-    }
-
-    // Fallback to dateFrom/dateTo if createdAt parameters not provided
-    if (createdAtFrom == null && dateFrom != null && dateFrom.isNotEmpty) {
-      queryParams.add("createdAtFrom=${Uri.encodeComponent(dateFrom)}");
-    }
-
-    if (createdAtTo == null && dateTo != null && dateTo.isNotEmpty) {
-      queryParams.add("createdAtTo=${Uri.encodeComponent(dateTo)}");
-    }
-
-    // Add pagination parameters
-    if (page != null) {
-      queryParams.add("page=$page");
-    } else {
-      queryParams.add("page=1"); // Default to page 1
-    }
-
-    if (limit != null) {
-      queryParams.add("limit=$limit");
-    } else {
-      queryParams.add(
-        "limit=100",
-      ); // Increased default limit to get more reports
-    }
-
-    if (queryParams.isNotEmpty) {
-      url += "?${queryParams.join('&')}";
-    }
-
-    return url;
+    return getCompletedLeads(
+      fromDate: dateFrom ?? createdAtFrom,
+      toDate: dateTo ?? createdAtTo,
+      page: page,
+      limit: limit,
+    );
   }
 
-  /// Get a single report by ID
   static String getReportById(String id) {
-    return "$reportsBaseUrl/$id";
+    return "$leadsEndpoint/$id";
   }
 
-  /// Get call summary/dashboard statistics
   static String getCallSummary({String? store, String? date}) {
-    String url = "$reportsEndpoint/call-summary";
+    String url = "$leadsEndpoint/call-summary";
     List<String> queryParams = [];
 
     if (date != null && date.isNotEmpty) {
       queryParams.add("date=${Uri.encodeComponent(date)}");
     }
-
     if (store != null && store.isNotEmpty) {
       queryParams.add("store=${Uri.encodeComponent(store)}");
     }
@@ -327,64 +258,34 @@ class ApiConfig {
     if (queryParams.isNotEmpty) {
       url += "?${queryParams.join('&')}";
     }
-
     return url;
   }
 
-  /// Follow-ups endpoint helper
   static String getFollowUps({String? store, int? page, int? limit}) {
-    String url = followUpsEndpoint;
-    List<String> queryParams = [];
-
-    if (store != null && store.isNotEmpty) {
-      queryParams.add("store=${Uri.encodeComponent(store)}");
-    }
-
-    if (page != null) {
-      queryParams.add("page=$page");
-    }
-
-    if (limit != null) {
-      queryParams.add("limit=$limit");
-    } else {
-      queryParams.add("limit=1000");
-    }
-
-    if (queryParams.isNotEmpty) {
-      url += "?${queryParams.join('&')}";
-    }
-
-    return url;
+    return getFollowupLeads(store: store, page: page, limit: limit);
   }
 
-  /// Starred calls endpoint helper
   static String getStarredCalls({String? store, int? page, int? limit}) {
-    String url = starredCallsEndpoint;
+    String url = "$leadsEndpoint/starred-calls";
     List<String> queryParams = [];
 
     if (store != null && store.isNotEmpty) {
       queryParams.add("store=${Uri.encodeComponent(store)}");
     }
-
     if (page != null) {
       queryParams.add("page=$page");
     }
-
     if (limit != null) {
       queryParams.add("limit=$limit");
-    } else {
-      queryParams.add("limit=1000");
     }
 
     if (queryParams.isNotEmpty) {
       url += "?${queryParams.join('&')}";
     }
-
     return url;
   }
 
-  /// Get a single starred call by ID
   static String getStarredCallById(String id) {
-    return "$starredCallsEndpoint/$id";
+    return "$leadsEndpoint/starred-calls/$id";
   }
 }

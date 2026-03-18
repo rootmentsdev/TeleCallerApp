@@ -4,6 +4,7 @@ import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
+import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 
 /// Controller for Lead Screen
@@ -43,7 +44,10 @@ class LeadScreenController extends ChangeNotifier {
     notifyListeners();
 
     final store = _headerController?.selectedStore;
-    final storeParam = (store == null || store == 'All Stores') ? null : store;
+    final storeParam =
+        (store == null || store.normalizedName == 'All Stores')
+            ? null
+            : store.normalizedName;
 
     String? dateFrom;
     String? dateTo;
@@ -53,7 +57,15 @@ class LeadScreenController extends ChangeNotifier {
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
       dateFrom = _formatDateForApi(_headerController!.dateRangeStart!);
-      dateTo = _formatDateForApi(_headerController!.dateRangeEnd!);
+      final endOfDay = DateTime(
+        _headerController!.dateRangeEnd!.year,
+        _headerController!.dateRangeEnd!.month,
+        _headerController!.dateRangeEnd!.day,
+        23,
+        59,
+        59,
+      );
+      dateTo = _formatDateForApi(endOfDay);
     } else {
       singleDate = _headerController?.selectedDate ?? DateTime.now();
     }
@@ -67,31 +79,51 @@ class LeadScreenController extends ChangeNotifier {
     String? dateTo,
     DateTime? singleDate,
   ) {
+    // Format single date to API format if provided
+    String? formattedDateFrom;
+    String? formattedDateTo;
+
+    if (dateFrom != null && dateTo != null) {
+      formattedDateFrom = dateFrom;
+      formattedDateTo = dateTo;
+    } else if (singleDate != null) {
+      // Convert single date to date range (full day)
+      formattedDateFrom = _formatDateForApi(singleDate);
+      // End of day
+      final endOfDay = DateTime(
+        singleDate.year,
+        singleDate.month,
+        singleDate.day,
+        23,
+        59,
+        59,
+      );
+      formattedDateTo = _formatDateForApi(endOfDay);
+    }
+
+    // Always pass date parameters if available
     if (store != null) {
-      if (dateFrom != null && dateTo != null) {
-        fetchAllLeadsFromApi(
-          store: store,
-          dateFrom: dateFrom,
-          dateTo: dateTo,
-          dateField: 'createdAt',
-        ).catchError((_) {});
-      } else {
-        fetchAllLeadsFromApi(store: store, date: singleDate).catchError((_) {});
-      }
-
-      fetchReturnLeadsFromApi(store: store).catchError((_) {});
+      fetchAllLeadsFromApi(
+        store: store,
+        dateFrom: formattedDateFrom,
+        dateTo: formattedDateTo,
+        dateField: 'createdAt',
+      ).catchError((_) {});
+      fetchReturnLeadsFromApi(
+        store: store,
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
     } else {
-      if (dateFrom != null && dateTo != null) {
-        fetchAllLeadsFromApi(
-          dateFrom: dateFrom,
-          dateTo: dateTo,
-          dateField: 'createdAt',
-        ).catchError((_) {});
-      } else {
-        fetchAllLeadsFromApi(date: singleDate).catchError((_) {});
-      }
-
-      fetchReturnLeadsFromApi().catchError((_) {});
+      fetchAllLeadsFromApi(
+        dateFrom: formattedDateFrom,
+        dateTo: formattedDateTo,
+        dateField: 'createdAt',
+      ).catchError((_) {});
+      fetchReturnLeadsFromApi(
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
     }
   }
 
@@ -125,7 +157,7 @@ class LeadScreenController extends ChangeNotifier {
   // Getters
   DateTime get selectedDate =>
       _headerController?.selectedDate ?? DateTime.now();
-  String? get selectedStore => _headerController?.selectedStore;
+  Store? get selectedStore => _headerController?.selectedStore;
   int get selectedCallTypeIndex => _selectedCallTypeIndex;
 
   // Setters
@@ -140,65 +172,22 @@ class LeadScreenController extends ChangeNotifier {
 
   List<Map<String, dynamic>> getCallSummary() {
     int getCalledLeadsCount({String? category}) {
-      DateTime? date;
-      DateTime? dateStart;
-      DateTime? dateEnd;
-
-      if (_headerController?.isRangeMode == true &&
-          _headerController?.dateRangeStart != null &&
-          _headerController?.dateRangeEnd != null) {
-        dateStart = _headerController!.dateRangeStart;
-        dateEnd = _headerController!.dateRangeEnd;
-      } else {
-        date = _headerController?.selectedDate ?? DateTime.now();
-      }
-
       List<LeadModel> leads = _repository.allLeads;
-
-      if (dateStart != null && dateEnd != null) {
-        final start = dateStart;
-        final end = dateEnd;
-        leads =
-            leads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              final normalizedLeadDate = DateTime.utc(
-                leadDate.year,
-                leadDate.month,
-                leadDate.day,
-              );
-              final normalizedStart = DateTime.utc(
-                start.year,
-                start.month,
-                start.day,
-              );
-              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-            }).toList();
-      } else if (date != null) {
-        final selectedDate = date;
-        leads =
-            leads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              return leadDate.year == selectedDate.year &&
-                  leadDate.month == selectedDate.month &&
-                  leadDate.day == selectedDate.day;
-            }).toList();
-      }
 
       if (category != null) {
         leads = leads.where((lead) => lead.category == category).toList();
       }
 
       final storeFilter = _headerController?.selectedStore;
-      if (storeFilter != null && storeFilter != "All Stores") {
+      if (storeFilter != null && storeFilter.normalizedName != "All Stores") {
+        final storeParam = storeFilter.normalizedName;
         leads =
             leads
-                .where((lead) => _repository.matchesStore(lead, storeFilter))
+                .where((lead) => _repository.matchesStore(lead, storeParam))
                 .toList();
       }
 
-      // Filter for CALLED leads (opposite of uncalled)
+      // Filter for CALLED leads
       leads =
           leads
               .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
@@ -208,61 +197,18 @@ class LeadScreenController extends ChangeNotifier {
     }
 
     int getUncalledLeadsCount({String? category}) {
-      DateTime? date;
-      DateTime? dateStart;
-      DateTime? dateEnd;
-
-      if (_headerController?.isRangeMode == true &&
-          _headerController?.dateRangeStart != null &&
-          _headerController?.dateRangeEnd != null) {
-        dateStart = _headerController!.dateRangeStart;
-        dateEnd = _headerController!.dateRangeEnd;
-      } else {
-        date = _headerController?.selectedDate ?? DateTime.now();
-      }
-
       List<LeadModel> leads = _repository.allLeads;
-
-      if (dateStart != null && dateEnd != null) {
-        final start = dateStart;
-        final end = dateEnd;
-        leads =
-            leads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              final normalizedLeadDate = DateTime.utc(
-                leadDate.year,
-                leadDate.month,
-                leadDate.day,
-              );
-              final normalizedStart = DateTime.utc(
-                start.year,
-                start.month,
-                start.day,
-              );
-              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-            }).toList();
-      } else if (date != null) {
-        final selectedDate = date;
-        leads =
-            leads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              return leadDate.year == selectedDate.year &&
-                  leadDate.month == selectedDate.month &&
-                  leadDate.day == selectedDate.day;
-            }).toList();
-      }
 
       if (category != null) {
         leads = leads.where((lead) => lead.category == category).toList();
       }
 
       final storeFilter = _headerController?.selectedStore;
-      if (storeFilter != null && storeFilter != "All Stores") {
+      if (storeFilter != null && storeFilter.normalizedName != "All Stores") {
+        final storeParam = storeFilter.normalizedName;
         leads =
             leads
-                .where((lead) => _repository.matchesStore(lead, storeFilter))
+                .where((lead) => _repository.matchesStore(lead, storeParam))
                 .toList();
       }
 
@@ -284,57 +230,14 @@ class LeadScreenController extends ChangeNotifier {
     }
 
     int getStarredLeadsCount() {
-      DateTime? date;
-      DateTime? dateStart;
-      DateTime? dateEnd;
-
-      if (_headerController?.isRangeMode == true &&
-          _headerController?.dateRangeStart != null &&
-          _headerController?.dateRangeEnd != null) {
-        dateStart = _headerController!.dateRangeStart;
-        dateEnd = _headerController!.dateRangeEnd;
-      } else {
-        date = _headerController?.selectedDate ?? DateTime.now();
-      }
-
       List<LeadModel> leads = _repository.starredCallsLeads;
 
-      if (dateStart != null && dateEnd != null) {
-        final start = dateStart;
-        final end = dateEnd;
-        leads =
-            leads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              final normalizedLeadDate = DateTime.utc(
-                leadDate.year,
-                leadDate.month,
-                leadDate.day,
-              );
-              final normalizedStart = DateTime.utc(
-                start.year,
-                start.month,
-                start.day,
-              );
-              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-            }).toList();
-      } else if (date != null) {
-        final selectedDate = date;
-        leads =
-            leads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              return leadDate.year == selectedDate.year &&
-                  leadDate.month == selectedDate.month &&
-                  leadDate.day == selectedDate.day;
-            }).toList();
-      }
-
       final storeFilter = _headerController?.selectedStore;
-      if (storeFilter != null && storeFilter != "All Stores") {
+      if (storeFilter != null && storeFilter.normalizedName != "All Stores") {
+        final storeParam = storeFilter.normalizedName;
         leads =
             leads
-                .where((lead) => _repository.matchesStore(lead, storeFilter))
+                .where((lead) => _repository.matchesStore(lead, storeParam))
                 .toList();
       }
 
@@ -381,205 +284,48 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   List<LeadDisplayModel> getFilteredLeads() {
-    String? category = _getCategoryForIndex(_selectedCallTypeIndex);
     final store = _headerController?.selectedStore;
+    List<LeadModel> filteredLeads = [];
 
-    DateTime? date;
-    DateTime? dateStart;
-    DateTime? dateEnd;
-
-    if (_headerController?.isRangeMode == true &&
-        _headerController?.dateRangeStart != null &&
-        _headerController?.dateRangeEnd != null) {
-      dateStart = _headerController!.dateRangeStart;
-      dateEnd = _headerController!.dateRangeEnd;
-    } else {
-      date = _headerController?.selectedDate ?? DateTime.now();
-    }
-
-    List<LeadModel> filteredLeads;
-
-    // Handle starred calls separately
-    if (_selectedCallTypeIndex == 3) {
-      filteredLeads = _repository.starredCallsLeads;
-
-      // Apply date filter
-      if (dateStart != null && dateEnd != null) {
-        final start = dateStart;
-        final end = dateEnd;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              final normalizedLeadDate = DateTime.utc(
-                leadDate.year,
-                leadDate.month,
-                leadDate.day,
-              );
-              final normalizedStart = DateTime.utc(
-                start.year,
-                start.month,
-                start.day,
-              );
-              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-            }).toList();
-      } else if (date != null) {
-        final selectedDate = date;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              return leadDate.year == selectedDate.year &&
-                  leadDate.month == selectedDate.month &&
-                  leadDate.day == selectedDate.day;
-            }).toList();
-      }
-    } else if (_selectedCallTypeIndex == 0) {
-      // Booking Confirmation tab - show booking confirmation leads with date filtering
+    // Backend already filters by date range, so just get the appropriate leads
+    // based on the selected tab
+    if (_selectedCallTypeIndex == 0) {
+      // Booking Confirmation tab
       filteredLeads =
           _repository.allLeads
-              .where((lead) => lead.category == LeadConstants.categoryBookingConfirmation)
+              .where(
+                (lead) =>
+                    lead.category == LeadConstants.categoryBookingConfirmation,
+              )
+              .where((lead) => !lead.isStarred)
+              .where((lead) => lead.followUpDate == null)
               .toList();
-
-      print(
-        'LeadScreenController: Tab 0 - Total leads in repo: ${_repository.allLeads.length}, Booking Confirmation leads: ${filteredLeads.length}',
-      );
-
-      // Apply date filter based on selected date or date range
-      if (dateStart != null && dateEnd != null) {
-        final start = dateStart;
-        final end = dateEnd;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              final normalizedLeadDate = DateTime.utc(
-                leadDate.year,
-                leadDate.month,
-                leadDate.day,
-              );
-              final normalizedStart = DateTime.utc(
-                start.year,
-                start.month,
-                start.day,
-              );
-              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-            }).toList();
-
-        print(
-          'LeadScreenController: After date range filter - Booking Confirmation leads: ${filteredLeads.length}',
-        );
-      } else if (date != null) {
-        final selectedDate = date;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              return leadDate.year == selectedDate.year &&
-                  leadDate.month == selectedDate.month &&
-                  leadDate.day == selectedDate.day;
-            }).toList();
-
-        print(
-          'LeadScreenController: After date filter - Booking Confirmation leads: ${filteredLeads.length}',
-        );
-      }
-
-      // Exclude starred leads
-      filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
-
-      print(
-        'LeadScreenController: After excluding starred - Booking Confirmation leads: ${filteredLeads.length}',
-      );
-
-      // Exclude leads with follow-up dates (they belong in Follow-Up screen)
-      filteredLeads =
-          filteredLeads.where((lead) => lead.followUpDate == null).toList();
-
-      print(
-        'LeadScreenController: After excluding follow-up dates - Booking Confirmation leads: ${filteredLeads.length}',
-      );
     } else if (_selectedCallTypeIndex == 1) {
-      // Feedback Calls tab - show return leads with date filtering
+      // Feedback Calls tab (Return leads)
       filteredLeads =
           _repository.allLeads
               .where((lead) => lead.category == LeadConstants.categoryRentOut)
+              .where((lead) => !lead.isStarred)
+              .where((lead) => lead.followUpDate == null)
               .toList();
-
-      // Apply date filter based on selected date or date range
-      if (dateStart != null && dateEnd != null) {
-        final start = dateStart;
-        final end = dateEnd;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              final normalizedLeadDate = DateTime.utc(
-                leadDate.year,
-                leadDate.month,
-                leadDate.day,
-              );
-              final normalizedStart = DateTime.utc(
-                start.year,
-                start.month,
-                start.day,
-              );
-              final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-              return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-                  normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-            }).toList();
-      } else if (date != null) {
-        final selectedDate = date;
-        filteredLeads =
-            filteredLeads.where((lead) {
-              final leadDate = lead.getEffectiveDate();
-              return leadDate.year == selectedDate.year &&
-                  leadDate.month == selectedDate.month &&
-                  leadDate.day == selectedDate.day;
-            }).toList();
-      }
-
-      // Exclude starred leads
-      filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
-
-      // Exclude leads with follow-up dates (they belong in Follow-Up screen)
-      filteredLeads =
-          filteredLeads.where((lead) => lead.followUpDate == null).toList();
+    } else if (_selectedCallTypeIndex == 3) {
+      // Marked Calls tab (Starred leads)
+      filteredLeads = _repository.starredCallsLeads;
     } else {
-      if (dateStart != null && dateEnd != null) {
-        filteredLeads = _repository.getLeadsByDateRange(dateStart, dateEnd);
-        if (category != null) {
-          filteredLeads =
-              filteredLeads.where((lead) => lead.category == category).toList();
-        }
-      } else {
-        filteredLeads = _repository.getLeadsByCategory(category, date: date);
-      }
-
-      if (_selectedCallTypeIndex != 0) {
-        filteredLeads =
-            filteredLeads
-                .where(
-                  (lead) => LeadConstants.isUncalledStatus(lead.callStatus),
-                )
-                .toList();
-      }
-
-      filteredLeads =
-          filteredLeads.where((lead) => lead.followUpDate == null).toList();
-
-      // Exclude starred leads from all tabs except Marked Calls
-      if (_selectedCallTypeIndex != 3) {
-        filteredLeads = filteredLeads.where((lead) => !lead.isStarred).toList();
-      }
+      // Other tabs
+      filteredLeads = _repository.allLeads;
     }
 
-    if (store != null && store != 'All Stores') {
+    // Apply store filter if not "All Stores"
+    if (store != null && store.normalizedName != 'All Stores') {
+      final storeParam = store.normalizedName;
       filteredLeads =
           filteredLeads
-              .where((lead) => _repository.matchesStore(lead, store))
+              .where((lead) => _repository.matchesStore(lead, storeParam))
               .toList();
     }
 
+    // Handle "show only new lead" feature
     if (_showOnlyNewLead &&
         _focusedNewLeadId != null &&
         _selectedCallTypeIndex == 0) {
@@ -621,106 +367,42 @@ class LeadScreenController extends ChangeNotifier {
 
   int getBookingConfirmationCount() {
     final store = _headerController?.selectedStore;
-    DateTime? date;
-    DateTime? dateStart;
-    DateTime? dateEnd;
 
-    if (_headerController?.isRangeMode == true &&
-        _headerController?.dateRangeStart != null &&
-        _headerController?.dateRangeEnd != null) {
-      dateStart = _headerController!.dateRangeStart;
-      dateEnd = _headerController!.dateRangeEnd;
-    } else {
-      date = _headerController?.selectedDate ?? DateTime.now();
-    }
-
-    List<LeadModel> leads = _repository.allLeads
-        .where((lead) => lead.category == LeadConstants.categoryBookingConfirmation)
-        .where((lead) => !lead.isStarred)
-        .where((lead) => lead.followUpDate == null)
-        .toList();
-
-    // Apply date filter
-    if (dateStart != null && dateEnd != null) {
-      final start = dateStart;
-      final end = dateEnd;
-      leads = leads.where((lead) {
-        final leadDate = lead.getEffectiveDate();
-        final normalizedLeadDate = DateTime.utc(
-          leadDate.year,
-          leadDate.month,
-          leadDate.day,
-        );
-        final normalizedStart = DateTime.utc(
-          start.year,
-          start.month,
-          start.day,
-        );
-        final normalizedEnd = DateTime.utc(end.year, end.month, end.day);
-        return normalizedLeadDate.compareTo(normalizedStart) >= 0 &&
-            normalizedLeadDate.compareTo(normalizedEnd) <= 0;
-      }).toList();
-    } else if (date != null) {
-      final selectedDate = date;
-      leads = leads.where((lead) {
-        final leadDate = lead.getEffectiveDate();
-        return leadDate.year == selectedDate.year &&
-            leadDate.month == selectedDate.month &&
-            leadDate.day == selectedDate.day;
-      }).toList();
-    }
+    List<LeadModel> leads =
+        _repository.allLeads
+            .where(
+              (lead) =>
+                  lead.category == LeadConstants.categoryBookingConfirmation,
+            )
+            .where((lead) => !lead.isStarred)
+            .where((lead) => lead.followUpDate == null)
+            .toList();
 
     // Apply store filter
-    if (store != null && store != 'All Stores') {
-      leads = leads.where((lead) => _repository.matchesStore(lead, store)).toList();
+    if (store != null && store.normalizedName != 'All Stores') {
+      final storeParam = store.normalizedName;
+      leads =
+          leads
+              .where((lead) => _repository.matchesStore(lead, storeParam))
+              .toList();
     }
 
     return leads.length;
   }
 
   int getFollowUpLeadsCount() {
-    DateTime? date;
-    DateTime? dateStart;
-    DateTime? dateEnd;
-
-    if (_headerController?.isRangeMode == true &&
-        _headerController?.dateRangeStart != null &&
-        _headerController?.dateRangeEnd != null) {
-      dateStart = _headerController!.dateRangeStart;
-      dateEnd = _headerController!.dateRangeEnd;
-    } else {
-      date = _headerController?.selectedDate ?? DateTime.now();
-    }
-
-    List<LeadModel> leads;
-    if (dateStart != null && dateEnd != null) {
-      leads = _repository.getLeadsByDateRange(dateStart, dateEnd);
-    } else {
-      leads = _repository.getLeadsByDate(date!);
-    }
+    List<LeadModel> leads = _repository.followUpLeads;
 
     final store = _headerController?.selectedStore;
-    if (store != null && store != 'All Stores') {
+    if (store != null && store.normalizedName != 'All Stores') {
+      final storeParam = store.normalizedName;
       leads =
-          leads.where((lead) => _repository.matchesStore(lead, store)).toList();
+          leads
+              .where((lead) => _repository.matchesStore(lead, storeParam))
+              .toList();
     }
 
-    return leads.where((lead) => lead.followUpDate != null).length;
-  }
-
-  String? _getCategoryForIndex(int index) {
-    switch (index) {
-      case 0:
-        return LeadConstants.categoryRentOut; // Feedback Calls
-      case 1:
-        return LeadConstants.categoryLossOfSales;
-      case 2:
-        return LeadConstants.categoryRentOut;
-      case 3:
-        return null; // Marked Calls (handled separately)
-      default:
-        return null;
-    }
+    return leads.length;
   }
 
   void refresh() {
@@ -731,12 +413,27 @@ class LeadScreenController extends ChangeNotifier {
     String? store,
     String? enquiryFrom,
     String? enquiryTo,
+    String? fromDate,
+    String? toDate,
   }) async {
     try {
+      print('═══════════════════════════════════════════════════════════');
+      print('LeadScreenController: CALLING fetchReturnLeadsFromApi');
+      print('═══════════════════════════════════════════════════════════');
+      print('Parameters:');
+      print('  store: $store');
+      print('  fromDate: $fromDate');
+      print('  toDate: $toDate');
+      print('  enquiryFrom: $enquiryFrom');
+      print('  enquiryTo: $enquiryTo');
+      print('═══════════════════════════════════════════════════════════');
+
       await _repository.fetchReturnLeadsFromApi(
         store: store,
         enquiryFrom: enquiryFrom,
         enquiryTo: enquiryTo,
+        fromDate: fromDate,
+        toDate: toDate,
       );
       notifyListeners();
     } catch (e, s) {
@@ -967,7 +664,8 @@ class LeadScreenController extends ChangeNotifier {
         securityPaid: securityPaid,
         remarks: remarks,
         followUpFlag: followUpFlag ?? false,
-        followUpDate: followUpDate != null ? followUpDate.toIso8601String() : null,
+        followUpDate:
+            followUpDate != null ? followUpDate.toIso8601String() : null,
         callDuration: callDuration,
         clearFollowUpDate: clearFollowUpDate ?? false,
       );

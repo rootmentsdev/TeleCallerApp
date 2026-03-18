@@ -202,7 +202,7 @@ class LeadModel {
     // Handle follow-up date (both formats)
     DateTime? followUpDate;
     final followUpDateValue =
-        json['follow_up_date'] ?? json['followUpDate'] ?? json['follow_upDate'];
+        json['follow_up_date'] ?? json['followUpDate'] ?? json['followupDate'];
     if (followUpDateValue != null) {
       try {
         followUpDate = DateTime.parse(followUpDateValue.toString());
@@ -232,7 +232,7 @@ class LeadModel {
     }
 
     // Handle lead type (both formats)
-    final leadType = json['lead_type'] ?? json['leadType'];
+    final leadType = json['lead_type'] ?? json['leadType'] ?? json['leadtype'];
 
     // Handle isStarred (multiple possible field names)
     final isStarred =
@@ -299,7 +299,9 @@ class LeadModel {
 
     // Handle mark_as_complaint
     final markAsComplaint =
-        json['mark_as_complaint'] ?? json['markAsComplaint'];
+        json['mark_as_complaint'] ??
+        json['markAsComplaint'] ??
+        json['markasComplaint'];
 
     return LeadModel(
       id: id,
@@ -361,7 +363,11 @@ class LeadModel {
   /// For return leads: use returnDate if available, otherwise createdAt
   /// For all other leads: use createdAt
   DateTime getEffectiveDate() {
-    if (leadType == 'return' && returnDate != null) {
+    // Check if this is a return lead by checking the leadType
+    // API returns leadtype as 'return' (lowercase, no underscore)
+    final isReturnLead = leadType?.toLowerCase() == 'return';
+
+    if (isReturnLead && returnDate != null) {
       return returnDate!;
     }
     return createdAt;

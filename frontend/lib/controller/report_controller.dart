@@ -3,52 +3,47 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/report_model.dart';
+import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
-import 'package:telecaller_app/utils/store_location.dart';
+import 'package:telecaller_app/utils/date_categorization.dart';
 
-/// Controller for Report Screen
 class ReportController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
   final ApiService _apiService = ApiService();
   HeaderController? _headerController;
-  int _selectedCallTypeIndex = 0; // 0: All Calls, 1: Loss of Sale, etc.
+  int _selectedCallTypeIndex = 0;
 
-  // Reports fetched from API
   List<ReportModel> _reports = [];
   PaginationInfo? _pagination;
   bool _isLoadingReports = false;
   String? _reportsError;
+  String _selectedDateCategory = 'Today';
 
-  // Getters for reports
+  static bool _shouldNavigateToEquaryCalls = false;
+
   List<ReportModel> get reports => _reports;
   PaginationInfo? get pagination => _pagination;
   bool get isLoadingReports => _isLoadingReports;
   String? get reportsError => _reportsError;
+  String get selectedDateCategory => _selectedDateCategory;
 
-  // Static flag to indicate navigation to Equary Calls tab after call save
-  static bool _shouldNavigateToEquaryCalls = false;
-
-  // Static method to trigger navigation to Equary Calls tab
   static void navigateToEquaryCalls() {
     _shouldNavigateToEquaryCalls = true;
   }
 
-  // Check and handle navigation flag
   void checkNavigationFlag() {
     if (_shouldNavigateToEquaryCalls) {
       _shouldNavigateToEquaryCalls = false;
-      setSelectedCallTypeIndex(5); // Equary Calls tab
+      setSelectedCallTypeIndex(5);
     }
   }
 
-  // Force refresh data from repository
   Future<void> forceRefreshData() async {
     await _repository.forceReloadFromStorage();
     notifyListeners();
   }
 
-  // Initialize with header controller
   void init(HeaderController headerController) {
     if (_headerController != headerController) {
       _headerController?.removeListener(_onHeaderChanged);
@@ -58,11 +53,9 @@ class ReportController extends ChangeNotifier {
   }
 
   void _onHeaderChanged() {
-    // When header (store/date) changes, fetch reports from API
     _fetchReportsForCurrentFilters();
   }
 
-  // Fetch reports when filters change
   Future<void> _fetchReportsForCurrentFilters() async {
     try {
       await fetchReportsWithCurrentFilters();
@@ -77,29 +70,22 @@ class ReportController extends ChangeNotifier {
     super.dispose();
   }
 
-  // Getters
   DateTime get selectedDate =>
       _headerController?.selectedDate ?? DateTime.now();
-  String? get selectedStore => _headerController?.selectedStore;
+  Store? get selectedStore => _headerController?.selectedStore;
   int get selectedCallTypeIndex => _selectedCallTypeIndex;
 
-  // Setters
   void setSelectedCallTypeIndex(int index) {
     _selectedCallTypeIndex = index;
     notifyListeners();
-    // Fetch reports when tab changes
     _fetchReportsForCurrentFilters();
   }
 
-  // Get call summary data (filtered by store and date)
-  // Only count leads that have been called (completed calls)
   List<Map<String, dynamic>> getCallSummary() {
     final store = _headerController?.selectedStore;
+    final storeFilter =
+        (store == null || store.normalizedName == 'All Stores') ? null : store;
 
-    // Handle "All Stores" case
-    final storeFilter = (store == null || store == 'All Stores') ? null : store;
-
-    // Helper function to count called leads
     int getCalledLeadsCount({String? category}) {
       final date = _headerController?.selectedDate ?? DateTime.now();
       List<dynamic> leads =
@@ -109,13 +95,19 @@ class ReportController extends ChangeNotifier {
                   .cast<dynamic>()
               : _repository.getLeadsByDate(date).cast<dynamic>();
 
-      // Filter by store - extract location from "Brand - Location" format
       if (storeFilter != null) {
-        final location = StoreLocations.resolveSelection(storeFilter).location;
-        leads = leads.where((lead) => lead.location == location).toList();
+        leads =
+            leads.where((lead) {
+              final leadLocation = lead.location ?? '';
+              return leadLocation.toLowerCase().contains(
+                    storeFilter.location.toLowerCase(),
+                  ) ||
+                  storeFilter.location.toLowerCase().contains(
+                    leadLocation.toLowerCase(),
+                  );
+            }).toList();
       }
 
-      // Filter by date
       leads =
           leads.where((lead) {
             final leadDate = lead.createdAt;
@@ -124,7 +116,6 @@ class ReportController extends ChangeNotifier {
                 leadDate.day == date.day;
           }).toList();
 
-      // Filter to only show leads that have been called
       leads =
           leads
               .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
@@ -174,19 +165,12 @@ class ReportController extends ChangeNotifier {
     ];
   }
 
-  // Get filtered leads based on selected call type
-  // Backend-driven: Uses API reports for tabs 0-3, local repository for tab 6 (Follow Up)
-  // No local filtering - backend returns filtered data
   List<Map<String, dynamic>> getFilteredLeads() {
     final store = _headerController?.selectedStore;
+    final storeFilter =
+        (store == null || store.normalizedName == 'All Stores') ? null : store;
 
-    // Handle "All Stores" case
-    final storeFilter = (store == null || store == 'All Stores') ? null : store;
-
-    // Special handling for tab 6 (Follow-up Leads)
-    // Shows: Only leads with followUpDate set
     if (_selectedCallTypeIndex == 6) {
-      // Get leads by date range if available, otherwise by single date
       List<dynamic> allLeads;
       if (_headerController?.isRangeMode == true &&
           _headerController?.dateRangeStart != null &&
@@ -200,26 +184,24 @@ class ReportController extends ChangeNotifier {
         allLeads = _repository.getLeadsByDate(selectedDate);
       }
 
-      // Filter only leads with follow-up date set
       List<dynamic> followUpLeads =
           allLeads.where((lead) {
             return lead.followUpDate != null;
           }).toList();
 
-      // Filter by store if specified
       if (storeFilter != null) {
-        final location = StoreLocations.resolveSelection(storeFilter).location;
         followUpLeads =
             followUpLeads.where((lead) {
               final leadLocation = lead.location ?? '';
               return leadLocation.toLowerCase().contains(
-                    location.toLowerCase(),
+                    storeFilter.location.toLowerCase(),
                   ) ||
-                  location.toLowerCase().contains(leadLocation.toLowerCase());
+                  storeFilter.location.toLowerCase().contains(
+                    leadLocation.toLowerCase(),
+                  );
             }).toList();
       }
 
-      // Convert to contact format
       return followUpLeads.map((lead) {
         return {
           "id": lead.id,
@@ -235,20 +217,15 @@ class ReportController extends ChangeNotifier {
           "followUpDate": lead.followUpDate?.toIso8601String(),
           "callDuration": lead.callDuration,
           "remarks": lead.reason ?? "",
+          "leadData": {},
         };
       }).toList();
     }
 
-    // For tabs 0-3, use API reports
-    // Backend already filters by leadType based on tab selection
-    // Show all reports regardless of call status
     List<Map<String, dynamic>> filteredReports =
         _reports.map((report) {
-          // Get lead data from leadSnapshot (current state of the lead)
-          // leadSnapshot now includes top-level fields from API response
           final leadData = report.leadData ?? {};
 
-          // Extract lead information from leadSnapshot
           final leadName =
               leadData['name']?.toString() ??
               leadData['lead_name']?.toString() ??
@@ -259,31 +236,22 @@ class ReportController extends ChangeNotifier {
               leadData['phone_number']?.toString() ??
               '';
 
-          // Extract call status - support both formats
           final callStatus =
               leadData['callStatus']?.toString() ??
               leadData['call_status']?.toString() ??
               '';
 
-          print(
-            'ReportController: Processing report - name: $leadName, callStatus: $callStatus, leadType: ${report.leadType}',
-          );
-
-          // Normalize store name (Calicut -> Kozhikode, etc.)
           var leadLocation =
               leadData['store']?.toString() ??
               leadData['location']?.toString() ??
               '';
 
-          // Apply store name normalization
           if (leadLocation.isNotEmpty && !leadLocation.contains(' - ')) {
-            leadLocation = StoreLocations.normalizeStoreName(leadLocation);
+            leadLocation = _normalizeStoreName(leadLocation);
           } else if (leadLocation.isNotEmpty && leadLocation.contains(' - ')) {
             final parts = leadLocation.split(' - ');
             if (parts.length == 2) {
-              final normalizedLocation = StoreLocations.normalizeStoreName(
-                parts[1],
-              );
+              final normalizedLocation = _normalizeStoreName(parts[1]);
               leadLocation = '${parts[0]} - $normalizedLocation';
             }
           }
@@ -297,14 +265,11 @@ class ReportController extends ChangeNotifier {
               leadData['reason_collected_from_store']?.toString() ??
               '';
 
-          // Get call_duration from leadData or top-level report model
           final callDuration =
               leadData['callDuration'] as int? ??
               leadData['call_duration'] as int? ??
               report.callDuration;
 
-          // Extract sub category, closing action, and item category from leadData
-          // These are now included in leadSnapshot via fallbackLeadSnapshot
           final subCategory =
               leadData['subCategory']?.toString() ??
               leadData['sub_category']?.toString() ??
@@ -318,7 +283,6 @@ class ReportController extends ChangeNotifier {
               leadData['item_category']?.toString() ??
               '';
 
-          // Parse dates
           DateTime? parseDate(dynamic dateValue) {
             if (dateValue == null) return null;
             try {
@@ -351,9 +315,8 @@ class ReportController extends ChangeNotifier {
           final bookingDate =
               parseDate(leadData['bookingDate']) ??
               parseDate(leadData['booking_date']) ??
-              enquiryDate; // Fallback to enquiryDate for booking date
+              enquiryDate;
 
-          // Extract additional fields for feedback/return reports
           final attendedBy =
               leadData['attendedBy']?.toString() ??
               leadData['attended_by']?.toString() ??
@@ -391,10 +354,8 @@ class ReportController extends ChangeNotifier {
                 functionDate != null
                     ? _formatDate(functionDate)
                     : "Not available",
-            "bookingDate":
-                bookingDate != null ? bookingDate.toIso8601String() : null,
-            "returnDate":
-                returnDate != null ? returnDate.toIso8601String() : null,
+            "bookingDate": bookingDate?.toIso8601String(),
+            "returnDate": returnDate?.toIso8601String(),
             "storeName":
                 leadLocation.isNotEmpty ? leadLocation : "Not available",
             "type": _getTypeFromLeadType(report.leadType),
@@ -412,22 +373,17 @@ class ReportController extends ChangeNotifier {
                 closingAction.isNotEmpty ? closingAction : "Not specified",
             "itemCategory":
                 itemCategory.isNotEmpty ? itemCategory : "Not specified",
-            // Additional fields for feedback/return reports
             "service": service,
             "rating": rating,
             "markAsComplaint": markAsComplaint,
             "noOfFunctions": noOfFunctions,
             "noOfAttires": noOfAttires,
             "competitor": competitor,
-            // Include leadData for nested access
             "leadData": leadData,
           };
         }).toList();
 
-    // For "All Calls" tab (index 0), also include newly created leads from local repository
-    // BUT ONLY if they have been called (completed calls)
     if (_selectedCallTypeIndex == 0) {
-      // Get leads by date range if available, otherwise by single date
       List<dynamic> localLeads;
       if (_headerController?.isRangeMode == true &&
           _headerController?.dateRangeStart != null &&
@@ -441,13 +397,11 @@ class ReportController extends ChangeNotifier {
         localLeads = _repository.getLeadsByDate(selectedDate);
       }
 
-      // Filter to only include leads that have been called
       final calledLocalLeads =
           localLeads
               .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
               .toList();
 
-      // Add newly created leads that aren't already in the API reports
       final reportIds = filteredReports.map((r) => r["id"]).toSet();
       for (final lead in calledLocalLeads) {
         if (!reportIds.contains(lead.id)) {
@@ -465,31 +419,104 @@ class ReportController extends ChangeNotifier {
             "followUpDate": lead.followUpDate?.toIso8601String(),
             "callDuration": lead.callDuration,
             "remarks": lead.reason ?? "",
+            "leadData": {},
           });
         }
       }
     }
 
-    // Filter by store if specified
     if (storeFilter != null) {
-      final location = StoreLocations.resolveSelection(storeFilter).location;
       filteredReports =
           filteredReports.where((report) {
             final storeName = report["storeName"] as String? ?? "";
-            return storeName.toLowerCase().contains(location.toLowerCase()) ||
-                location.toLowerCase().contains(storeName.toLowerCase());
+            return storeName.toLowerCase().contains(
+                  storeFilter.location.toLowerCase(),
+                ) ||
+                storeFilter.location.toLowerCase().contains(
+                  storeName.toLowerCase(),
+                );
           }).toList();
     }
-
-    // NOTE: Backend already filters by leadType based on selected tab
-    // No need to filter locally - trust backend
-    // Tabs 0-3 are handled by API with leadType parameter
-    // Tab 6 (Follow Up) is handled by local repository filtering above
 
     return filteredReports;
   }
 
-  // Convert API leadType to display type
+  String _normalizeStoreName(String? storeName) {
+    if (storeName == null || storeName.isEmpty) return '';
+
+    const Map<String, String> normalization = {
+      'Calicut': 'Kozhikode',
+      'calicut': 'Kozhikode',
+      'CALICUT': 'Kozhikode',
+      'Cochin': 'Edappally',
+      'cochin': 'Edappally',
+      'COCHIN': 'Edappally',
+      'mg road': 'MG Road',
+      'MG road': 'MG Road',
+      'mg Road': 'MG Road',
+      'MG_Road': 'MG Road',
+      'mg_road': 'MG Road',
+      'MG-Road': 'MG Road',
+      'mg-road': 'MG Road',
+      'M.G. Road': 'MG Road',
+      'm.g. road': 'MG Road',
+      'Vatakara': 'Vadakara',
+      'vatakara': 'Vadakara',
+      'VATAKARA': 'Vadakara',
+      'trivandrum': 'Trivandrum',
+      'TRIVANDRUM': 'Trivandrum',
+      'Thiruvananthapuram': 'Trivandrum',
+      'thiruvananthapuram': 'Trivandrum',
+      'kottayam': 'Kottayam',
+      'KOTTAYAM': 'Kottayam',
+      'edappally': 'Edappally',
+      'EDAPPALLY': 'Edappally',
+      'Edapally': 'Edappally',
+      'edapally': 'Edappally',
+      'perumbavoor': 'Perumbavoor',
+      'PERUMBAVOOR': 'Perumbavoor',
+      'Perumbavur': 'Perumbavoor',
+      'perumbavur': 'Perumbavoor',
+      'thrissur': 'Thrissur',
+      'THRISSUR': 'Thrissur',
+      'Trichur': 'Thrissur',
+      'trichur': 'Thrissur',
+      'palakkad': 'Palakkad',
+      'PALAKKAD': 'Palakkad',
+      'Palghat': 'Palakkad',
+      'palghat': 'Palakkad',
+      'chavakkad': 'Chavakkad',
+      'CHAVAKKAD': 'Chavakkad',
+      'Chavakad': 'Chavakkad',
+      'chavakad': 'Chavakkad',
+      'edappal': 'Edappal',
+      'EDAPPAL': 'Edappal',
+      'Edapal': 'Edappal',
+      'edapal': 'Edappal',
+      'perinthalmanna': 'Perinthalmanna',
+      'PERINTHALMANNA': 'Perinthalmanna',
+      'manjeri': 'Manjeri',
+      'MANJERI': 'Manjeri',
+      'kottakal': 'Kottakal',
+      'KOTTAKAL': 'Kottakal',
+      'kozhikode': 'Kozhikode',
+      'KOZHIKODE': 'Kozhikode',
+      'vadakara': 'Vadakara',
+      'VADAKARA': 'Vadakara',
+      'kannur': 'Kannur',
+      'KANNUR': 'Kannur',
+      'Cannanore': 'Kannur',
+      'cannanore': 'Kannur',
+      'kalpetta': 'Kalpetta',
+      'KALPETTA': 'Kalpetta',
+      'Kottakkal': 'Kottakkal',
+      'kottakkal': 'Kottakkal',
+      'KOTTAKKAL': 'Kottakkal',
+    };
+
+    return normalization[storeName] ?? storeName;
+  }
+
   String _getTypeFromLeadType(String? leadType) {
     if (leadType == null) return "general";
 
@@ -499,10 +526,10 @@ class ReportController extends ChangeNotifier {
       case "lossofsale":
         return "loss";
       case "rentoutfeedback":
-      case "return": // Backend now uses "return" instead of "rentoutFeedback"
+      case "return":
         return "hardout";
       case "bookingconfirmation":
-      case "booked": // Backend returns "booked" when we send "booked"
+      case "booked":
         return "booking";
       case "justdial":
         return "justdial";
@@ -548,7 +575,6 @@ class ReportController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetch reports from API
   Future<void> fetchReportsFromApi({
     String? leadType,
     String? editedBy,
@@ -598,28 +624,22 @@ class ReportController extends ChangeNotifier {
     }
   }
 
-  /// Fetch reports filtered by current header settings (store and date)
   Future<void> fetchReportsWithCurrentFilters() async {
-    // Format date with time to ISO8601 for API (includes time component)
     String formatDateWithTime(DateTime date) {
       return date.toIso8601String();
     }
 
-    // Use date range if available, otherwise use single selected date
     String editedAtFromStr;
     String editedAtToStr;
 
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
-      // Use date range - format with time to ensure full day coverage
       editedAtFromStr = formatDateWithTime(_headerController!.dateRangeStart!);
       editedAtToStr = formatDateWithTime(_headerController!.dateRangeEnd!);
     } else {
-      // Use single date - format with time to ensure full day coverage
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
       editedAtFromStr = formatDateWithTime(selectedDate);
-      // For end date, use 23:59:59 of the same day
       final endOfDay = DateTime(
         selectedDate.year,
         selectedDate.month,
@@ -631,28 +651,26 @@ class ReportController extends ChangeNotifier {
       editedAtToStr = formatDateWithTime(endOfDay);
     }
 
-    // Determine leadType based on selected call type index
     String? leadType;
 
     switch (_selectedCallTypeIndex) {
       case 0:
-        leadType = null; // ALL CALLS - fetch all lead types
+        leadType = null;
         break;
       case 1:
-        leadType = "enquiry"; // ENQUIRY CALLS
+        leadType = "enquiry";
         break;
       case 2:
-        leadType = "return"; // FEEDBACK CALLS - Backend uses "return"
+        leadType = "return";
         break;
       case 3:
-        leadType = "bookingconfirmation"; // BOOKING CALLS
+        leadType = "bookingconfirmation";
         break;
       case 4:
-        leadType = "lossOfSale"; // LOSS OF SALE CALLS
+        leadType = "lossOfSale";
         break;
       case 5:
-        leadType =
-            null; // FOLLOW UP CALLS - fetch all, filter locally by followUpFlag
+        leadType = null;
         break;
       default:
         leadType = null;
@@ -663,7 +681,6 @@ class ReportController extends ChangeNotifier {
       'ReportController: Fetching reports with filters - leadType: $leadType, editedAtFrom: $editedAtFromStr, editedAtTo: $editedAtToStr',
     );
 
-    // Fetch reports with date filters
     try {
       await fetchReportsFromApi(
         leadType: leadType,
@@ -678,8 +695,6 @@ class ReportController extends ChangeNotifier {
     }
   }
 
-  /// Get current user ID for filtering reports by editor
-  /// This can be used to fetch reports edited by the current user
   Future<void> fetchReportsByCurrentUser({
     String? leadType,
     String? dateFrom,
@@ -687,8 +702,6 @@ class ReportController extends ChangeNotifier {
     int? page,
     int? limit,
   }) async {
-    // TODO: Get current user ID from AuthService
-    // For now, fetch all reports
     await fetchReportsFromApi(
       leadType: leadType,
       dateFrom: dateFrom,
@@ -696,5 +709,76 @@ class ReportController extends ChangeNotifier {
       page: page,
       limit: limit,
     );
+  }
+
+  void setSelectedDateCategory(String category) {
+    _selectedDateCategory = category;
+    notifyListeners();
+  }
+
+  List<Map<String, dynamic>> getFilteredReportsByDateCategory() {
+    final allReports = getFilteredLeads();
+
+    print(
+      'ReportController: getFilteredReportsByDateCategory - Total reports: ${allReports.length}, Category: $_selectedDateCategory',
+    );
+
+    final dateRange = DateCategorization.getDateRange(_selectedDateCategory);
+    print(
+      'ReportController: Date range for $_selectedDateCategory: ${dateRange.start} to ${dateRange.end}',
+    );
+
+    final filteredReports =
+        allReports.where((report) {
+          try {
+            final leadData = report['leadData'] as Map<String, dynamic>? ?? {};
+            dynamic createdAtValue =
+                leadData['createdAt'] ?? report['callDate'];
+
+            if (createdAtValue == null) {
+              print(
+                'ReportController: No date found for report ${report['name']}',
+              );
+              return false;
+            }
+
+            DateTime reportDate;
+            if (createdAtValue is String) {
+              reportDate = DateTime.parse(createdAtValue);
+            } else if (createdAtValue is DateTime) {
+              reportDate = createdAtValue;
+            } else {
+              print(
+                'ReportController: Invalid date type for ${report['name']}: ${createdAtValue.runtimeType}',
+              );
+              return false;
+            }
+
+            final normalizedReportDate = DateTime(
+              reportDate.year,
+              reportDate.month,
+              reportDate.day,
+            );
+
+            print(
+              'ReportController: Checking ${report['name']} - Date: $normalizedReportDate, In category: ${DateCategorization.isDateInCategory(normalizedReportDate, _selectedDateCategory)}',
+            );
+
+            return DateCategorization.isDateInCategory(
+              normalizedReportDate,
+              _selectedDateCategory,
+            );
+          } catch (e) {
+            print(
+              'ReportController: Error parsing report date for ${report['name']}: $e',
+            );
+            return false;
+          }
+        }).toList();
+
+    print(
+      'ReportController: Filtered reports count: ${filteredReports.length}',
+    );
+    return filteredReports;
   }
 }

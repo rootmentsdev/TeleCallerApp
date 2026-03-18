@@ -203,7 +203,8 @@ class LeadRepository extends ChangeNotifier {
   }
 
   /// Test lead ID for UI checking (used when kDebugMode)
-  static const String _testBookingConfirmationLeadId = 'test_booking_confirmation_lead_001';
+  static const String _testBookingConfirmationLeadId =
+      'test_booking_confirmation_lead_001';
 
   /// Add test booking confirmation lead data for UI checking (debug mode only)
   Future<void> _addTestBookingConfirmationDataIfNeeded() async {
@@ -213,7 +214,9 @@ class LeadRepository extends ChangeNotifier {
     final today = DateTime(now.year, now.month, now.day);
 
     // Check if test lead already exists
-    final existingTestLead = _leads.any((l) => l.id == _testBookingConfirmationLeadId);
+    final existingTestLead = _leads.any(
+      (l) => l.id == _testBookingConfirmationLeadId,
+    );
     if (!existingTestLead) {
       final testLead = LeadModel(
         id: _testBookingConfirmationLeadId,
@@ -231,7 +234,9 @@ class LeadRepository extends ChangeNotifier {
       );
       _leads.add(testLead);
       await _saveLeads();
-      print('LeadRepository: Added test booking confirmation lead for UI check');
+      print(
+        'LeadRepository: Added test booking confirmation lead for UI check',
+      );
     }
 
     // Always ensure booking data is available for test lead (not persisted)
@@ -702,7 +707,8 @@ class LeadRepository extends ChangeNotifier {
           leadData['callDuration'] as int? ?? leadData['call_duration'] as int?;
       final followUpDate =
           _parseDate(leadData['follow_up_date']) ??
-          _parseDate(leadData['followUpDate']);
+          _parseDate(leadData['followUpDate']) ??
+          _parseDate(leadData['followupDate']);
       final functionDate =
           _parseDate(leadData['function_date']) ??
           _parseDate(leadData['functionDate']);
@@ -761,14 +767,31 @@ class LeadRepository extends ChangeNotifier {
     String? store,
     String? enquiryFrom,
     String? enquiryTo,
+    String? fromDate,
+    String? toDate,
   }) async {
     try {
       await ensureInitialized();
 
+      print('═══════════════════════════════════════════════════════════');
+      print('LeadRepository: FETCHING FEEDBACK CALLS (RETURN LEADS)');
+      print('═══════════════════════════════════════════════════════════');
+      print('Parameters:');
+      print('  store: $store');
+      print('  fromDate: $fromDate');
+      print('  toDate: $toDate');
+      print('  enquiryFrom: $enquiryFrom');
+      print('  enquiryTo: $enquiryTo');
+      print('═══════════════════════════════════════════════════════════');
+
       // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
-      final response = await _apiService.getReturnLeads(store: storeFilter);
+      final response = await _apiService.getReturnLeads(
+        store: storeFilter,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
 
       final leadsData = _parseResponseData(response);
 
@@ -862,7 +885,6 @@ class LeadRepository extends ChangeNotifier {
         remarks: remarks,
         callDuration: callDuration,
         followUpDate: followUpDate,
-        clearFollowUpDate: clearFollowUpDate,
         subCategory: subCategory,
         itemCategory: itemCategory,
         functionDate: functionDate,
@@ -1156,14 +1178,7 @@ class LeadRepository extends ChangeNotifier {
         remarks: remarks,
         callDuration: callDuration,
         followUpDate: followUpDate,
-        clearFollowUpDate: clearFollowUpDate,
-        subCategory: subCategory,
-        closingAction: closingAction,
-        rating: rating,
-        leadType: leadType,
-        functionDate: functionDate,
         followUpFlag: followUpFlag,
-        markAsComplaint: markAsComplaint,
       );
 
       // Update local lead if it exists
@@ -1227,12 +1242,6 @@ class LeadRepository extends ChangeNotifier {
       final response = await _apiService.getAllLeads(
         store: storeFilter,
         page: page,
-        enquiryDateFrom: enquiryDateFrom,
-        enquiryDateTo: enquiryDateTo,
-        functionDateFrom: functionDateFrom,
-        functionDateTo: functionDateTo,
-        visitDateFrom: visitDateFrom,
-        visitDateTo: visitDateTo,
         dateFrom: dateFrom,
         dateTo: dateTo,
         dateField: dateField,

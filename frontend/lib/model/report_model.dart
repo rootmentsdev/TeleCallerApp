@@ -47,9 +47,12 @@ class ReportModel {
 
   // -------- JSON to Model -------- //
   factory ReportModel.fromJson(Map<String, dynamic> json) {
-    // Extract leadType from multiple possible locations
+    // Extract leadType from multiple possible locations (including lowercase)
     final extractedLeadType =
-        json['leadType']?.toString() ?? json['lead_type']?.toString() ?? '';
+        json['leadType']?.toString() ??
+        json['lead_type']?.toString() ??
+        json['leadtype']?.toString() ??
+        '';
 
     print(
       'ReportModel: Extracted leadType: "$extractedLeadType" from JSON keys: ${json.keys.toList()}',
@@ -225,14 +228,29 @@ class ReportsResponse {
   ReportsResponse({required this.reports, required this.pagination});
 
   factory ReportsResponse.fromJson(Map<String, dynamic> json) {
+    // API returns data in 'data' object with 'leads' array
+    final data = json['data'] as Map<String, dynamic>? ?? json;
+
     final List<ReportModel> parsedReports =
-        (json['reports'] as List? ?? [])
-            .map((item) => ReportModel.fromJson(item))
+        (data['leads'] as List? ?? data['reports'] as List? ?? [])
+            .map((item) => ReportModel.fromJson(item as Map<String, dynamic>))
             .toList();
+
+    print(
+      'ReportsResponse: Parsed ${parsedReports.length} reports from API response',
+    );
 
     return ReportsResponse(
       reports: parsedReports,
-      pagination: PaginationInfo.fromJson(json['pagination'] ?? {}),
+      pagination: PaginationInfo.fromJson(
+        data['pagination'] ??
+            {
+              'page': data['page'] ?? 1,
+              'limit': data['limit'] ?? 100,
+              'total': data['total'] ?? 0,
+              'pages': ((data['total'] ?? 0) / (data['limit'] ?? 100)).ceil(),
+            },
+      ),
     );
   }
 }

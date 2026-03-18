@@ -39,6 +39,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
       );
       followupController.init(headerController);
       followupController.fetchFollowUpLeads();
+      print('FollowupScreen: initState - fetchFollowUpLeads called');
     });
   }
 
@@ -66,7 +67,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
                     color: Colors.white,
                   ),
                 ),
-               GestureDetector(
+                GestureDetector(
                   onTap: () {
                     // Handle notification tap
                   },
@@ -163,6 +164,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
   ) {
     return GestureDetector(
       onTap: () {
+        print('FollowupScreen: Tab $index ($label) tapped');
         controller.setSelectedTabIndex(index);
       },
       child: Container(
@@ -230,6 +232,10 @@ class _FollowupScreenState extends State<FollowupScreen> {
     }
 
     final currentLeads = controller.getCurrentLeads();
+
+    print(
+      'FollowupScreen: _buildCallsList called - currentLeads.length=${currentLeads.length}, selectedTab=${controller.selectedTabIndex}',
+    );
 
     if (currentLeads.isEmpty) {
       return Center(

@@ -4,6 +4,7 @@ import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
+import 'package:telecaller_app/utils/date_categorization.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/booking_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/enquiry_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/feedback_detail_screen.dart';
@@ -16,11 +17,11 @@ class CallReportListScreen extends StatefulWidget {
 }
 
 class _CallReportListScreenState extends State<CallReportListScreen> {
-  String _selectedTimeRange = '7 Days';
+  String _selectedTimeRange = 'Last 7 Days';
   String _selectedCallType = 'All';
 
   final List<String> timeRanges = [
-    '7 Days',
+    'Last 7 Days',
     'Today',
     'This Month',
     'Last Month',
@@ -42,7 +43,9 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         listen: false,
       );
       reportController.init(headerController);
-      // Set initial date range for "7 Days"
+      // Set initial date category to "Last 7 Days"
+      reportController.setSelectedDateCategory('Last 7 Days');
+      // Set initial date range for "Last 7 Days"
       _applyTimeRangeFilter(_selectedTimeRange, headerController);
       // Fetch initial reports
       reportController.fetchReportsWithCurrentFilters();
@@ -56,41 +59,33 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
 
     switch (range) {
       case 'Today':
-        // Both dates should be today's date
         startDate = DateTime(now.year, now.month, now.day);
-        endDate = DateTime(now.year, now.month, now.day);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
-      case '7 Days':
-        // Today's date and 7 days back
-        endDate = DateTime(now.year, now.month, now.day);
-        startDate = endDate.subtract(
-          const Duration(days: 6),
-        ); // 7 days including today
+      case 'Last 7 Days':
+        startDate = now.subtract(const Duration(days: 7));
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
       case 'This Month':
-        // First day to last day of current month
         startDate = DateTime(now.year, now.month, 1);
-        endDate = DateTime(
-          now.year,
-          now.month + 1,
-          0,
-        ); // Last day of current month
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
       case 'Last Month':
-        // First day to last day of previous month
         final firstDayThisMonth = DateTime(now.year, now.month, 1);
-        endDate = firstDayThisMonth.subtract(
-          const Duration(days: 1),
-        ); // Last day of last month
-        startDate = DateTime(
+        endDate = firstDayThisMonth.subtract(const Duration(days: 1));
+        endDate = DateTime(
           endDate.year,
           endDate.month,
-          1,
-        ); // First day of last month
+          endDate.day,
+          23,
+          59,
+          59,
+        );
+        startDate = DateTime(endDate.year, endDate.month, 1);
         break;
       default:
         startDate = now;
-        endDate = now;
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     }
 
     // Update header controller with date range
@@ -100,9 +95,42 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
   List<Map<String, dynamic>> _getFilteredReports(
     List<Map<String, dynamic>> allReports,
   ) {
-    // First, filter out invalid lead types (only keep Enquiry, Feedback, Booking)
-    final validReports =
+    // First, filter by date category using local filtering
+    final dateFilteredReports =
         allReports.where((report) {
+          try {
+            final leadData = report['leadData'] as Map<String, dynamic>? ?? {};
+            dynamic createdAtValue =
+                leadData['createdAt'] ?? report['callDate'];
+
+            if (createdAtValue == null) return false;
+
+            DateTime reportDate;
+            if (createdAtValue is String) {
+              reportDate = DateTime.parse(createdAtValue);
+            } else if (createdAtValue is DateTime) {
+              reportDate = createdAtValue;
+            } else {
+              return false;
+            }
+
+            final normalizedReportDate = DateTime(
+              reportDate.year,
+              reportDate.month,
+              reportDate.day,
+            );
+            return DateCategorization.isDateInCategory(
+              normalizedReportDate,
+              _selectedTimeRange,
+            );
+          } catch (e) {
+            return false;
+          }
+        }).toList();
+
+    // Then filter out invalid lead types (only keep Enquiry, Feedback, Booking)
+    final validReports =
+        dateFilteredReports.where((report) {
           final callType = _getCallTypeDisplay(report['type']);
           return callType != 'Call'; // Exclude unknown types
         }).toList();
@@ -264,6 +292,10 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                                       setState(
                                         () => _selectedTimeRange = range,
                                       );
+                                      // Set date category for local filtering
+                                      reportController.setSelectedDateCategory(
+                                        range,
+                                      );
                                       // Apply time range filter to header controller
                                       _applyTimeRangeFilter(
                                         range,
@@ -326,7 +358,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              headerController.selectedStore,
+                              headerController.selectedStore.normalizedName,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

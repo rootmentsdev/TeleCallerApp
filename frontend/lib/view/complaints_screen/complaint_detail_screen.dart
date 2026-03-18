@@ -30,22 +30,24 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
   void initState() {
     super.initState();
     // Pre-fill remarks: if call was made, use complaint_remarks, otherwise use original remarks
-    if (widget.complaint.hasCallBeenMade && widget.complaint.complaintRemarks.isNotEmpty) {
+    if (widget.complaint.hasCallBeenMade &&
+        widget.complaint.complaintRemarks.isNotEmpty) {
       _remarksController.text = widget.complaint.complaintRemarks;
     } else {
       _remarksController.text = widget.complaint.remarks;
     }
-    
+
     // Check if call was already made (from backend data)
     // If callStatus is not "Not Called" or callDuration > 0, call was already made
     if (widget.complaint.hasCallBeenMade) {
       _hasCalled = true;
       _hasSaved = true; // If call was made, it means it was already saved
-      if (widget.complaint.callDuration != null && widget.complaint.callDuration! > 0) {
+      if (widget.complaint.callDuration != null &&
+          widget.complaint.callDuration! > 0) {
         _callDuration = widget.complaint.callDuration!;
       }
     }
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final callTrackingController = Provider.of<CallTrackingController>(
         context,
@@ -103,50 +105,55 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
     try {
       // Use complaint ID for the complaints call endpoint
       final complaintId = widget.complaint.id;
-      
+
       // Make API call to POST complaint call data
       // Endpoint: /api/pages/complaints/{id}/call
-      final url = Uri.parse('${ApiConfig.baseUrl}/api/pages/complaints/$complaintId/call');
+      final url = Uri.parse(
+        '${ApiConfig.baseUrl}/api/pages/complaints/$complaintId/call',
+      );
       final apiService = ApiService();
       final headers = await apiService.getAuthHeaders();
-      
+
       if (!headers.containsKey('Authorization')) {
         throw Exception('Authentication required. Please login again.');
       }
-      
+
       // Prepare request body for complaint call endpoint
       final requestBody = <String, dynamic>{
         'remarks': _remarksController.text.trim(), // Complaint remarks
-        'call_duration': _callDuration > 0 ? _callDuration : 0, // Call duration in seconds
+        'call_duration':
+            _callDuration > 0 ? _callDuration : 0, // Call duration in seconds
         // Update call_status to indicate call was made
         // If call duration > 0, call was likely connected; otherwise use a default status
         'call_status': _callDuration > 0 ? 'Connected' : 'Not Connected',
       };
-      
+
       final requestBodyJson = json.encode(requestBody);
-      
+
       print('ComplaintDetailScreen: Patching complaint call data');
       print('ComplaintDetailScreen: PATCH URL: $url');
       print('ComplaintDetailScreen: PATCH BODY: $requestBodyJson');
-      
+
       final response = await http.patch(
         url,
         headers: headers,
         body: requestBodyJson,
       );
-      
+
       print('ComplaintDetailScreen: Response status: ${response.statusCode}');
       print('ComplaintDetailScreen: Response body: ${response.body}');
-      
+
       if (response.statusCode != 200 && response.statusCode != 201) {
-        String errorMessage = 'Failed to update complaint: Status ${response.statusCode}';
+        String errorMessage =
+            'Failed to update complaint: Status ${response.statusCode}';
         try {
           final errorData = json.decode(response.body);
           if (errorData is Map<String, dynamic>) {
-            errorMessage = errorData['message'] ?? 
-                          errorData['error'] ?? 
-                          errorData['msg'] ?? 
-                          errorMessage;
+            errorMessage =
+                errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                errorMessage;
           }
         } catch (e) {
           print('ComplaintDetailScreen: Could not parse error response: $e');
@@ -159,20 +166,23 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
         setState(() {
           _hasSaved = true;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Complaint updated successfully'),
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Wait a moment to show success message, then go back
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         // Pop back to complaints screen
         if (mounted) {
-          Navigator.pop(context, true); // Return true to indicate refresh needed
+          Navigator.pop(
+            context,
+            true,
+          ); // Return true to indicate refresh needed
         }
       }
     } catch (e) {
@@ -405,8 +415,8 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                widget.complaint.functionDate.isEmpty 
-                                    ? 'N/A' 
+                                widget.complaint.functionDate.isEmpty
+                                    ? 'N/A'
                                     : widget.complaint.functionDate,
                                 style: const TextStyle(
                                   fontSize: 13,
@@ -436,8 +446,8 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          widget.complaint.subCategory.isEmpty 
-                              ? 'Not specified' 
+                          widget.complaint.subCategory.isEmpty
+                              ? 'Not specified'
                               : widget.complaint.subCategory,
                           style: const TextStyle(
                             fontSize: 13,
@@ -465,11 +475,11 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                         const SizedBox(height: 4),
                         Text(
                           widget.complaint.hasCallBeenMade
-                              ? (widget.complaint.complaintRemarks.isNotEmpty 
-                                  ? widget.complaint.complaintRemarks 
+                              ? (widget.complaint.complaintRemarks.isNotEmpty
+                                  ? widget.complaint.complaintRemarks
                                   : 'No complaint remarks')
-                              : (widget.complaint.remarks.isNotEmpty 
-                                  ? widget.complaint.remarks 
+                              : (widget.complaint.remarks.isNotEmpty
+                                  ? widget.complaint.remarks
                                   : 'No remarks'),
                           style: const TextStyle(
                             fontSize: 13,
@@ -626,27 +636,28 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: _isSaving
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
+                              child:
+                                  _isSaving
+                                      ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                      : const Text(
+                                        "Save Complaint",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: TextConstant.dmSansMedium,
                                         ),
                                       ),
-                                    )
-                                  : const Text(
-                                      "Save Complaint",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: TextConstant.dmSansMedium,
-                                      ),
-                                    ),
                             ),
                           ),
                         ],
@@ -684,4 +695,3 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
     }
   }
 }
-
