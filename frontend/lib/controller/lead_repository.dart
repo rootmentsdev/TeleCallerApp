@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:telecaller_app/model/lead_model.dart';
+import 'package:telecaller_app/model/booking_confirmation_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/utils/store_location.dart';
@@ -74,7 +75,6 @@ class LeadRepository extends ChangeNotifier {
   Future<void> _initialize() async {
     if (_isInitialized) return;
     await _loadLeads();
-    await _addTestBookingConfirmationDataIfNeeded();
     _isInitialized = true;
   }
 
@@ -202,54 +202,6 @@ class LeadRepository extends ChangeNotifier {
     return _bookingConfirmationData[leadId];
   }
 
-  /// Test lead ID for UI checking (used when kDebugMode)
-  static const String _testBookingConfirmationLeadId =
-      'test_booking_confirmation_lead_001';
-
-  /// Add test booking confirmation lead data for UI checking (debug mode only)
-  Future<void> _addTestBookingConfirmationDataIfNeeded() async {
-    if (!kDebugMode) return;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    // Check if test lead already exists
-    final existingTestLead = _leads.any(
-      (l) => l.id == _testBookingConfirmationLeadId,
-    );
-    if (!existingTestLead) {
-      final testLead = LeadModel(
-        id: _testBookingConfirmationLeadId,
-        name: 'Abhiram S Kumar',
-        phone: '9876543210',
-        brand: 'Zorucci',
-        location: 'Edappally',
-        category: LeadConstants.categoryBookingConfirmation,
-        callStatus: 'Not called yet',
-        leadStatus: 'New Lead',
-        enquiryDate: DateTime(2025, 10, 30),
-        functionDate: DateTime(2026, 11, 2),
-        createdAt: today,
-        isStarred: false,
-      );
-      _leads.add(testLead);
-      await _saveLeads();
-      print(
-        'LeadRepository: Added test booking confirmation lead for UI check',
-      );
-    }
-
-    // Always ensure booking data is available for test lead (not persisted)
-    _bookingConfirmationData[_testBookingConfirmationLeadId] = {
-      'attendedBy': 'Arjun GS',
-      'attended_by': 'Arjun GS',
-      'advance': 5500,
-      'totalAmount': 7500,
-      'productAmount': 7500,
-      'product_amount': 7500,
-    };
-  }
-
   // ========== Helper Methods ==========
 
   /// Apply date filter to a list of leads
@@ -314,6 +266,7 @@ class LeadRepository extends ChangeNotifier {
       category: category,
       callDuration: lead.callDuration,
       createdAt: lead.createdAt,
+      returnDate: lead.returnDate,
       subCategory: lead.subCategory,
       closingAction: lead.closingAction,
       functionDate: lead.functionDate,
@@ -726,9 +679,18 @@ class LeadRepository extends ChangeNotifier {
           _parseDate(leadData['returnDate']) ??
           DateTime.now();
 
-      final leadTypeField = _extractField(leadData, ['lead_type', 'leadType']);
+      final leadTypeField = _extractField(leadData, [
+        'lead_type',
+        'leadType',
+        'leadtype',
+      ]);
       final category = _mapLeadTypeToCategory(leadTypeField);
       final leadType = _mapLeadTypeToDisplay(leadTypeField);
+
+      // Extract returnDate for return/feedback leads
+      final returnDate =
+          _parseDate(leadData['return_date']) ??
+          _parseDate(leadData['returnDate']);
 
       return LeadModel(
         id: id,
@@ -743,6 +705,7 @@ class LeadRepository extends ChangeNotifier {
         category: category,
         callDuration: callDuration,
         createdAt: createdAt,
+        returnDate: returnDate,
         subCategory:
             leadData['sub_category']?.toString() ?? // Backend snake_case
             leadData['subCategory']
@@ -1269,11 +1232,6 @@ class LeadRepository extends ChangeNotifier {
                   lead.category == LeadConstants.categoryBookingConfirmation;
               final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
 
-              // Preserve test lead in debug mode for UI checking
-              if (kDebugMode && lead.id == _testBookingConfirmationLeadId) {
-                return true;
-              }
-
               // Don't preserve called return leads or booking confirmation leads
               if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
                 return false;
@@ -1520,5 +1478,170 @@ class LeadRepository extends ChangeNotifier {
     print(
       'LeadRepository: dispose() called but ignored - singleton should not be disposed',
     );
+  }
+
+  // ========== Booking Confirmation Methods ==========
+
+  /// Fetch booking confirmation leads from API
+  Future<void> fetchBookingConfirmationLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      print(
+        'LeadRepository: Fetching booking confirmation leads (store=$store)',
+      );
+
+      final response = await _apiService.getBookingConfirmationLeads(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+        page: 1,
+        limit: 100,
+      );
+
+      // Handle nested data structure: response['data'] is a Map with 'leads' array
+      List<dynamic> data = [];
+      if (response.containsKey('data')) {
+        final dataValue = response['data'];
+        if (dataValue is Map<String, dynamic>) {
+          // Extract leads array from data map
+          final leads = dataValue['leads'];
+          if (leads is List<dynamic>) {
+            data = leads;
+          }
+        } else if (dataValue is List<dynamic>) {
+          // If data is directly a list
+          data = dataValue;
+        }
+      }
+
+      print(
+        'LeadRepository: Fetched ${data.length} booking confirmation leads successfully',
+      );
+
+      // Convert booking confirmation data to LeadModel and add to repository
+      for (final item in data) {
+        if (item is Map<String, dynamic>) {
+          final id = item['id']?.toString() ?? item['_id']?.toString() ?? '';
+          if (id.isNotEmpty) {
+            // Store in booking confirmation cache
+            _bookingConfirmationData[id] = item;
+
+            // Convert to LeadModel and add to repository
+            try {
+              final leadModel = LeadModel(
+                id: id,
+                name: item['customerName']?.toString() ?? 'Unknown',
+                phone: item['phone']?.toString() ?? '',
+                brand: 'Booking',
+                location: item['store']?.toString() ?? '',
+                category: LeadConstants.categoryBookingConfirmation,
+                callStatus: 'Not called yet',
+                leadStatus: item['leadStatus']?.toString() ?? 'new',
+                createdAt: _parseDate(item['bookingDate']) ?? DateTime.now(),
+                enquiryDate: _parseDate(item['bookingDate']),
+                isStarred: false,
+              );
+
+              // Add to leads list if not already present
+              if (!_leads.any((l) => l.id == id)) {
+                _leads.add(leadModel);
+              }
+            } catch (e) {
+              print(
+                'LeadRepository: Error converting booking confirmation to LeadModel: $e',
+              );
+            }
+          }
+        }
+      }
+
+      notifyListeners();
+    } catch (e, s) {
+      print('LeadRepository: Error fetching booking confirmation leads: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchBookingConfirmationLeadsFromApi failed',
+      );
+      rethrow;
+    }
+  }
+
+  /// Get booking confirmation lead detail by ID
+  Future<BookingConfirmationLead?> getBookingConfirmationDetail(
+    String id,
+  ) async {
+    try {
+      print('LeadRepository: Fetching booking confirmation detail for ID: $id');
+
+      final response = await _apiService.getBookingConfirmationDetail(id);
+
+      if (response.containsKey('data')) {
+        final data = response['data'] as Map<String, dynamic>;
+        return BookingConfirmationLead.fromJson(data);
+      } else if (response.containsKey('id') || response.containsKey('_id')) {
+        return BookingConfirmationLead.fromJson(response);
+      }
+
+      return null;
+    } catch (e, s) {
+      print('LeadRepository: Error fetching booking confirmation detail: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getBookingConfirmationDetail failed',
+      );
+      rethrow;
+    }
+  }
+
+  /// Update booking confirmation after call
+  Future<void> updateBookingConfirmation({
+    required String id,
+    String? service,
+    String? callDuration,
+    String? billReceived,
+    bool? amountMismatch,
+    String? remarks,
+    bool? markAsComplaint,
+    bool? markAsFollowup,
+    DateTime? followupDate,
+  }) async {
+    try {
+      print('LeadRepository: Updating booking confirmation ID: $id');
+
+      final response = await _apiService.updateBookingConfirmation(
+        id: id,
+        service: service,
+        callDuration: callDuration,
+        billReceived: billReceived,
+        amountMismatch: amountMismatch,
+        remarks: remarks,
+        markAsComplaint: markAsComplaint,
+        markAsFollowup: markAsFollowup,
+        followupDate: followupDate,
+      );
+
+      print('LeadRepository: Booking confirmation updated successfully');
+      print('LeadRepository: Response: $response');
+
+      notifyListeners();
+    } catch (e, s) {
+      print('LeadRepository: Error updating booking confirmation: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateBookingConfirmation failed',
+      );
+      rethrow;
+    }
+  }
+
+  /// Get booking confirmation data for a lead (cached)
+  Map<String, dynamic>? getBookingConfirmationDataCached(String leadId) {
+    return _bookingConfirmationData[leadId];
   }
 }

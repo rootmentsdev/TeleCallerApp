@@ -213,7 +213,7 @@ class ApiConfig {
 
   // ===== Legacy Methods (for backward compatibility) =====
   static String addLead() {
-    return "$leadsEndpoint/add-lead";
+    return leadsEndpoint;
   }
 
   static String walkInLeads() {
@@ -221,6 +221,7 @@ class ApiConfig {
   }
 
   static String getReports({
+    String? store,
     String? leadType,
     String? editedBy,
     String? dateFrom,
@@ -233,8 +234,10 @@ class ApiConfig {
     int? limit,
   }) {
     return getCompletedLeads(
+      store: store,
       fromDate: dateFrom ?? createdAtFrom,
       toDate: dateTo ?? createdAtTo,
+      leadtype: leadType,
       page: page,
       limit: limit,
     );

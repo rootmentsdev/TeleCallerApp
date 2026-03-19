@@ -150,6 +150,39 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
       }
     }
 
+    // Sort by date (most recent first)
+    deduplicatedReports.sort((a, b) {
+      try {
+        final dateAStr = a['callDate'] ?? a['date'];
+        final dateBStr = b['callDate'] ?? b['date'];
+
+        if (dateAStr == null || dateBStr == null) return 0;
+
+        DateTime dateA;
+        DateTime dateB;
+
+        if (dateAStr is String) {
+          dateA = DateTime.parse(dateAStr);
+        } else if (dateAStr is DateTime) {
+          dateA = dateAStr;
+        } else {
+          return 0;
+        }
+
+        if (dateBStr is String) {
+          dateB = DateTime.parse(dateBStr);
+        } else if (dateBStr is DateTime) {
+          dateB = dateBStr;
+        } else {
+          return 0;
+        }
+
+        return dateB.compareTo(dateA); // Descending order (most recent first)
+      } catch (e) {
+        return 0;
+      }
+    });
+
     if (_selectedCallType == 'All') {
       return deduplicatedReports;
     }

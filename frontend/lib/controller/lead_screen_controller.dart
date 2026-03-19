@@ -390,6 +390,28 @@ class LeadScreenController extends ChangeNotifier {
     return leads.length;
   }
 
+  int getReturnLeadsCount() {
+    final store = _headerController?.selectedStore;
+
+    List<LeadModel> leads =
+        _repository.allLeads
+            .where((lead) => lead.category == LeadConstants.categoryRentOut)
+            .where((lead) => !lead.isStarred)
+            .where((lead) => lead.followUpDate == null)
+            .toList();
+
+    // Apply store filter
+    if (store != null && store.normalizedName != 'All Stores') {
+      final storeParam = store.normalizedName;
+      leads =
+          leads
+              .where((lead) => _repository.matchesStore(lead, storeParam))
+              .toList();
+    }
+
+    return leads.length;
+  }
+
   int getFollowUpLeadsCount() {
     List<LeadModel> leads = _repository.followUpLeads;
 
@@ -613,10 +635,27 @@ class LeadScreenController extends ChangeNotifier {
 
   Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
     try {
-      // Fetch all leads and filter for booking confirmation
-      await _repository.fetchAllLeadsFromApi(store: store);
+      // Get selected date from HeaderController (not today's date)
+      final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+      final dateStr =
+          '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+
+      print(
+        'LeadScreenController: Fetching booking confirmation leads (store=$store, date=$dateStr)',
+      );
+
+      // Fetch booking confirmation leads from API with selected date
+      await _repository.fetchBookingConfirmationLeadsFromApi(
+        store: store,
+        fromDate: dateStr,
+        toDate: dateStr,
+      );
+
       notifyListeners();
     } catch (e, s) {
+      print(
+        'LeadScreenController: Error fetching booking confirmation leads: $e',
+      );
       FirebaseCrashlytics.instance.recordError(
         e,
         s,

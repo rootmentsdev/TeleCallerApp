@@ -360,17 +360,25 @@ class LeadModel {
   bool get needsFollowUp => followUpDate != null;
 
   /// Get the effective date for this lead based on its type
-  /// For return leads: use returnDate if available, otherwise createdAt
+  /// For return/feedback leads: use returnDate if available, otherwise createdAt
   /// For all other leads: use createdAt
+  /// Converts UTC dates to local timezone for proper display
   DateTime getEffectiveDate() {
-    // Check if this is a return lead by checking the leadType
-    // API returns leadtype as 'return' (lowercase, no underscore)
-    final isReturnLead = leadType?.toLowerCase() == 'return';
+    // Check by category (most reliable) or by raw leadType value
+    final isReturnLead =
+        category == 'Return' || // LeadConstants.categoryRentOut
+        leadType?.toLowerCase() == 'return' ||
+        leadType?.toLowerCase() == 'feedback';
 
+    DateTime dateToUse;
     if (isReturnLead && returnDate != null) {
-      return returnDate!;
+      dateToUse = returnDate!;
+    } else {
+      dateToUse = createdAt;
     }
-    return createdAt;
+
+    // Convert UTC to local timezone for correct display
+    return dateToUse.isUtc ? dateToUse.toLocal() : dateToUse;
   }
 
   // UI-level sorting helpers for Follow-Up screen tabs (Today/Upcoming/Overdue)

@@ -8,6 +8,7 @@ import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
 import 'package:telecaller_app/model/store_model.dart';
+import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/responsive_helper.dart';
@@ -61,6 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
       reportController.init(headerController);
       reportController.fetchReportsWithCurrentFilters();
 
+      // Fetch stores from backend
+      _fetchStores(headerController);
+
       Future.delayed(const Duration(milliseconds: 500), () {
         _fetchFollowUpLeads(headerController);
         _fetchComplaints(headerController);
@@ -85,6 +89,22 @@ class _HomeScreenState extends State<HomeScreen> {
     return (store == null || store.normalizedName == 'All Stores')
         ? null
         : store.normalizedName;
+  }
+
+  /// Fetch stores from backend and populate dropdown
+  Future<void> _fetchStores(HeaderController headerController) async {
+    try {
+      final apiService = ApiService();
+      final response = await apiService.getStores();
+      final storesResponse = StoresResponse.fromJson(response);
+
+      if (storesResponse.stores.isNotEmpty) {
+        headerController.setAvailableStores(storesResponse.stores);
+        print('HomeScreen: Loaded ${storesResponse.stores.length} stores');
+      }
+    } catch (e) {
+      print('HomeScreen: Error fetching stores: $e');
+    }
   }
 
   Future<void> _fetchFollowUpLeads(HeaderController headerController) async {

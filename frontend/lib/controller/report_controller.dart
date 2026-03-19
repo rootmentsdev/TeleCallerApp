@@ -576,6 +576,7 @@ class ReportController extends ChangeNotifier {
   }
 
   Future<void> fetchReportsFromApi({
+    String? store,
     String? leadType,
     String? editedBy,
     String? dateFrom,
@@ -593,6 +594,7 @@ class ReportController extends ChangeNotifier {
       notifyListeners();
 
       final response = await _apiService.getReports(
+        store: store,
         leadType: leadType,
         editedBy: editedBy,
         dateFrom: dateFrom,
@@ -677,12 +679,19 @@ class ReportController extends ChangeNotifier {
         break;
     }
 
+    final store = _headerController?.selectedStore;
+    final storeParam =
+        (store == null || store.normalizedName == 'All Stores')
+            ? null
+            : store.normalizedName;
+
     print(
-      'ReportController: Fetching reports with filters - leadType: $leadType, editedAtFrom: $editedAtFromStr, editedAtTo: $editedAtToStr',
+      'ReportController: Fetching reports with filters - store: $storeParam, leadType: $leadType, editedAtFrom: $editedAtFromStr, editedAtTo: $editedAtToStr',
     );
 
     try {
       await fetchReportsFromApi(
+        store: storeParam,
         leadType: leadType,
         editedAtFrom: editedAtFromStr,
         editedAtTo: editedAtToStr,
@@ -775,6 +784,40 @@ class ReportController extends ChangeNotifier {
             return false;
           }
         }).toList();
+
+    // Sort by date (most recent first)
+    filteredReports.sort((a, b) {
+      try {
+        final dateAStr = a['callDate'] ?? a['date'];
+        final dateBStr = b['callDate'] ?? b['date'];
+
+        if (dateAStr == null || dateBStr == null) return 0;
+
+        DateTime dateA;
+        DateTime dateB;
+
+        if (dateAStr is String) {
+          dateA = DateTime.parse(dateAStr);
+        } else if (dateAStr is DateTime) {
+          dateA = dateAStr;
+        } else {
+          return 0;
+        }
+
+        if (dateBStr is String) {
+          dateB = DateTime.parse(dateBStr);
+        } else if (dateBStr is DateTime) {
+          dateB = dateBStr;
+        } else {
+          return 0;
+        }
+
+        return dateB.compareTo(dateA); // Descending order (most recent first)
+      } catch (e) {
+        print('ReportController: Error sorting reports: $e');
+        return 0;
+      }
+    });
 
     print(
       'ReportController: Filtered reports count: ${filteredReports.length}',

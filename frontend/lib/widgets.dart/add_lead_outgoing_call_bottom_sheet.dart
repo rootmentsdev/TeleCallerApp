@@ -36,11 +36,12 @@ class _AddLeadOutgoingCallBottomSheetState
   String? _selectedSubCategory;
   String? _selectedCloseReason;
   String? _selectedItemCategory;
+  String? _selectedCallStatus = "connected";
   DateTime? _functionDate;
+  DateTime? _followUpDate;
   bool _markAsComplaint = false;
   bool _hasCalled = false;
   int _callDuration = 0;
-  String? _selectedCallStatus;
   int _rating = 0;
 
   bool _isLoading = false;
@@ -413,7 +414,72 @@ class _AddLeadOutgoingCallBottomSheetState
 
                     const SizedBox(height: 16),
 
-                    // Mark as Complaint
+                    // Call Status Dropdown
+                    _buildDropdownField(
+                      value: _selectedCallStatus,
+                      label: 'Call Status',
+                      items: [
+                        "connected",
+                        "not connected",
+                        "interested",
+                        "not interested",
+                        "forwarded",
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCallStatus = value;
+                          // Clear follow-up date if not needed
+                          if (value != "not connected" &&
+                              value != "interested") {
+                            _followUpDate = null;
+                          }
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Follow-up Date Picker - only show for "not connected" or "interested"
+                    if (_selectedCallStatus == "not connected" ||
+                        _selectedCallStatus == "interested")
+                      InkWell(
+                        onTap: _selectFollowUpDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Follow-up Date',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF666666),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _followUpDate != null
+                                    ? _formatDate(_followUpDate!)
+                                    : 'Select date',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF333333),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Checkbox(
@@ -830,6 +896,21 @@ class _AddLeadOutgoingCallBottomSheetState
     }
   }
 
+  Future<void> _selectFollowUpDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _followUpDate ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+
+    if (date != null) {
+      setState(() {
+        _followUpDate = date;
+      });
+    }
+  }
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
@@ -873,12 +954,17 @@ class _AddLeadOutgoingCallBottomSheetState
                 ? null
                 : _remarksController.text.trim(),
         functionDate: _functionDate?.toIso8601String(),
+        followUpDate: _followUpDate?.toIso8601String(),
         createdAt: DateTime.now().toIso8601String(),
         callDuration: _callDuration,
         subCategory: _selectedSubCategory,
         itemCategory: _selectedItemCategory,
         closingAction: _selectedCloseReason,
         markAsComplaint: _markAsComplaint,
+        callStatus: _selectedCallStatus,
+        followUpFlag:
+            _selectedCallStatus == "not connected" ||
+            _selectedCallStatus == "interested",
       );
 
       String leadId = '';
