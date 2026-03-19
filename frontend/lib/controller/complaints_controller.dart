@@ -23,7 +23,7 @@ class ComplaintsController extends ChangeNotifier {
     String? dateFrom,
     String? dateTo,
     int page = 1,
-    int limit = 100,
+    int limit = 1000,
   }) async {
     try {
       _isLoading = true;

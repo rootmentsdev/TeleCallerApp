@@ -71,7 +71,36 @@ class _LeadScreenState extends State<LeadScreen> {
 
     try {
       final storeParam = _getStoreParam(headerController.selectedStore);
-      await controller.fetchBookingConfirmationLeadsFromApi(store: storeParam);
+
+      String? dateFrom;
+      String? dateTo;
+      if (headerController.isRangeMode &&
+          headerController.dateRangeStart != null &&
+          headerController.dateRangeEnd != null) {
+        dateFrom = _formatDateForApi(headerController.dateRangeStart!);
+        dateTo = _formatDateForApi(
+          DateTime(
+            headerController.dateRangeEnd!.year,
+            headerController.dateRangeEnd!.month,
+            headerController.dateRangeEnd!.day,
+            23,
+            59,
+            59,
+          ),
+        );
+      } else {
+        final d = headerController.selectedDate;
+        dateFrom = _formatDateForApi(d);
+        dateTo = _formatDateForApi(
+          DateTime(d.year, d.month, d.day, 23, 59, 59),
+        );
+      }
+
+      await controller.fetchBookingConfirmationLeadsFromApi(
+        store: storeParam,
+        fromDate: dateFrom,
+        toDate: dateTo,
+      );
 
       if (mounted) {
         controller.refresh();
@@ -265,9 +294,11 @@ class _LeadScreenState extends State<LeadScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              "Booking Confirmation (${controller.getBookingConfirmationCount()})",
+                              "Booking (${controller.getBookingConfirmationCount()})",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: TextConstant.dmSansMedium,
                                 color:
@@ -309,8 +340,10 @@ class _LeadScreenState extends State<LeadScreen> {
                           child: Center(
                             child: Text(
                               "Feedback Calls (${filteredLeads.length})",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: TextConstant.dmSansMedium,
                                 color:

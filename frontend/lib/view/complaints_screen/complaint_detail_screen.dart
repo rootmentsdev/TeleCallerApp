@@ -107,9 +107,9 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
       final complaintId = widget.complaint.id;
 
       // Make API call to POST complaint call data
-      // Endpoint: /api/pages/complaints/{id}/call
+      // Endpoint: /api/leads/complaints/{id}
       final url = Uri.parse(
-        '${ApiConfig.baseUrl}/api/pages/complaints/$complaintId/call',
+        '${ApiConfig.leadsEndpoint}/complaints/$complaintId',
       );
       final apiService = ApiService();
       final headers = await apiService.getAuthHeaders();
@@ -120,21 +120,18 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
 
       // Prepare request body for complaint call endpoint
       final requestBody = <String, dynamic>{
-        'remarks': _remarksController.text.trim(), // Complaint remarks
-        'call_duration':
-            _callDuration > 0 ? _callDuration : 0, // Call duration in seconds
-        // Update call_status to indicate call was made
-        // If call duration > 0, call was likely connected; otherwise use a default status
-        'call_status': _callDuration > 0 ? 'Connected' : 'Not Connected',
+        'remarks': _remarksController.text.trim(),
+        'callDuration': _callDuration > 0 ? _callDuration : 0,
+        'callStatus': _callDuration > 0 ? 'connected' : 'not connected',
       };
 
       final requestBodyJson = json.encode(requestBody);
 
-      print('ComplaintDetailScreen: Patching complaint call data');
-      print('ComplaintDetailScreen: PATCH URL: $url');
-      print('ComplaintDetailScreen: PATCH BODY: $requestBodyJson');
+      print('ComplaintDetailScreen: Posting complaint call data');
+      print('ComplaintDetailScreen: POST URL: $url');
+      print('ComplaintDetailScreen: POST BODY: $requestBodyJson');
 
-      final response = await http.patch(
+      final response = await http.post(
         url,
         headers: headers,
         body: requestBodyJson,

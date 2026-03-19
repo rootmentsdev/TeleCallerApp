@@ -319,6 +319,8 @@ class LeadRepository extends ChangeNotifier {
       functionDate: lead.functionDate,
       enquiryDate: lead.enquiryDate,
       leadType: lead.leadType,
+      returnDate: lead.returnDate,
+      bookingDate: lead.bookingDate,
     );
   }
 
@@ -610,6 +612,12 @@ class LeadRepository extends ChangeNotifier {
     try {
       if (leadData is! Map<String, dynamic>) return null;
 
+      // Debug: log all keys to find date field names
+      print('LeadRepository: Lead keys: ${leadData.keys.toList()}');
+      print(
+        'LeadRepository: returnDate=${leadData['returnDate']}, return_date=${leadData['return_date']}, bookingDate=${leadData['bookingDate']}, booking_date=${leadData['booking_date']}',
+      );
+
       final id =
           _extractField(leadData, ['id', '_id', 'leadId', 'lead_id']) ??
           DateTime.now().millisecondsSinceEpoch.toString();
@@ -715,6 +723,12 @@ class LeadRepository extends ChangeNotifier {
       final enquiryDate =
           _parseDate(leadData['enquiry_date']) ??
           _parseDate(leadData['enquiryDate']);
+      final returnDate =
+          _parseDate(leadData['return_date']) ??
+          _parseDate(leadData['returnDate']);
+      final bookingDate =
+          _parseDate(leadData['bookingDate']) ??
+          _parseDate(leadData['booking_date']);
       final createdAt =
           _parseDate(leadData['created_at']) ??
           _parseDate(leadData['createdAt']) ??
@@ -722,8 +736,6 @@ class LeadRepository extends ChangeNotifier {
           _parseDate(leadData['enquiryDate']) ??
           _parseDate(leadData['visit_date']) ??
           _parseDate(leadData['visitDate']) ??
-          _parseDate(leadData['return_date']) ??
-          _parseDate(leadData['returnDate']) ??
           DateTime.now();
 
       final leadTypeField = _extractField(leadData, ['lead_type', 'leadType']);
@@ -751,9 +763,11 @@ class LeadRepository extends ChangeNotifier {
             leadData['closing_action']?.toString() ?? // Backend snake_case
             leadData['closingAction']
                 ?.toString(), // Individual endpoint camelCase
-        functionDate: functionDate, // Function date from API
-        enquiryDate: enquiryDate, // Enquiry date from API
-        leadType: leadType, // Lead type for display
+        functionDate: functionDate,
+        enquiryDate: enquiryDate,
+        leadType: leadType,
+        returnDate: returnDate,
+        bookingDate: bookingDate,
       );
     } catch (e) {
       print('Error parsing API lead: $e');
@@ -791,6 +805,7 @@ class LeadRepository extends ChangeNotifier {
         store: storeFilter,
         fromDate: fromDate,
         toDate: toDate,
+        limit: 1000,
       );
 
       final leadsData = _parseResponseData(response);
@@ -849,7 +864,57 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
-  /// Update Return lead via API
+  /// Fetch Booking Confirmation leads from the dedicated API endpoint
+  Future<void> fetchBookingConfirmationLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getBookingConfirmationLeads(
+        store: storeFilter,
+        fromDate: fromDate,
+        toDate: toDate,
+        limit: 1000,
+      );
+
+      final leadsData = _parseResponseData(response);
+
+      // Remove existing booking confirmation leads (avoid duplicates)
+      _leads.removeWhere(
+        (lead) =>
+            lead.category == LeadConstants.categoryBookingConfirmation &&
+            !lead.needsFollowUp,
+      );
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            final bookingLead = _createLeadWithCategory(
+              lead,
+              LeadConstants.categoryBookingConfirmation,
+            );
+            _leads.add(bookingLead);
+          }
+        } catch (e) {
+          print('LeadRepository: Error parsing Booking Confirmation lead: $e');
+        }
+      }
+
+      await _saveLeads();
+      notifyListeners();
+    } catch (e) {
+      print('LeadRepository: Error fetching Booking Confirmation leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Update Booking Confirmation lead via API
   Future<void> updateReturnLeadFromApi({
     required String id,
     String? callStatus,
@@ -937,7 +1002,10 @@ class LeadRepository extends ChangeNotifier {
       // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
-      final response = await _apiService.getFollowUpLeads(store: storeFilter);
+      final response = await _apiService.getFollowUpLeads(
+        store: storeFilter,
+        limit: 1000,
+      );
 
       final leadsData = _parseResponseData(response);
 
@@ -1061,7 +1129,7 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
-  /// Update Follow-Up lead via API
+  /// Update Booking Confirmation lead via the dedicated API endpoint
   Future<void> updateBookingConfirmationLeadFromApi({
     required String id,
     required String leadName,
@@ -1081,67 +1149,35 @@ class LeadRepository extends ChangeNotifier {
     String? followUpDate,
     int? callDuration,
     bool clearFollowUpDate = false,
+    bool? markAsComplaint,
   }) async {
     try {
       await ensureInitialized();
 
-      // Handle follow-up date clearing
-      String? finalFollowUpDate = followUpDate;
-      bool finalFollowUpFlag = followUpFlag;
-
+      DateTime? followupDateTime;
+      if (followUpFlag && followUpDate != null) {
+        followupDateTime = DateTime.tryParse(followUpDate);
+      }
       if (clearFollowUpDate) {
-        finalFollowUpFlag = false;
-        finalFollowUpDate = null;
+        followupDateTime = null;
       }
 
-      // Combine remarks with additional booking confirmation fields
-      String? finalRemarks = remarks;
-      if (service != null ||
-          billReceived == true ||
-          amountMismatch == true ||
-          advancePaid != null ||
-          securityPaid != null) {
-        final List<String> remarkParts = [];
-        if (remarks != null && remarks.isNotEmpty) {
-          remarkParts.add(remarks);
-        }
-        if (service != null) {
-          remarkParts.add('Service: $service');
-        }
-        if (billReceived == true) {
-          remarkParts.add('Bill Received: Yes');
-        }
-        if (amountMismatch == true) {
-          remarkParts.add('Amount Mismatch: Yes');
-          if (advancePaid != null && advancePaid.isNotEmpty) {
-            remarkParts.add('Advance Paid: $advancePaid');
-          }
-          if (securityPaid != null && securityPaid.isNotEmpty) {
-            remarkParts.add('Security Paid: $securityPaid');
-          }
-        }
-        if (remarkParts.isNotEmpty) {
-          finalRemarks = remarkParts.join('\n');
-        }
-      }
-
-      await _apiService.updateLead(
+      await _apiService.updateBookingConfirmation(
         id: id,
-        leadName: leadName,
-        phoneNumber: phoneNumber,
-        store: store,
-        source: source,
-        leadType: leadType,
-        callStatus: callStatus,
-        leadStatus: leadStatus,
-        remarks: finalRemarks,
-        followUpFlag: finalFollowUpFlag,
-        followUpDate: finalFollowUpDate,
-        callDuration: callDuration,
+        service: service,
+        callDuration: callDuration?.toString(),
+        billReceived: billReceived == true ? 'yes' : null,
+        amountMismatch: amountMismatch,
+        remarks: remarks,
+        markasComplaint: markAsComplaint,
+        markasFollowup: followUpFlag ? true : null,
+        followupDate: followupDateTime,
       );
 
-      // Refresh leads to get updated data
-      await fetchAllLeadsFromApi();
+      // Remove from active list after update
+      _leads.removeWhere((l) => l.id == id);
+      await _saveLeads();
+      notifyListeners();
     } catch (e, s) {
       FirebaseCrashlytics.instance.recordError(
         e,
@@ -1429,7 +1465,10 @@ class LeadRepository extends ChangeNotifier {
       // Pass store in "Brand - Location" format (e.g., "Suitor Guy - Edappal")
       final storeFilter =
           (store == null || store == 'All Stores') ? null : store;
-      final response = await _apiService.getStarredCalls(store: storeFilter);
+      final response = await _apiService.getStarredCalls(
+        store: storeFilter,
+        limit: 1000,
+      );
 
       final leadsData = _parseResponseData(response);
 

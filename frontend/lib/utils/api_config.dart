@@ -213,7 +213,7 @@ class ApiConfig {
 
   // ===== Legacy Methods (for backward compatibility) =====
   static String addLead() {
-    return "$leadsEndpoint/add-lead";
+    return "$leadsEndpoint";
   }
 
   static String walkInLeads() {

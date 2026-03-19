@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/model/store_model.dart';
-import 'package:telecaller_app/services/api_service.dart';
+
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/call_report_list_screen.dart';
@@ -38,9 +38,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
       reportController.init(headerController);
 
-      // Fetch stores from backend
-      _fetchStores(headerController);
-
       // Set default date range to TODAY
       final now = DateTime.now();
       final startDate = DateTime(now.year, now.month, now.day);
@@ -52,21 +49,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       // Fetch reports only for today
       reportController.fetchReportsWithCurrentFilters();
     });
-  }
-
-  Future<void> _fetchStores(HeaderController headerController) async {
-    try {
-      final apiService = ApiService();
-      final response = await apiService.getStores();
-      final storesResponse = StoresResponse.fromJson(response);
-
-      if (storesResponse.stores.isNotEmpty) {
-        headerController.setAvailableStores(storesResponse.stores);
-        print('ReportsScreen: Loaded ${storesResponse.stores.length} stores');
-      }
-    } catch (e) {
-      print('ReportsScreen: Error fetching stores: $e');
-    }
   }
 
   List<String> _getTimeRanges() {
@@ -406,20 +388,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                               ),
                                             ),
                                           ),
-                                          // Add stores from backend
-                                          ...headerController.availableStores
-                                              .map((Store store) {
-                                                return DropdownMenuItem<Store>(
-                                                  value: store,
-                                                  child: Text(
-                                                    store.normalizedName,
-                                                    style: const TextStyle(
-                                                      color: Colors.black87,
-                                                    ),
+                                          // Hardcoded store list
+                                          ...HeaderController.defaultStores.map(
+                                            (Store store) {
+                                              return DropdownMenuItem<Store>(
+                                                value: store,
+                                                child: Text(
+                                                  store.normalizedName,
+                                                  style: const TextStyle(
+                                                    color: Colors.black87,
                                                   ),
-                                                );
-                                              })
-                                              .toList(),
+                                                ),
+                                              );
+                                            },
+                                          ).toList(),
                                         ],
                                         onChanged: (Store? newValue) {
                                           if (newValue != null) {

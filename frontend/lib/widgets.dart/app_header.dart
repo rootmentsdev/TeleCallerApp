@@ -199,18 +199,30 @@ class AppHeader extends StatelessWidget {
                             "Select Store",
                             style: TextStyle(color: Colors.white70),
                           ),
-                          items:
-                              headerController.availableStores.map((
-                                Store store,
-                              ) {
-                                return DropdownMenuItem<Store>(
-                                  value: store,
-                                  child: Text(
-                                    store.normalizedName,
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                );
-                              }).toList(),
+                          items: [
+                            DropdownMenuItem<Store>(
+                              value: Store(
+                                brand: 'All',
+                                location: 'Stores',
+                                normalizedName: 'All Stores',
+                              ),
+                              child: const Text(
+                                'All Stores',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            ...HeaderController.defaultStores.map((
+                              Store store,
+                            ) {
+                              return DropdownMenuItem<Store>(
+                                value: store,
+                                child: Text(
+                                  store.normalizedName,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              );
+                            }),
+                          ],
                           onChanged: (Store? newValue) {
                             if (newValue != null) {
                               headerController.setSelectedStore(newValue);
@@ -255,20 +267,34 @@ class AppHeader extends StatelessWidget {
                                         "Select Store",
                                         style: TextStyle(color: Colors.white70),
                                       ),
-                                      items:
-                                          headerController.availableStores.map((
-                                            Store store,
-                                          ) {
-                                            return DropdownMenuItem<Store>(
-                                              value: store,
-                                              child: Text(
-                                                store.normalizedName,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                ),
+                                      items: [
+                                        DropdownMenuItem<Store>(
+                                          value: Store(
+                                            brand: 'All',
+                                            location: 'Stores',
+                                            normalizedName: 'All Stores',
+                                          ),
+                                          child: const Text(
+                                            'All Stores',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        ...HeaderController.defaultStores.map((
+                                          Store store,
+                                        ) {
+                                          return DropdownMenuItem<Store>(
+                                            value: store,
+                                            child: Text(
+                                              store.normalizedName,
+                                              style: const TextStyle(
+                                                color: Colors.white,
                                               ),
-                                            );
-                                          }).toList(),
+                                            ),
+                                          );
+                                        }),
+                                      ],
                                       onChanged: (Store? newValue) {
                                         if (newValue != null) {
                                           headerController.setSelectedStore(

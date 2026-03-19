@@ -305,8 +305,13 @@ class ApiService {
   }
 
   // Get Follow-up Leads
-  Future<Map<String, dynamic>> getFollowUpLeads({String? store}) async {
-    final url = Uri.parse(ApiConfig.getFollowupLeads(store: store));
+  Future<Map<String, dynamic>> getFollowUpLeads({
+    String? store,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      ApiConfig.getFollowupLeads(store: store, limit: limit),
+    );
 
     try {
       final headers = await _getAuthHeaders();
@@ -530,6 +535,7 @@ class ApiService {
     String? itemCategory,
     String? closingAction,
     bool markAsComplaint = false,
+    String? callStatus,
   }) async {
     final url = Uri.parse(ApiConfig.addLead());
 
@@ -546,25 +552,22 @@ class ApiService {
       }
 
       final requestBody = <String, dynamic>{
-        'customer_name': leadName,
-        'phone_number': phoneNumber,
-        'brand': store.contains('-') ? store.split('-')[0] : store,
-        'store_location': store,
-        'lead_status': 'No Status',
-        'call_status': 'Not Called',
-        'sub_category': subCategory,
-        'item_category': itemCategory,
-        'closing_action': closingAction,
-        'reasons': remarks,
+        'name': leadName,
+        'phone': phoneNumber,
+        'store': store,
+        'leadtype': normalizedLeadType,
+        'callStatus': _normalizeCallStatus(callStatus ?? 'Not Called'),
+        'subCategory': subCategory,
+        'itemCategory': itemCategory,
+        'closingAction': closingAction,
+        'closingReason': remarks,
         'remarks': remarks,
-        'lead_type': normalizedLeadType,
-        'function_date': functionDate,
-        'created_at': createdAt,
-        'mark_as_complaint': markAsComplaint,
-        'follow_up_flag': followUpFlag,
-        'follow_up_date':
+        'functionDate': functionDate,
+        'markasComplaint': markAsComplaint,
+        'markasFollowup': followUpFlag,
+        'followupDate':
             followUpFlag && followUpDate != null ? followUpDate : null,
-        'call_duration': callDuration ?? 0,
+        'callDuration': callDuration?.toString() ?? '0',
       };
 
       requestBody.removeWhere((key, value) => value == null);
@@ -602,6 +605,25 @@ class ApiService {
         reason: 'createLead failed',
       );
       rethrow;
+    }
+  }
+
+  /// Maps display call status labels to backend enum values
+  String _normalizeCallStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'connected':
+        return 'connected';
+      case 'not connected':
+        return 'not connected';
+      case 'interested':
+        return 'interested';
+      case 'not interested':
+        return 'not interested';
+      case 'forwarded':
+        return 'forwarded';
+      case 'not called':
+      default:
+        return 'not called';
     }
   }
 
@@ -873,8 +895,13 @@ class ApiService {
   }
 
   // Get Starred Calls
-  Future<Map<String, dynamic>> getStarredCalls({String? store}) async {
-    final url = Uri.parse(ApiConfig.getStarredCalls(store: store));
+  Future<Map<String, dynamic>> getStarredCalls({
+    String? store,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      ApiConfig.getStarredCalls(store: store, limit: limit),
+    );
 
     try {
       final headers = await _getAuthHeaders();
@@ -905,6 +932,122 @@ class ApiService {
         e,
         s,
         reason: 'getStarredCalls failed',
+      );
+      rethrow;
+    }
+  }
+
+  // ===== Booking Confirmation =====
+
+  Future<Map<String, dynamic>> getBookingConfirmationLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      ApiConfig.getBookingConfirmationLeads(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+        limit: limit,
+      ),
+    );
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(url, headers: headers);
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is List) return {'data': decoded};
+        return {'data': []};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load booking confirmation leads: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getBookingConfirmationLeads failed',
+      );
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getBookingConfirmationById(String id) async {
+    final url = Uri.parse(ApiConfig.updateBookingConfirmationLead(id));
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(url, headers: headers);
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        return decoded is Map<String, dynamic> ? decoded : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load booking confirmation: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getBookingConfirmationById failed',
+      );
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> updateBookingConfirmation({
+    required String id,
+    String? service,
+    String? callDuration,
+    String? billReceived,
+    bool? amountMismatch,
+    String? remarks,
+    bool? markasComplaint,
+    bool? markasFollowup,
+    DateTime? followupDate,
+  }) async {
+    final url = Uri.parse(ApiConfig.updateBookingConfirmationLead(id));
+    try {
+      final headers = await _getAuthHeaders();
+      final body = <String, dynamic>{};
+      if (service != null) body['service'] = service;
+      if (callDuration != null) body['callDuration'] = callDuration;
+      if (billReceived != null) body['billReceived'] = billReceived;
+      if (amountMismatch != null) body['amountMismatch'] = amountMismatch;
+      if (remarks != null) body['remarks'] = remarks;
+      if (markasComplaint != null) body['markasComplaint'] = markasComplaint;
+      if (markasFollowup != null) body['markasFollowup'] = markasFollowup;
+      if (followupDate != null) {
+        body['followupDate'] = followupDate.toUtc().toIso8601String();
+      }
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: json.encode(body),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = json.decode(response.body);
+        return decoded is Map<String, dynamic> ? decoded : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to update booking confirmation: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateBookingConfirmation failed',
       );
       rethrow;
     }

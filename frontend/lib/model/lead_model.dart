@@ -27,6 +27,7 @@ class LeadModel {
   final int? rating; // Rating for return leads (1-5)
   final bool? followUpFlag; // Flag to keep in Follow-Ups collection
   final bool? markAsComplaint; // Flag to move to Complaints
+  final DateTime? bookingDate; // Booking date for booking confirmation leads
 
   LeadModel({
     required this.id,
@@ -56,6 +57,7 @@ class LeadModel {
     this.rating,
     this.followUpFlag,
     this.markAsComplaint,
+    this.bookingDate,
   }) : createdAt = createdAt ?? DateTime.now();
 
   // Convert to Map for local storage (camelCase)
@@ -88,6 +90,7 @@ class LeadModel {
       'rating': rating,
       'followUpFlag': followUpFlag,
       'markAsComplaint': markAsComplaint,
+      'bookingDate': bookingDate?.toIso8601String(),
     };
   }
 
@@ -154,6 +157,10 @@ class LeadModel {
       rating: map['rating'],
       followUpFlag: map['followUpFlag'],
       markAsComplaint: map['markAsComplaint'],
+      bookingDate:
+          map['bookingDate'] != null
+              ? DateTime.parse(map['bookingDate'])
+              : null,
     );
   }
 
@@ -303,6 +310,17 @@ class LeadModel {
         json['markAsComplaint'] ??
         json['markasComplaint'];
 
+    // Handle bookingDate (for booking confirmation leads)
+    DateTime? bookingDate;
+    final bookingDateValue = json['bookingDate'] ?? json['booking_date'];
+    if (bookingDateValue != null) {
+      try {
+        bookingDate = DateTime.parse(bookingDateValue.toString());
+      } catch (e) {
+        // If parsing fails, leave as null
+      }
+    }
+
     return LeadModel(
       id: id,
       name: name,
@@ -352,6 +370,7 @@ class LeadModel {
                   ? markAsComplaint
                   : markAsComplaint.toString().toLowerCase() == 'true')
               : null,
+      bookingDate: bookingDate,
     );
   }
 
@@ -360,16 +379,21 @@ class LeadModel {
   bool get needsFollowUp => followUpDate != null;
 
   /// Get the effective date for this lead based on its type
-  /// For return leads: use returnDate if available, otherwise createdAt
+  /// For return/feedback leads: use returnDate if available, otherwise createdAt
+  /// For booking confirmation leads: use bookingDate if available, otherwise createdAt
   /// For all other leads: use createdAt
   DateTime getEffectiveDate() {
-    // Check if this is a return lead by checking the leadType
-    // API returns leadtype as 'return' (lowercase, no underscore)
-    final isReturnLead = leadType?.toLowerCase() == 'return';
+    final type = leadType?.toLowerCase();
 
-    if (isReturnLead && returnDate != null) {
+    if (type == 'return' && returnDate != null) {
       return returnDate!;
     }
+
+    if ((type == 'bookingconfirmation' || type == 'booked') &&
+        bookingDate != null) {
+      return bookingDate!;
+    }
+
     return createdAt;
   }
 

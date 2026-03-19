@@ -611,10 +611,17 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchBookingConfirmationLeadsFromApi({String? store}) async {
+  Future<void> fetchBookingConfirmationLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
     try {
-      // Fetch all leads and filter for booking confirmation
-      await _repository.fetchAllLeadsFromApi(store: store);
+      await _repository.fetchBookingConfirmationLeadsFromApi(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
       notifyListeners();
     } catch (e, s) {
       FirebaseCrashlytics.instance.recordError(

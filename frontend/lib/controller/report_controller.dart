@@ -687,7 +687,7 @@ class ReportController extends ChangeNotifier {
         editedAtFrom: editedAtFromStr,
         editedAtTo: editedAtToStr,
         page: 1,
-        limit: 100,
+        limit: 1000,
       );
     } catch (e) {
       print('ReportController: Error fetching reports: $e');

@@ -12,13 +12,50 @@ class HeaderController extends ChangeNotifier {
   late Store _selectedStore;
   List<Store> _availableStores = [];
 
+  /// Hardcoded store list — normalizedName is used as the `store=` query param
+  static final List<Store> defaultStores = [
+    Store(brand: 'SG', location: 'Calicut', normalizedName: 'SG-Calicut'),
+    Store(brand: 'SG', location: 'Chavakkad', normalizedName: 'SG-Chavakkad'),
+    Store(brand: 'SG', location: 'Edappal', normalizedName: 'SG-Edappal'),
+    Store(brand: 'SG', location: 'Edappally', normalizedName: 'SG-Edappally'),
+    Store(brand: 'SG', location: 'Kalpetta', normalizedName: 'SG-Kalpetta'),
+    Store(brand: 'SG', location: 'Kannur', normalizedName: 'SG-Kannur'),
+    Store(brand: 'SG', location: 'Kottakkal', normalizedName: 'SG-Kottakkal'),
+    Store(brand: 'SG', location: 'Kottayam', normalizedName: 'SG-Kottayam'),
+    Store(brand: 'SG', location: 'Manjeri', normalizedName: 'SG-Manjeri'),
+    Store(brand: 'SG', location: 'Mg Road', normalizedName: 'SG-Mg Road'),
+    Store(brand: 'SG', location: 'Palakkad', normalizedName: 'SG-Palakkad'),
+    Store(
+      brand: 'SG',
+      location: 'Perinthalmanna',
+      normalizedName: 'SG-Perinthalmanna',
+    ),
+    Store(
+      brand: 'SG',
+      location: 'Perumbavoor',
+      normalizedName: 'SG-Perumbavoor',
+    ),
+    Store(brand: 'SG', location: 'Thrissur', normalizedName: 'SG-Thrissur'),
+    Store(brand: 'SG', location: 'Trivandrum', normalizedName: 'SG-Trivandrum'),
+    Store(brand: 'SG', location: 'Vadakara', normalizedName: 'SG-Vadakara'),
+    Store(brand: 'Z', location: 'Edapally', normalizedName: 'Z-Edapally'),
+    Store(brand: 'Z', location: 'Edappal', normalizedName: 'Z-Edappal'),
+    Store(brand: 'Z', location: 'Kottakkal', normalizedName: 'Z-Kottakkal'),
+    Store(
+      brand: 'Z',
+      location: 'Perinthalmanna',
+      normalizedName: 'Z-Perinthalmanna',
+    ),
+  ];
+
   HeaderController() {
-    // Initialize with a default "All Stores" option
     _selectedStore = Store(
       brand: 'All',
       location: 'Stores',
       normalizedName: 'All Stores',
     );
+    // Pre-populate with the hardcoded list
+    _availableStores = defaultStores;
   }
 
   // Getters
