@@ -211,7 +211,7 @@ class AppHeader extends StatelessWidget {
                                 style: TextStyle(color: Colors.white),
                               ),
                             ),
-                            ...HeaderController.defaultStores.map((
+                            ...headerController.availableStores.map((
                               Store store,
                             ) {
                               return DropdownMenuItem<Store>(
@@ -281,19 +281,19 @@ class AppHeader extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        ...HeaderController.defaultStores.map((
-                                          Store store,
-                                        ) {
-                                          return DropdownMenuItem<Store>(
-                                            value: store,
-                                            child: Text(
-                                              store.normalizedName,
-                                              style: const TextStyle(
-                                                color: Colors.white,
+                                        ...headerController.availableStores.map(
+                                          (Store store) {
+                                            return DropdownMenuItem<Store>(
+                                              value: store,
+                                              child: Text(
+                                                store.normalizedName,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                ),
                                               ),
-                                            ),
-                                          );
-                                        }),
+                                            );
+                                          },
+                                        ),
                                       ],
                                       onChanged: (Store? newValue) {
                                         if (newValue != null) {

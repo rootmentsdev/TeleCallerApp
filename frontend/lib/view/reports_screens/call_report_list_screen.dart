@@ -27,7 +27,13 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     'Last Month',
   ];
 
-  final List<String> callTypes = ['All', 'Feedback', 'Enquiry', 'Booking'];
+  final List<String> callTypes = [
+    'All',
+    'Feedback',
+    'Enquiry',
+    'Booking',
+    'Booking Confirmation',
+  ];
 
   @override
   void initState() {
@@ -168,8 +174,10 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
       case 'return':
         return 'Feedback';
       case 'booking':
-      case 'bookingconfirmation':
         return 'Booking';
+      case 'bookingconfirmation':
+      case 'booking confirmation':
+        return 'Booking Confirmation';
       default:
         return 'Call'; // Unknown type - will be filtered out
     }
@@ -183,6 +191,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFFF3E5F5);
       case 'Booking':
         return const Color(0xFFE8F5E9);
+      case 'Booking Confirmation':
+        return const Color(0xFFFFF3E0);
       default:
         return const Color(0xFFE3F2FD);
     }
@@ -196,6 +206,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFF7B1FA2);
       case 'Booking':
         return const Color(0xFF388E3C);
+      case 'Booking Confirmation':
+        return const Color(0xFFE65100);
       default:
         return const Color(0xFF1976D2);
     }

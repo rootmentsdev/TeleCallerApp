@@ -288,4 +288,9 @@ class ApiConfig {
   static String getStarredCallById(String id) {
     return "$leadsEndpoint/starred-calls/$id";
   }
+
+  // ===== Phone Identification =====
+  static String checkPhone(String phone) {
+    return "$baseUrl/api/customers/check-phone?phone=${Uri.encodeComponent(phone)}";
+  }
 }

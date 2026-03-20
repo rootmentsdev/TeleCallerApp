@@ -1095,4 +1095,40 @@ class ApiService {
     }
     return camel;
   }
+
+  // ===== Phone Identification =====
+  /// GET /api/customers/check-phone?phone=$phone
+  /// Returns the popup type and lead data for an incoming call.
+  Future<Map<String, dynamic>> checkPhone(String phone) async {
+    // Normalize: keep only digits
+    final normalized = phone.replaceAll(RegExp(r'\D'), '');
+    final url = Uri.parse(ApiConfig.checkPhone(normalized));
+    print('ApiService: checkPhone → URL: $url');
+    try {
+      final headers = await _getAuthHeaders();
+      print('ApiService: checkPhone → headers ready, sending GET...');
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      print(
+        'ApiService: checkPhone → status=${response.statusCode}, body=${response.body}',
+      );
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        return decoded is Map<String, dynamic> ? decoded : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception('Phone check failed: Status ${response.statusCode}');
+      }
+    } catch (e, s) {
+      print('ApiService: checkPhone → ERROR: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'checkPhone failed',
+      );
+      rethrow;
+    }
+  }
 }

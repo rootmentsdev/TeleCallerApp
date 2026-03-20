@@ -384,13 +384,32 @@ class LeadModel {
   /// For all other leads: use createdAt
   DateTime getEffectiveDate() {
     final type = leadType?.toLowerCase();
+    final cat = category?.toLowerCase();
 
-    if (type == 'return' && returnDate != null) {
+    // Return/Feedback leads — check both leadType and category
+    final isReturn =
+        type == 'return' ||
+        type == 'feedback' ||
+        type == 'rentout' ||
+        type == 'rent out' ||
+        type == 'rentoutfeedback' ||
+        cat == 'return' ||
+        cat == 'rentout' ||
+        cat == 'rent out' ||
+        cat == 'feedback';
+    if (isReturn && returnDate != null) {
       return returnDate!;
     }
 
-    if ((type == 'bookingconfirmation' || type == 'booked') &&
-        bookingDate != null) {
+    // Booking Confirmation leads — check both leadType and category
+    final isBooking =
+        type == 'bookingconfirmation' ||
+        type == 'booking confirmation' ||
+        type == 'booking' ||
+        type == 'booked' ||
+        cat == 'booking confirmation' ||
+        cat == 'bookingconfirmation';
+    if (isBooking && bookingDate != null) {
       return bookingDate!;
     }
 

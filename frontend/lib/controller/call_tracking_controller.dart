@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
+import 'package:telecaller_app/services/phone_identification_service.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
-import 'package:telecaller_app/widgets.dart/add_lead_bottom_sheet.dart';
 import 'package:telecaller_app/main.dart';
 
 class CallTrackingController extends ChangeNotifier {
@@ -148,44 +148,47 @@ class CallTrackingController extends ChangeNotifier {
     PhoneCallService.makeCall(phone);
   }
 
-  /// Show add lead bottom sheet for incoming calls
+  /// Show correct popup for incoming calls by checking phone via API
   void _showAddLeadBottomSheetForIncomingCall(
     String phoneNumber,
     int duration,
   ) {
-    // Check if lead already exists - don't show bottom sheet if it does
     final cleanPhone = _cleanPhoneNumber(phoneNumber);
-    final existingLead = _findLeadByPhone(cleanPhone);
 
-    if (existingLead != null) {
-      print(
-        'CallTrackingController: Lead already exists for $phoneNumber, skipping add lead bottom sheet',
-      );
+    print('╔══════════════════════════════════════════════════════════╗');
+    print('║      _showAddLeadBottomSheetForIncomingCall()            ║');
+    print('╠══════════════════════════════════════════════════════════╣');
+    print('║  rawPhone   : $phoneNumber');
+    print('║  cleanPhone : $cleanPhone');
+    print('║  duration   : $duration');
+    print('╚══════════════════════════════════════════════════════════╝');
+
+    final context = navigatorKey.currentContext;
+    print(
+      'CallTrackingController: navigatorKey.currentContext is ${context == null ? "NULL — cannot show popup" : "available"}',
+    );
+
+    if (context == null) {
+      print('CallTrackingController: No context available to show popup');
       return;
     }
 
-    // Use navigatorKey to get context and show bottom sheet
-    final context = navigatorKey.currentContext;
-    if (context != null) {
-      // Add a small delay to ensure UI is ready
-      Future.delayed(const Duration(milliseconds: 500), () {
-        final currentContext = navigatorKey.currentContext;
-        if (currentContext != null && mounted) {
-          print(
-            'CallTrackingController: Showing add lead bottom sheet for incoming call - phone=$phoneNumber, duration=$duration',
-          );
-          showAddLeadBottomSheet(
-            currentContext,
-            phoneNumber: phoneNumber,
-            callDuration: duration,
-          );
-        }
-      });
-    } else {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      final currentContext = navigatorKey.currentContext;
       print(
-        'CallTrackingController: No context available to show add lead bottom sheet',
+        'CallTrackingController: After delay — currentContext is ${currentContext == null ? "NULL" : "available"}, mounted=$mounted',
       );
-    }
+      if (currentContext != null && mounted) {
+        print(
+          'CallTrackingController: Calling PhoneIdentificationService.identify for phone=$cleanPhone, duration=$duration',
+        );
+        PhoneIdentificationService().identify(
+          context: currentContext,
+          phone: cleanPhone,
+          callDuration: duration,
+        );
+      }
+    });
   }
 
   bool get mounted => !_disposed;

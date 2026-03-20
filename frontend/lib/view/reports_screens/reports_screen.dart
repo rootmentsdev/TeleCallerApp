@@ -157,10 +157,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final count =
             reports.where((r) {
               final lt = r.leadType?.toLowerCase() ?? '';
-              return lt == 'bookingconfirmation' || lt == 'booked';
+              return lt == 'bookingconfirmation' ||
+                  lt == 'booked' ||
+                  lt == 'booking confirmation';
             }).length;
         print('ReportsScreen: Booking count: $count');
         return count.toString();
+      case 'bookingconfirmation':
+        final bcCount =
+            reports.where((r) {
+              final lt = r.leadType?.toLowerCase() ?? '';
+              return lt == 'bookingconfirmation' ||
+                  lt == 'booking confirmation';
+            }).length;
+        return bcCount.toString();
       default:
         return '0';
     }
@@ -179,8 +189,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       case 'return':
         return 'Feedback';
       case 'booking':
-      case 'bookingconfirmation':
         return 'Booking';
+      case 'bookingconfirmation':
+      case 'booking confirmation':
+        return 'Booking Confirmation';
       default:
         return 'Call';
     }
@@ -442,12 +454,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 children: [
                                   Expanded(
                                     child: _buildReportCard(
-                                      icon: Icons.phone,
+                                      icon: Icons.check_circle_outline,
                                       count: _getReportCount(
                                         reportController,
-                                        'total',
+                                        'bookingconfirmation',
                                       ),
-                                      title: 'Total Calls',
+                                      title: 'Booking Confirmation Calls',
                                       iconBgColor: const Color(0xFFE3F2FD),
                                     ),
                                   ),

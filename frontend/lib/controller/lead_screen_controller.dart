@@ -390,6 +390,27 @@ class LeadScreenController extends ChangeNotifier {
     return leads.length;
   }
 
+  int getReturnLeadsCount() {
+    final store = _headerController?.selectedStore;
+
+    List<LeadModel> leads =
+        _repository.allLeads
+            .where((lead) => lead.category == LeadConstants.categoryRentOut)
+            .where((lead) => !lead.isStarred)
+            .where((lead) => lead.followUpDate == null)
+            .toList();
+
+    if (store != null && store.normalizedName != 'All Stores') {
+      final storeParam = store.normalizedName;
+      leads =
+          leads
+              .where((lead) => _repository.matchesStore(lead, storeParam))
+              .toList();
+    }
+
+    return leads.length;
+  }
+
   int getFollowUpLeadsCount() {
     List<LeadModel> leads = _repository.followUpLeads;
 

@@ -276,7 +276,11 @@ class _LeadScreenState extends State<LeadScreen> {
                           );
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 8,
+                          ),
+                          constraints: const BoxConstraints(minHeight: 56),
                           decoration: BoxDecoration(
                             color:
                                 controller.selectedCallTypeIndex ==
@@ -294,11 +298,12 @@ class _LeadScreenState extends State<LeadScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              "Booking (${controller.getBookingConfirmationCount()})",
-                              maxLines: 1,
+                              "Booking Confirmation Calls (${controller.getBookingConfirmationCount()})",
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: TextConstant.dmSansMedium,
                                 color:
@@ -321,7 +326,11 @@ class _LeadScreenState extends State<LeadScreen> {
                           _fetchReturnLeads(controller, headerController);
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 8,
+                          ),
+                          constraints: const BoxConstraints(minHeight: 56),
                           decoration: BoxDecoration(
                             color:
                                 controller.selectedCallTypeIndex ==
@@ -339,7 +348,7 @@ class _LeadScreenState extends State<LeadScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              "Feedback Calls (${filteredLeads.length})",
+                              "Feedback Calls (${controller.getReturnLeadsCount()})",
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
