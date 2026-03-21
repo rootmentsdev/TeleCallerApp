@@ -428,6 +428,67 @@ class ApiService {
     }
   }
 
+  /// Fetch completed leads from /leads/completed endpoint
+  Future<Map<String, dynamic>> getCompletedLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      ApiConfig.getCompletedLeads(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+      ),
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching completed leads');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print(
+        'ApiService: Completed leads response status: ${response.statusCode}',
+      );
+      print('ApiService: Completed leads response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+        if (decodedResponse is Map<String, dynamic>) {
+          return decodedResponse;
+        } else if (decodedResponse is List) {
+          return {
+            'data': {'leads': decodedResponse},
+          };
+        } else {
+          throw Exception('Unexpected response format from server');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load completed leads: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: Error fetching completed leads: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getCompletedLeads failed',
+      );
+      rethrow;
+    }
+  }
+
   // Get Complaints
   Future<Map<String, dynamic>> getComplaints({
     String? store,
@@ -622,8 +683,10 @@ class ApiService {
       case 'forwarded':
         return 'forwarded';
       case 'not called':
+      case '':
       default:
-        return 'not called';
+        // Backend doesn't accept 'not called', use 'not connected' as default
+        return 'not connected';
     }
   }
 
@@ -783,6 +846,210 @@ class ApiService {
         e,
         s,
         reason: 'postFollowUp failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Post Followup Update - for incoming call popup
+  Future<Map<String, dynamic>> postFollowupUpdate(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/followups/$id');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final requestBodyJson = json.encode(body);
+
+      print('ApiService: postFollowupUpdate - URL: $url');
+      print('ApiService: postFollowupUpdate - Body: $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print('ApiService: postFollowupUpdate - Status: ${response.statusCode}');
+      print('ApiService: postFollowupUpdate - Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to update followup: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: postFollowupUpdate - Error: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'postFollowupUpdate failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Post Complaint Update - for incoming call popup
+  Future<Map<String, dynamic>> postComplaintUpdate(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/complaints/$id');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final requestBodyJson = json.encode(body);
+
+      print('ApiService: postComplaintUpdate - URL: $url');
+      print('ApiService: postComplaintUpdate - Body: $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print('ApiService: postComplaintUpdate - Status: ${response.statusCode}');
+      print('ApiService: postComplaintUpdate - Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to update complaint: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: postComplaintUpdate - Error: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'postComplaintUpdate failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Post Return Update - for incoming call popup
+  Future<Map<String, dynamic>> postReturnUpdate(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/returns/$id');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final requestBodyJson = json.encode(body);
+
+      print('ApiService: postReturnUpdate - URL: $url');
+      print('ApiService: postReturnUpdate - Body: $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print('ApiService: postReturnUpdate - Status: ${response.statusCode}');
+      print('ApiService: postReturnUpdate - Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to update return: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: postReturnUpdate - Error: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'postReturnUpdate failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Post Booking Confirmation Update - for incoming call popup
+  Future<Map<String, dynamic>> postBookingConfirmationUpdate(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/api/leads/booking-confirmation/$id',
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final requestBodyJson = json.encode(body);
+
+      print('ApiService: postBookingConfirmationUpdate - URL: $url');
+      print(
+        'ApiService: postBookingConfirmationUpdate - Body: $requestBodyJson',
+      );
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print(
+        'ApiService: postBookingConfirmationUpdate - Status: ${response.statusCode}',
+      );
+      print(
+        'ApiService: postBookingConfirmationUpdate - Response: ${response.body}',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to update booking confirmation: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: postBookingConfirmationUpdate - Error: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'postBookingConfirmationUpdate failed',
       );
       rethrow;
     }
@@ -1127,6 +1394,55 @@ class ApiService {
         e,
         s,
         reason: 'checkPhone failed',
+      );
+      rethrow;
+    }
+  }
+
+  /// Generic GET method for fetching lead details
+  /// Supports paths like /leads/returns/{id}, /leads/booking-confirmation/{id}, etc.
+  Future<Map<String, dynamic>> getLeadDetails(String path) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}$path');
+    print('ApiService: getLeadDetails → URL: $url');
+    try {
+      final headers = await _getAuthHeaders();
+      print('ApiService: getLeadDetails → headers: $headers');
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      print('ApiService: getLeadDetails → status=${response.statusCode}');
+      print('ApiService: getLeadDetails → body=${response.body}');
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        print('ApiService: getLeadDetails → decoded: $decoded');
+        if (decoded is Map<String, dynamic>) {
+          // Handle both wrapped and unwrapped responses
+          if (decoded.containsKey('data')) {
+            final data = decoded['data'];
+            print('ApiService: getLeadDetails → returning data: $data');
+            return data is Map<String, dynamic> ? data : decoded;
+          }
+          print('ApiService: getLeadDetails → returning full response');
+          return decoded;
+        }
+        print(
+          'ApiService: getLeadDetails → decoded is not a map, returning empty',
+        );
+        return {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to fetch lead details: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: getLeadDetails → ERROR: $e');
+      print('ApiService: getLeadDetails → STACK: $s');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getLeadDetails failed for path: $path',
       );
       rethrow;
     }

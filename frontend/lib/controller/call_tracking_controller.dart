@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
-import 'package:telecaller_app/services/phone_identification_service.dart';
+import 'package:telecaller_app/services/incoming_call_handler.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/main.dart';
@@ -180,11 +180,11 @@ class CallTrackingController extends ChangeNotifier {
       );
       if (currentContext != null && mounted) {
         print(
-          'CallTrackingController: Calling PhoneIdentificationService.identify for phone=$cleanPhone, duration=$duration',
+          'CallTrackingController: Calling IncomingCallHandler.handleIncomingCall for phone=$cleanPhone, duration=$duration',
         );
-        PhoneIdentificationService().identify(
+        IncomingCallHandler().handleIncomingCall(
           context: currentContext,
-          phone: cleanPhone,
+          phoneNumber: cleanPhone,
           callDuration: duration,
         );
       }

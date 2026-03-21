@@ -625,72 +625,82 @@ class ReportController extends ChangeNotifier {
   }
 
   Future<void> fetchReportsWithCurrentFilters() async {
-    String formatDateWithTime(DateTime date) {
-      return date.toIso8601String();
+    String formatDateForApi(DateTime date) {
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
 
-    String editedAtFromStr;
-    String editedAtToStr;
+    String dateFromStr;
+    String dateToStr;
 
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
-      editedAtFromStr = formatDateWithTime(_headerController!.dateRangeStart!);
-      editedAtToStr = formatDateWithTime(_headerController!.dateRangeEnd!);
+      dateFromStr = formatDateForApi(_headerController!.dateRangeStart!);
+      dateToStr = formatDateForApi(_headerController!.dateRangeEnd!);
     } else {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-      editedAtFromStr = formatDateWithTime(selectedDate);
-      final endOfDay = DateTime(
-        selectedDate.year,
-        selectedDate.month,
-        selectedDate.day,
-        23,
-        59,
-        59,
-      );
-      editedAtToStr = formatDateWithTime(endOfDay);
+      dateFromStr = formatDateForApi(selectedDate);
+      dateToStr = formatDateForApi(selectedDate);
     }
 
-    String? leadType;
-
-    switch (_selectedCallTypeIndex) {
-      case 0:
-        leadType = null;
-        break;
-      case 1:
-        leadType = "enquiry";
-        break;
-      case 2:
-        leadType = "return";
-        break;
-      case 3:
-        leadType = "bookingconfirmation";
-        break;
-      case 4:
-        leadType = "lossOfSale";
-        break;
-      case 5:
-        leadType = null;
-        break;
-      default:
-        leadType = null;
-        break;
+    String? storeParam;
+    final store = _headerController?.selectedStore;
+    if (store != null && store.normalizedName != 'All Stores') {
+      storeParam = store.normalizedName;
     }
 
     print(
-      'ReportController: Fetching reports with filters - leadType: $leadType, editedAtFrom: $editedAtFromStr, editedAtTo: $editedAtToStr',
+      'ReportController: Fetching completed leads - store: $storeParam, dateFrom: $dateFromStr, dateTo: $dateToStr',
     );
 
     try {
-      await fetchReportsFromApi(
-        leadType: leadType,
-        editedAtFrom: editedAtFromStr,
-        editedAtTo: editedAtToStr,
-        page: 1,
-        limit: 1000,
+      await fetchCompletedLeadsFromApi(
+        store: storeParam,
+        fromDate: dateFromStr,
+        toDate: dateToStr,
       );
     } catch (e) {
-      print('ReportController: Error fetching reports: $e');
+      print('ReportController: Error fetching completed leads: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> fetchCompletedLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      _isLoadingReports = true;
+      _reportsError = null;
+      notifyListeners();
+
+      final response = await _apiService.getCompletedLeads(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+        limit: 1000,
+      );
+
+      final reportsResponse = ReportsResponse.fromJson(response);
+      _reports = reportsResponse.reports;
+      _pagination = reportsResponse.pagination;
+
+      print(
+        'ReportController: Fetched ${_reports.length} completed leads from API',
+      );
+
+      _isLoadingReports = false;
+      notifyListeners();
+    } catch (e, s) {
+      _isLoadingReports = false;
+      _reportsError = e.toString();
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchCompletedLeads failed',
+      );
+      notifyListeners();
       rethrow;
     }
   }
@@ -717,68 +727,14 @@ class ReportController extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> getFilteredReportsByDateCategory() {
+    // Backend already filters by date range, so just return all reports
+    // converted to the display format
     final allReports = getFilteredLeads();
 
     print(
-      'ReportController: getFilteredReportsByDateCategory - Total reports: ${allReports.length}, Category: $_selectedDateCategory',
+      'ReportController: getFilteredReportsByDateCategory - Total reports: ${allReports.length}',
     );
 
-    final dateRange = DateCategorization.getDateRange(_selectedDateCategory);
-    print(
-      'ReportController: Date range for $_selectedDateCategory: ${dateRange.start} to ${dateRange.end}',
-    );
-
-    final filteredReports =
-        allReports.where((report) {
-          try {
-            final leadData = report['leadData'] as Map<String, dynamic>? ?? {};
-            dynamic createdAtValue =
-                leadData['createdAt'] ?? report['callDate'];
-
-            if (createdAtValue == null) {
-              print(
-                'ReportController: No date found for report ${report['name']}',
-              );
-              return false;
-            }
-
-            DateTime reportDate;
-            if (createdAtValue is String) {
-              reportDate = DateTime.parse(createdAtValue);
-            } else if (createdAtValue is DateTime) {
-              reportDate = createdAtValue;
-            } else {
-              print(
-                'ReportController: Invalid date type for ${report['name']}: ${createdAtValue.runtimeType}',
-              );
-              return false;
-            }
-
-            final normalizedReportDate = DateTime(
-              reportDate.year,
-              reportDate.month,
-              reportDate.day,
-            );
-
-            print(
-              'ReportController: Checking ${report['name']} - Date: $normalizedReportDate, In category: ${DateCategorization.isDateInCategory(normalizedReportDate, _selectedDateCategory)}',
-            );
-
-            return DateCategorization.isDateInCategory(
-              normalizedReportDate,
-              _selectedDateCategory,
-            );
-          } catch (e) {
-            print(
-              'ReportController: Error parsing report date for ${report['name']}: $e',
-            );
-            return false;
-          }
-        }).toList();
-
-    print(
-      'ReportController: Filtered reports count: ${filteredReports.length}',
-    );
-    return filteredReports;
+    return allReports;
   }
 }

@@ -531,7 +531,9 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                             const SizedBox(height: 4),
                                             Text(
                                               _formatDateString(
-                                                returnData['returnDate'] ??
+                                                widget.lead.returnDate
+                                                        ?.toIso8601String() ??
+                                                    returnData['returnDate'] ??
                                                     returnData['return_date'],
                                               ),
                                               style: const TextStyle(

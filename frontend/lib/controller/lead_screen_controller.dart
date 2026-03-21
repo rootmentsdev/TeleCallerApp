@@ -287,8 +287,8 @@ class LeadScreenController extends ChangeNotifier {
     final store = _headerController?.selectedStore;
     List<LeadModel> filteredLeads = [];
 
-    // Backend already filters by date range, so just get the appropriate leads
-    // based on the selected tab
+    // Backend already filters by date range and store, so just get the appropriate leads
+    // based on the selected tab - NO additional local filtering
     if (_selectedCallTypeIndex == 0) {
       // Booking Confirmation tab
       filteredLeads =
@@ -297,16 +297,13 @@ class LeadScreenController extends ChangeNotifier {
                 (lead) =>
                     lead.category == LeadConstants.categoryBookingConfirmation,
               )
-              .where((lead) => !lead.isStarred)
-              .where((lead) => lead.followUpDate == null)
               .toList();
     } else if (_selectedCallTypeIndex == 1) {
       // Feedback Calls tab (Return leads)
+      // Backend already filtered by store and date, just filter by category
       filteredLeads =
           _repository.allLeads
               .where((lead) => lead.category == LeadConstants.categoryRentOut)
-              .where((lead) => !lead.isStarred)
-              .where((lead) => lead.followUpDate == null)
               .toList();
     } else if (_selectedCallTypeIndex == 3) {
       // Marked Calls tab (Starred leads)
@@ -314,15 +311,6 @@ class LeadScreenController extends ChangeNotifier {
     } else {
       // Other tabs
       filteredLeads = _repository.allLeads;
-    }
-
-    // Apply store filter if not "All Stores"
-    if (store != null && store.normalizedName != 'All Stores') {
-      final storeParam = store.normalizedName;
-      filteredLeads =
-          filteredLeads
-              .where((lead) => _repository.matchesStore(lead, storeParam))
-              .toList();
     }
 
     // Handle "show only new lead" feature
@@ -366,47 +354,24 @@ class LeadScreenController extends ChangeNotifier {
   }
 
   int getBookingConfirmationCount() {
-    final store = _headerController?.selectedStore;
-
+    // Backend already filters by store and date, just count by category
     List<LeadModel> leads =
         _repository.allLeads
             .where(
               (lead) =>
                   lead.category == LeadConstants.categoryBookingConfirmation,
             )
-            .where((lead) => !lead.isStarred)
-            .where((lead) => lead.followUpDate == null)
             .toList();
-
-    // Apply store filter
-    if (store != null && store.normalizedName != 'All Stores') {
-      final storeParam = store.normalizedName;
-      leads =
-          leads
-              .where((lead) => _repository.matchesStore(lead, storeParam))
-              .toList();
-    }
 
     return leads.length;
   }
 
   int getReturnLeadsCount() {
-    final store = _headerController?.selectedStore;
-
+    // Backend already filters by store and date, just count by category
     List<LeadModel> leads =
         _repository.allLeads
             .where((lead) => lead.category == LeadConstants.categoryRentOut)
-            .where((lead) => !lead.isStarred)
-            .where((lead) => lead.followUpDate == null)
             .toList();
-
-    if (store != null && store.normalizedName != 'All Stores') {
-      final storeParam = store.normalizedName;
-      leads =
-          leads
-              .where((lead) => _repository.matchesStore(lead, storeParam))
-              .toList();
-    }
 
     return leads.length;
   }

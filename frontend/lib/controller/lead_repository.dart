@@ -513,6 +513,38 @@ class LeadRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clear all followup leads from local storage
+  /// This removes all leads with category "Follow Up" from the in-memory list and persists the change
+  Future<void> clearFollowupLeads() async {
+    try {
+      await ensureInitialized();
+
+      final followupCount = followUpLeads.length;
+
+      // Remove all leads with category "Follow Up"
+      _leads.removeWhere(
+        (lead) => lead.category == LeadConstants.categoryFollowUp,
+      );
+
+      // Persist the changes
+      await _saveLeads();
+
+      print(
+        'LeadRepository: Cleared followup leads - Removed $followupCount leads, Total leads now: ${_leads.length}',
+      );
+
+      notifyListeners();
+    } catch (e, s) {
+      print('LeadRepository: Error clearing followup leads: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'clearFollowupLeads failed',
+      );
+      rethrow;
+    }
+  }
+
   /// Debug method to check data integrity
   void debugDataIntegrity() {
     print('LeadRepository: Total leads: ${_leads.length}');

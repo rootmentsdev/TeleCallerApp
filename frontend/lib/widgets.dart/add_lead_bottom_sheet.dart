@@ -6,6 +6,7 @@ import 'package:telecaller_app/model/call_model.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/store_location.dart';
 import 'package:telecaller_app/services/api_service.dart';
+import 'package:telecaller_app/view/followup_screen/followup_detail_screen.dart';
 
 class AddLeadBottomSheet extends StatefulWidget {
   final String? prefilledPhoneNumber;
@@ -38,6 +39,8 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
   DateTime? _functionDate;
   bool _markAsComplaint = false;
   int? _callDuration;
+  String? _selectedCallStatus;
+  DateTime? _followUpDate;
 
   bool _isLoading = false;
 
@@ -228,6 +231,84 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                       label: 'Customer Name (Optional)',
                       icon: Icons.person,
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Call Status dropdown
+                    _buildDropdownField(
+                      value: _selectedCallStatus,
+                      label: 'Call Status',
+                      items: const [
+                        'Connected',
+                        'Not Connected',
+                        'Interested',
+                        'Not Interested',
+                        'Forwarded',
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCallStatus = value;
+                          // Clear follow-up date if status doesn't need it
+                          if (value != 'Not Connected' &&
+                              value != 'Interested') {
+                            _followUpDate = null;
+                          }
+                        });
+                      },
+                    ),
+
+                    // Follow-up date picker — shown for Not Connected / Interested
+                    if (_selectedCallStatus == 'Not Connected' ||
+                        _selectedCallStatus == 'Interested') ...[
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate:
+                                _followUpDate ??
+                                DateTime.now().add(const Duration(days: 1)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2101),
+                          );
+                          if (picked != null) {
+                            setState(() => _followUpDate = picked);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[400]!),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 18,
+                                color: Color(0xFF003D7A),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                _followUpDate != null
+                                    ? '${_followUpDate!.day}/${_followUpDate!.month}/${_followUpDate!.year}'
+                                    : 'Select Follow-up Date',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color:
+                                      _followUpDate != null
+                                          ? Colors.black87
+                                          : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 16),
 
@@ -810,6 +891,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         itemCategory: _selectedItemCategory,
         closingAction: _selectedCloseReason,
         markAsComplaint: _markAsComplaint,
+        callStatus: _selectedCallStatus,
       );
 
       String leadId = '';
@@ -891,7 +973,48 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         setState(() {
           _isLoading = false;
         });
-        Navigator.pop(context);
+
+        // If call status is "Interested" or "Not Connected", show followup screen
+        if (_selectedCallStatus == 'Interested' ||
+            _selectedCallStatus == 'Not Connected') {
+          // Create a LeadModel with the saved lead data
+          final lead = LeadModel(
+            id: leadId,
+            name: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+            brand: _selectedBrand,
+            location: _selectedLocation,
+            leadStatus: 'New',
+            callStatus: _selectedCallStatus,
+            reason:
+                _remarksController.text.trim().isEmpty
+                    ? null
+                    : _remarksController.text.trim(),
+            category: null,
+            callDuration: _callDuration,
+            callCount: _callDuration != null && _callDuration! > 0 ? 1 : 0,
+            createdAt: DateTime.now(),
+            source: 'Incoming Call',
+            leadType: normalizedLeadType,
+            subCategory: _selectedSubCategory,
+            closingAction: _selectedCloseReason,
+            functionDate: _functionDate,
+            followUpDate: _followUpDate,
+            followUpFlag: true,
+          );
+
+          // Close the bottom sheet and navigate to followup screen
+          Navigator.pop(context);
+
+          // Navigate to followup detail screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => FollowupDetailScreen(lead: lead)),
+          );
+        } else {
+          // For other statuses, just close the bottom sheet
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       print('AddLeadBottomSheet: Error saving lead: $e');
