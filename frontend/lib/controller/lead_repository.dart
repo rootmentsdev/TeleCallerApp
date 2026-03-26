@@ -743,8 +743,21 @@ class LeadRepository extends ChangeNotifier {
         'reason_collected_from_store',
         'notes',
       ]);
-      final callDuration =
-          leadData['callDuration'] as int? ?? leadData['call_duration'] as int?;
+
+      // Parse callDuration - API returns as String, need to convert to int
+      final callDuration = () {
+        final callDur = leadData['callDuration'] ?? leadData['call_duration'];
+        if (callDur == null) return null;
+        if (callDur is int) return callDur;
+        if (callDur is String) {
+          try {
+            return int.parse(callDur);
+          } catch (_) {
+            return null;
+          }
+        }
+        return null;
+      }();
       final followUpDate =
           _parseDate(leadData['follow_up_date']) ??
           _parseDate(leadData['followUpDate']) ??

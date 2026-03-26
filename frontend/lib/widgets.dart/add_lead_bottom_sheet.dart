@@ -644,9 +644,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed:
-                                  (_isLoading ||
-                                          _callDuration == null ||
-                                          _callDuration == 0)
+                                  (_isLoading || _callDuration == null)
                                       ? null
                                       : _saveLead,
                               style: ElevatedButton.styleFrom(

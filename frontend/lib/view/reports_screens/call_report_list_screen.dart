@@ -213,6 +213,20 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     }
   }
 
+  // Parse callDuration - API returns as String, need to convert to int
+  int? _parseCallDuration(dynamic callDur) {
+    if (callDur == null) return null;
+    if (callDur is int) return callDur;
+    if (callDur is String) {
+      try {
+        return int.parse(callDur);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   String _formatDuration(int? seconds) {
     if (seconds == null || seconds == 0) {
       return '0s';
@@ -468,7 +482,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                               date: report['date'] ?? 'N/A',
                               callType: callType,
                               duration: _formatDuration(
-                                report['callDuration'] as int?,
+                                _parseCallDuration(report['callDuration']),
                               ),
                               report: report,
                             );

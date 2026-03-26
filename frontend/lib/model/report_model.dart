@@ -152,8 +152,20 @@ class ReportModel {
       note: json['note']?.toString(),
 
       // Get call_duration from top-level API response
-      callDuration:
-          json['call_duration'] as int? ?? json['callDuration'] as int?,
+      // API returns callDuration as String, so parse it to int
+      callDuration: () {
+        final callDur = json['call_duration'] ?? json['callDuration'];
+        if (callDur == null) return null;
+        if (callDur is int) return callDur;
+        if (callDur is String) {
+          try {
+            return int.parse(callDur);
+          } catch (_) {
+            return null;
+          }
+        }
+        return null;
+      }(),
 
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),

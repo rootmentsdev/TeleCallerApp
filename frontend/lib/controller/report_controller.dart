@@ -6,7 +6,10 @@ import 'package:telecaller_app/model/report_model.dart';
 import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
-import 'package:telecaller_app/utils/date_categorization.dart';
+import 'package:csv/csv.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ReportController extends ChangeNotifier {
   final LeadRepository _repository = LeadRepository();
@@ -265,10 +268,23 @@ class ReportController extends ChangeNotifier {
               leadData['reason_collected_from_store']?.toString() ??
               '';
 
-          final callDuration =
-              leadData['callDuration'] as int? ??
-              leadData['call_duration'] as int? ??
-              report.callDuration;
+          // Parse callDuration - API returns as String, need to convert to int
+          final callDuration = () {
+            final callDur =
+                leadData['callDuration'] ??
+                leadData['call_duration'] ??
+                report.callDuration;
+            if (callDur == null) return null;
+            if (callDur is int) return callDur;
+            if (callDur is String) {
+              try {
+                return int.parse(callDur);
+              } catch (_) {
+                return null;
+              }
+            }
+            return null;
+          }();
 
           final subCategory =
               leadData['subCategory']?.toString() ??
@@ -736,5 +752,89 @@ class ReportController extends ChangeNotifier {
     );
 
     return allReports;
+  }
+
+  /// Export filtered reports to CSV
+  Future<void> exportReportsCsv() async {
+    try {
+      final leads = getFilteredReportsByDateCategory();
+
+      if (leads.isEmpty) {
+        throw Exception('No reports available to export');
+      }
+
+      List<List<dynamic>> rows = [];
+
+      // Header row
+      rows.add([
+        "ID",
+        "Customer Name",
+        "Phone",
+        "Store",
+        "Lead Type",
+        "Lead Status",
+        "Call Duration",
+        "Sub Category",
+        "Remarks",
+        "Closing Action",
+        "Function Date",
+        "Followup Date",
+        "Return Date",
+        "Booking Date",
+        "Delivery Date",
+        "Created At",
+        "Updated At",
+        "Attended By",
+      ]);
+
+      // Data rows
+      for (var lead in leads) {
+        rows.add([
+          lead['id'] ?? "",
+          lead['name'] ?? "",
+          lead['phone'] ?? "",
+          lead['storeName'] ?? "",
+          lead['type'] ?? "",
+          lead['leadStatus'] ?? "",
+          lead['callDuration']?.toString() ?? "",
+          lead['subCategory'] ?? "",
+          lead['remarks'] ?? "",
+          lead['closingAction'] ?? "",
+          lead['functionDate'] ?? "",
+          lead['followUpDate'] ?? "",
+          lead['returnDate'] ?? "",
+          lead['bookingDate'] ?? "",
+          lead['deliveryDate'] ?? "",
+          lead['callDate'] ?? "",
+          lead['updatedAt'] ?? "",
+          lead['attendedBy'] ?? "",
+        ]);
+      }
+
+      // Convert to CSV
+      String csvData = const ListToCsvConverter().convert(rows);
+
+      // Get application documents directory
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'call_report_$timestamp.csv';
+      final file = File("${directory.path}/$fileName");
+
+      // Write CSV to file
+      await file.writeAsString(csvData);
+
+      // Share the file
+      await Share.shareXFiles([XFile(file.path)], text: 'Call Report Export');
+
+      print('ReportController: CSV exported successfully: ${file.path}');
+    } catch (e, s) {
+      print('ReportController: CSV Export Error: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'exportReportsCsv failed',
+      );
+      rethrow;
+    }
   }
 }

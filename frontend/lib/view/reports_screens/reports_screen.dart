@@ -7,9 +7,6 @@ import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/call_report_list_screen.dart';
-import 'package:telecaller_app/view/reports_screens/report_details_screen/booking_detail_screen.dart';
-import 'package:telecaller_app/view/reports_screens/report_details_screen/enquiry_detail_screen.dart';
-import 'package:telecaller_app/view/reports_screens/report_details_screen/feedback_detail_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -176,6 +173,38 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  // Calculate total calls count by summing all callDuration values from reports
+  int _getTotalCallsCount(ReportController controller) {
+    final reports = controller.reports;
+    int totalCalls = 0;
+
+    for (var report in reports) {
+      if (report.callDuration != null && report.callDuration! > 0) {
+        totalCalls += 1; // Count each report with duration > 0 as 1 call
+      }
+    }
+
+    print('ReportsScreen: Total calls count from reports: $totalCalls');
+    return totalCalls;
+  }
+
+  // Calculate total call duration by summing all callDuration values from reports
+  int _getTotalCallDuration(ReportController controller) {
+    final reports = controller.reports;
+    int totalDuration = 0;
+
+    for (var report in reports) {
+      if (report.callDuration != null && report.callDuration! > 0) {
+        totalDuration += report.callDuration!;
+      }
+    }
+
+    print(
+      'ReportsScreen: Total call duration from reports: $totalDuration seconds',
+    );
+    return totalDuration;
+  }
+
   List<Map<String, dynamic>> _getLatestReports(ReportController controller) {
     // Apply local date categorization filtering
     return controller.getFilteredReportsByDateCategory();
@@ -213,29 +242,78 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   horizontal: 16,
                   vertical: 12,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const SizedBox(width: 24), // Placeholder for alignment
-                    const Text(
-                      "Reports",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 30),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 24), // Placeholder for alignment
+                      const Text(
+                        "Reports",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        // Handle notification tap
-                      },
-                      child: const Icon(
-                        Icons.notifications_outlined,
-                        color: Colors.white,
-                        size: 24,
+                      Row(
+                        children: [
+                          // Download/Export button
+                          GestureDetector(
+                            onTap: () async {
+                              try {
+                                final reportController =
+                                    Provider.of<ReportController>(
+                                      context,
+                                      listen: false,
+                                    );
+                                await reportController.exportReportsCsv();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Report exported successfully',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Export failed: $e'),
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                Icons.download,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                          // Notification button
+                          GestureDetector(
+                            onTap: () {
+                              // Handle notification tap
+                            },
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               Expanded(
@@ -685,132 +763,61 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required Map<String, dynamic> report,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey[200]!),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  phone,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  store,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      phone,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontFamily: TextConstant.dmSansRegular,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: callTypeColor,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   callType,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: callTypeTextColor,
-                    fontFamily: TextConstant.dmSansMedium,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            store,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontFamily: TextConstant.dmSansRegular,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+              const SizedBox(height: 8),
               Text(
                 date,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                  fontFamily: TextConstant.dmSansRegular,
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Widget detailScreen;
-                  if (callType == 'Enquiry') {
-                    detailScreen = EnquiryDetailScreen(
-                      name: name,
-                      phone: phone,
-                      callType: callType,
-                      reportData: report,
-                    );
-                  } else if (callType == 'Feedback') {
-                    detailScreen = FeedbackDetailScreen(
-                      name: name,
-                      phone: phone,
-                      callType: callType,
-                      reportData: report,
-                    );
-                  } else {
-                    detailScreen = BookingDetailScreen(
-                      name: name,
-                      phone: phone,
-                      callType: callType,
-                      reportData: report,
-                    );
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => detailScreen),
-                  );
-                },
-                child: Row(
-                  children: [
-                    Text(
-                      'Details',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2196F3),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 12,
-                      color: Color(0xFF2196F3),
-                    ),
-                  ],
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
               ),
             ],
           ),

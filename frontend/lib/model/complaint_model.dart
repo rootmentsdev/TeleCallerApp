@@ -11,7 +11,8 @@ class ComplaintModel {
   final String functionDate;
   final String subCategory;
   final String remarks; // Original remarks (before call)
-  final String complaintRemarks; // Complaint remarks (after call) - from complaint_remarks field
+  final String
+  complaintRemarks; // Complaint remarks (after call) - from complaint_remarks field
   final String callStatus;
   final String leadStatus;
   final bool isExpanded;
@@ -40,15 +41,28 @@ class ComplaintModel {
     try {
       final rawStore = json['store']?.toString() ?? '';
       final normalizedStore = StoreLocations.normalizeStoreName(rawStore);
-      final callDuration =
-          json['callDuration'] as int? ?? json['call_duration'] as int?;
+
+      // Parse callDuration - API returns as String, need to convert to int
+      final callDuration = () {
+        final callDur = json['callDuration'] ?? json['call_duration'];
+        if (callDur == null) return null;
+        if (callDur is int) return callDur;
+        if (callDur is String) {
+          try {
+            return int.parse(callDur);
+          } catch (_) {
+            return null;
+          }
+        }
+        return null;
+      }();
 
       // Fetch original remarks (before call) - this is the 'remarks' field
       String originalRemarks = '';
       if (json['remarks'] != null) {
         originalRemarks = json['remarks'].toString();
       }
-      
+
       // Check in nested snapshots if not found at top level
       if (originalRemarks.isEmpty) {
         final leadSnapshot = json['leadSnapshot'] as Map<String, dynamic>?;
@@ -56,25 +70,25 @@ class ComplaintModel {
           originalRemarks = leadSnapshot['remarks'].toString();
         }
       }
-      
+
       if (originalRemarks.isEmpty) {
         final afterSnapshot = json['afterSnapshot'] as Map<String, dynamic>?;
         if (afterSnapshot != null && afterSnapshot['remarks'] != null) {
           originalRemarks = afterSnapshot['remarks'].toString();
         }
       }
-      
+
       // Fetch complaint remarks (after call) - this is the 'complaint_remarks' field
       // Handle null values properly
       String complaintRemarks = '';
-      
+
       // Check top-level fields first - use null-aware operators
       if (json['complaint_remarks'] != null) {
         complaintRemarks = json['complaint_remarks'].toString();
       } else if (json['complaintRemarks'] != null) {
         complaintRemarks = json['complaintRemarks'].toString();
       }
-      
+
       // Check in nested snapshots if not found at top level
       if (complaintRemarks.isEmpty) {
         final leadSnapshot = json['leadSnapshot'] as Map<String, dynamic>?;
@@ -86,7 +100,7 @@ class ComplaintModel {
           }
         }
       }
-      
+
       if (complaintRemarks.isEmpty) {
         final afterSnapshot = json['afterSnapshot'] as Map<String, dynamic>?;
         if (afterSnapshot != null) {
@@ -123,9 +137,10 @@ class ComplaintModel {
       if (idValue != null) {
         if (idValue is Map) {
           // Handle MongoDB ObjectId format: {"$oid": "..."}
-          id = idValue['\$oid']?.toString() ?? 
-               idValue['oid']?.toString() ?? 
-               idValue.toString();
+          id =
+              idValue['\$oid']?.toString() ??
+              idValue['oid']?.toString() ??
+              idValue.toString();
         } else {
           id = idValue.toString();
         }
@@ -133,7 +148,7 @@ class ComplaintModel {
       if (id.isEmpty) {
         id = json['id']?.toString() ?? '';
       }
-      
+
       final name = json['name']?.toString() ?? 'Unknown';
       final phone = json['phone']?.toString() ?? '';
       final type = json['leadType']?.toString() ?? 'Enquiry';
@@ -167,9 +182,10 @@ class ComplaintModel {
       final idValue = json['_id'];
       if (idValue != null) {
         if (idValue is Map) {
-          safeId = idValue['\$oid']?.toString() ?? 
-                  idValue['oid']?.toString() ?? 
-                  idValue.toString();
+          safeId =
+              idValue['\$oid']?.toString() ??
+              idValue['oid']?.toString() ??
+              idValue.toString();
         } else {
           safeId = idValue.toString();
         }
@@ -177,22 +193,28 @@ class ComplaintModel {
       if (safeId.isEmpty) {
         safeId = json['id']?.toString() ?? '';
       }
-      
+
       return ComplaintModel(
         id: safeId,
         name: json['name']?.toString() ?? 'Unknown',
         phone: json['phone']?.toString() ?? '',
-        store: StoreLocations.normalizeStoreName(json['store']?.toString() ?? ''),
+        store: StoreLocations.normalizeStoreName(
+          json['store']?.toString() ?? '',
+        ),
         type: json['leadType']?.toString() ?? 'Enquiry',
         date: 'N/A',
         functionDate: '',
         subCategory: json['subCategory']?.toString() ?? '',
         remarks: json['remarks']?.toString() ?? '',
-        complaintRemarks: json['complaint_remarks']?.toString() ?? json['complaintRemarks']?.toString() ?? '',
+        complaintRemarks:
+            json['complaint_remarks']?.toString() ??
+            json['complaintRemarks']?.toString() ??
+            '',
         callStatus: json['callStatus']?.toString() ?? 'Not Called',
         leadStatus: json['leadStatus']?.toString() ?? 'No Status',
         rawData: json,
-        callDuration: json['callDuration'] as int? ?? json['call_duration'] as int?,
+        callDuration:
+            json['callDuration'] as int? ?? json['call_duration'] as int?,
       );
     }
   }
@@ -203,9 +225,10 @@ class ComplaintModel {
       String dateStr = '';
       if (dateValue is Map) {
         // Handle MongoDB date format: {"$date": "2026-02-12T00:00:00.000Z"}
-        dateStr = dateValue['\$date']?.toString() ?? 
-                 dateValue['date']?.toString() ?? 
-                 '';
+        dateStr =
+            dateValue['\$date']?.toString() ??
+            dateValue['date']?.toString() ??
+            '';
         if (dateStr.isEmpty) {
           return 'N/A';
         }
@@ -215,7 +238,7 @@ class ComplaintModel {
           return 'N/A';
         }
       }
-      
+
       final date = DateTime.parse(dateStr);
       final hour = date.hour.toString().padLeft(2, '0');
       final minute = date.minute.toString().padLeft(2, '0');
@@ -284,7 +307,7 @@ class ComplaintModel {
 
   /// Check if call has been made (call was completed)
   /// Returns true only if callStatus is NOT "Not Called" AND there's evidence of a call
-  /// 
+  ///
   /// Logic:
   /// - If callStatus is "Not Called", return false (no call made, regardless of other fields)
   /// - If callStatus is not "Not Called", check if callDuration > 0 or complaint_remarks exists
@@ -293,13 +316,13 @@ class ComplaintModel {
     if (callStatus == 'Not Called') {
       return false;
     }
-    
+
     // If callStatus is not "Not Called", check for evidence of a call:
     // - callDuration > 0 indicates a call was tracked
     // - complaint_remarks exists indicates a call was made and saved
     final hasCallDuration = callDuration != null && callDuration! > 0;
     final hasComplaintRemarks = complaintRemarks.isNotEmpty;
-    
+
     // Call was made if there's evidence (duration or remarks)
     return hasCallDuration || hasComplaintRemarks;
   }
@@ -310,8 +333,8 @@ class ComplaintModel {
   String get displayRemarks {
     if (hasCallBeenMade) {
       // After call: show complaint remarks (complaint_remarks from backend)
-      return complaintRemarks.isNotEmpty 
-          ? complaintRemarks 
+      return complaintRemarks.isNotEmpty
+          ? complaintRemarks
           : (remarks.isNotEmpty ? remarks : 'No remarks yet');
     } else {
       // Before call: show original remarks (remarks field)
@@ -319,5 +342,3 @@ class ComplaintModel {
     }
   }
 }
-
-

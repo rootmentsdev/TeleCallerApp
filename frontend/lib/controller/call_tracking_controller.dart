@@ -38,9 +38,24 @@ class CallTrackingController extends ChangeNotifier {
         'CallTrackingController: Received duration=$duration for phone=$phone (outgoing call)',
       );
       _lastPhone = phone;
-      _lastDuration = duration;
+
+      // CRITICAL: Use the actual duration from Android call log
+      // Android already provides the correct answered duration
+      // Do NOT recalculate - just use it directly
+      if (_lastCallWasAnswered && duration > 0) {
+        _lastDuration = duration;
+        print(
+          'CallTrackingController: Outgoing call was answered - using duration=$_lastDuration seconds from Android call log',
+        );
+      } else {
+        _lastDuration = 0;
+        print(
+          'CallTrackingController: Outgoing call was NOT answered - duration set to 0',
+        );
+      }
+
       _lastCallWasIncoming = false; // Outgoing call
-      _updateLeadWithDuration(phone, duration);
+      _updateLeadWithDuration(phone, _lastDuration ?? 0);
 
       // Only notify if controller is not disposed
       if (!_disposed) {
@@ -62,7 +77,22 @@ class CallTrackingController extends ChangeNotifier {
         );
 
         _lastPhone = phoneNumber;
-        _lastDuration = duration;
+
+        // CRITICAL: Use the actual duration from Android call log
+        // Android already provides the correct answered duration (from answer to end)
+        // Do NOT recalculate - just use it directly
+        if (_lastCallWasAnswered && duration > 0) {
+          _lastDuration = duration;
+          print(
+            'CallTrackingController: Call was answered - using duration=$_lastDuration seconds from Android call log',
+          );
+        } else {
+          // Call was not answered, set duration to 0
+          _lastDuration = 0;
+          print(
+            'CallTrackingController: Call was NOT answered - duration set to 0',
+          );
+        }
 
         // CRITICAL: Set _lastCallWasIncoming based on callType from Android
         // This ensures we only show incoming call form for actual incoming calls
@@ -75,41 +105,34 @@ class CallTrackingController extends ChangeNotifier {
         _outgoingCallInProgress = false;
         print('CallTrackingController: Reset _outgoingCallInProgress=false');
 
-        // Reset answered flag when call ends
-        if (duration > 0) {
-          // Call was answered and had duration
-          _lastCallWasAnswered = true;
-        } else {
-          // Reset answered flag - call ended without duration
-          _lastCallWasAnswered = false;
+        _updateLeadWithDuration(phoneNumber, _lastDuration ?? 0);
+
+        // Notify listeners BEFORE resetting answered flag so UI can update
+        print('CallTrackingController: Notifying listeners...');
+        if (!_disposed) {
+          notifyListeners();
+          print('CallTrackingController: Listeners notified');
         }
 
-        _updateLeadWithDuration(phoneNumber, duration);
+        // Reset answered flag AFTER notifying listeners
+        _lastCallWasAnswered = false;
 
         // Show add lead bottom sheet ONLY for incoming calls with duration > 0
         // Do NOT show for outgoing calls - they are handled by the outgoing call form
         if (_lastCallWasIncoming &&
-            duration > 0 &&
+            (_lastDuration ?? 0) > 0 &&
             phoneNumber != 'Unknown' &&
             phoneNumber.isNotEmpty) {
           print(
-            'CallTrackingController: Showing incoming call form for phone=$phoneNumber, duration=$duration',
+            'CallTrackingController: Showing incoming call form for phone=$phoneNumber, duration=$_lastDuration',
           );
-          _showAddLeadBottomSheetForIncomingCall(phoneNumber, duration);
+          _showAddLeadBottomSheetForIncomingCall(
+            phoneNumber,
+            _lastDuration ?? 0,
+          );
         } else {
           print(
-            'CallTrackingController: NOT showing incoming call form - isIncoming=$_lastCallWasIncoming, duration=$duration, phone=$phoneNumber',
-          );
-        }
-
-        print('CallTrackingController: Notifying listeners...');
-        // Only notify if controller is not disposed
-        if (!_disposed) {
-          notifyListeners();
-          print('CallTrackingController: Listeners notified');
-        } else {
-          print(
-            'CallTrackingController: Controller is disposed, not notifying',
+            'CallTrackingController: NOT showing incoming call form - isIncoming=$_lastCallWasIncoming, duration=$_lastDuration, phone=$phoneNumber',
           );
         }
       } else if (call.method == 'onCallStateChanged') {
@@ -197,8 +220,9 @@ class CallTrackingController extends ChangeNotifier {
     final cleanPhone = _cleanPhoneNumber(phone);
     final lead = _findLeadByPhone(cleanPhone);
 
+    // CRITICAL: Only update if duration > 0 (call was answered)
     if (lead != null && duration > 0) {
-      // Increment call count for each successful call
+      // Increment call count for each successful answered call
       final newCallCount = lead.callCount + 1;
       print(
         'CallTrackingController: Updating lead $cleanPhone with duration=$duration, callCount=$newCallCount',
@@ -219,6 +243,10 @@ class CallTrackingController extends ChangeNotifier {
         createdAt: lead.createdAt,
       );
       _leadRepository.updateLead(updatedLead);
+    } else if (duration == 0) {
+      print(
+        'CallTrackingController: NOT updating lead - call was not answered (duration=0)',
+      );
     }
   }
 

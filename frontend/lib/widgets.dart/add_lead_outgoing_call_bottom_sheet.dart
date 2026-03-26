@@ -84,7 +84,9 @@ class _AddLeadOutgoingCallBottomSheetState
       listen: false,
     );
 
-    if (callTrackingController.lastDuration != null &&
+    // CRITICAL: Only capture duration if call was answered
+    if (callTrackingController.lastCallWasAnswered &&
+        callTrackingController.lastDuration != null &&
         callTrackingController.lastDuration! > 0) {
       if (mounted) {
         setState(() {
@@ -700,11 +702,7 @@ class _AddLeadOutgoingCallBottomSheetState
                         Expanded(
                           child: ElevatedButton(
                             onPressed:
-                                (_isLoading ||
-                                        !_hasCalled ||
-                                        _callDuration == 0)
-                                    ? null
-                                    : _saveLead,
+                                (_isLoading || !_hasCalled) ? null : _saveLead,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF003D7A),
                               foregroundColor: Colors.white,
