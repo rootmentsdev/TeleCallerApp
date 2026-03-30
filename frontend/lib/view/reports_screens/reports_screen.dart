@@ -151,22 +151,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
         print('ReportsScreen: Feedback count: $count');
         return count.toString();
       case 'booking':
+        // Only count 'booked' type, exclude bookingconfirmation
         final count =
             reports.where((r) {
               final lt = r.leadType?.toLowerCase() ?? '';
-              return lt == 'bookingconfirmation' ||
-                  lt == 'booked' ||
-                  lt == 'booking confirmation';
+              return lt == 'booked';
             }).length;
         print('ReportsScreen: Booking count: $count');
         return count.toString();
       case 'bookingconfirmation':
+        // Only count bookingconfirmation and booking confirmation types
         final bcCount =
             reports.where((r) {
               final lt = r.leadType?.toLowerCase() ?? '';
               return lt == 'bookingconfirmation' ||
                   lt == 'booking confirmation';
             }).length;
+        print('ReportsScreen: Booking Confirmation count: $bcCount');
         return bcCount.toString();
       default:
         return '0';

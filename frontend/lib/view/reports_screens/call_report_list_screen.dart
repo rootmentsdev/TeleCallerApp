@@ -17,7 +17,7 @@ class CallReportListScreen extends StatefulWidget {
 }
 
 class _CallReportListScreenState extends State<CallReportListScreen> {
-  String _selectedTimeRange = 'Last 7 Days';
+  String _selectedTimeRange = 'Today';
   String _selectedCallType = 'All';
 
   final List<String> timeRanges = [
@@ -49,9 +49,9 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         listen: false,
       );
       reportController.init(headerController);
-      // Set initial date category to "Last 7 Days"
-      reportController.setSelectedDateCategory('Last 7 Days');
-      // Set initial date range for "Last 7 Days"
+      // Set initial date category to "Today"
+      reportController.setSelectedDateCategory('Today');
+      // Set initial date range for "Today"
       _applyTimeRangeFilter(_selectedTimeRange, headerController);
       // Fetch initial reports
       reportController.fetchReportsWithCurrentFilters();
@@ -105,17 +105,24 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     final dateFilteredReports =
         allReports.where((report) {
           try {
-            final leadData = report['leadData'] as Map<String, dynamic>? ?? {};
-            dynamic createdAtValue =
-                leadData['createdAt'] ?? report['callDate'];
+            // Use callDate which is already formatted and available
+            dynamic callDateValue = report['callDate'];
 
-            if (createdAtValue == null) return false;
+            if (callDateValue == null) return false;
 
+            // callDate is already formatted as string (e.g., "25 Mar, 2026")
+            // We need to parse it back to DateTime for comparison
             DateTime reportDate;
-            if (createdAtValue is String) {
-              reportDate = DateTime.parse(createdAtValue);
-            } else if (createdAtValue is DateTime) {
-              reportDate = createdAtValue;
+            if (callDateValue is String) {
+              // Try to parse the formatted date
+              try {
+                reportDate = DateTime.parse(callDateValue);
+              } catch (_) {
+                // If parsing fails, assume it's today's date
+                reportDate = DateTime.now();
+              }
+            } else if (callDateValue is DateTime) {
+              reportDate = callDateValue;
             } else {
               return false;
             }

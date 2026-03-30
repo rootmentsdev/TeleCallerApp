@@ -418,15 +418,43 @@ class ReportController extends ChangeNotifier {
               .where((lead) => LeadConstants.isCalledStatus(lead.callStatus))
               .toList();
 
+      // Filter by date range - use updatedAt if available, otherwise createdAt
+      final filteredByDate =
+          calledLocalLeads.where((lead) {
+            final dateToCheck = lead.updatedAt ?? lead.createdAt;
+
+            if (_headerController?.isRangeMode == true &&
+                _headerController?.dateRangeStart != null &&
+                _headerController?.dateRangeEnd != null) {
+              final rangeStart = _headerController!.dateRangeStart!;
+              final rangeEnd = DateTime(
+                _headerController!.dateRangeEnd!.year,
+                _headerController!.dateRangeEnd!.month,
+                _headerController!.dateRangeEnd!.day,
+                23,
+                59,
+                59,
+              );
+              return dateToCheck.isAfter(rangeStart) &&
+                  dateToCheck.isBefore(rangeEnd);
+            } else {
+              final selectedDate =
+                  _headerController?.selectedDate ?? DateTime.now();
+              return dateToCheck.year == selectedDate.year &&
+                  dateToCheck.month == selectedDate.month &&
+                  dateToCheck.day == selectedDate.day;
+            }
+          }).toList();
+
       final reportIds = filteredReports.map((r) => r["id"]).toSet();
-      for (final lead in calledLocalLeads) {
+      for (final lead in filteredByDate) {
         if (!reportIds.contains(lead.id)) {
           filteredReports.add({
             "id": lead.id,
             "name": lead.name,
             "phone": lead.phone,
             "date": _formatDate(lead.createdAt),
-            "callDate": _formatDate(lead.createdAt),
+            "callDate": _formatDate(lead.updatedAt ?? lead.createdAt),
             "storeName": lead.location ?? lead.brand ?? "Not available",
             "type": "general",
             "callStatus": lead.callStatus ?? "Not called yet",
@@ -545,7 +573,10 @@ class ReportController extends ChangeNotifier {
       case "return":
         return "hardout";
       case "bookingconfirmation":
+      case "booking confirmation":
+        return "bookingconfirmation";
       case "booked":
+      case "booking":
         return "booking";
       case "justdial":
         return "justdial";

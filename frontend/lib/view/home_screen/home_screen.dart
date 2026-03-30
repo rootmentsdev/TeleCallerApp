@@ -175,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Get calls today count - calculate independently to avoid being overridden by reports screen
-        // Count leads created today with call duration > 0 + complaint calls with duration > 0
+        // Count leads with calls made today (updatedAt) with call duration > 0 + complaint calls with duration > 0
         final today = DateTime.now();
         final todayStart = DateTime(today.year, today.month, today.day);
         final todayEnd = DateTime(
@@ -193,8 +193,8 @@ class _HomeScreenState extends State<HomeScreen> {
             _repository.allLeads
                 .where(
                   (lead) =>
-                      lead.createdAt.isAfter(todayStart) &&
-                      lead.createdAt.isBefore(todayEnd) &&
+                      (lead.updatedAt?.isAfter(todayStart) ?? false) &&
+                      (lead.updatedAt?.isBefore(todayEnd) ?? false) &&
                       (lead.callDuration ?? 0) > 0 &&
                       (lead.markAsComplaint !=
                           true), // Exclude complaint-marked leads

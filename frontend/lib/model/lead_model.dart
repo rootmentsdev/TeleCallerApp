@@ -11,6 +11,8 @@ class LeadModel {
   final String? category; // Loss of Sale, Feedback, Booking Confirmation, etc.
   final DateTime createdAt;
   final DateTime?
+  updatedAt; // When the lead was last updated (e.g., when call was made)
+  final DateTime?
   returnDate; // Return date for return leads (used instead of createdAt for return lead filtering)
   final int? callDuration; // Call duration in seconds
   final int callCount; // Number of calls made to this lead
@@ -43,6 +45,7 @@ class LeadModel {
     this.callDuration,
     this.callCount = 0,
     DateTime? createdAt,
+    this.updatedAt,
     this.returnDate,
     this.source,
     this.leadType,
@@ -74,6 +77,7 @@ class LeadModel {
       'reason': reason,
       'category': category,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
       'returnDate': returnDate?.toIso8601String(),
       'callDuration': callDuration,
       'callCount': callCount,
@@ -135,6 +139,8 @@ class LeadModel {
           map['createdAt'] != null
               ? DateTime.parse(map['createdAt'])
               : DateTime.now(),
+      updatedAt:
+          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
       returnDate:
           map['returnDate'] != null ? DateTime.parse(map['returnDate']) : null,
       source: map['source'],
@@ -235,6 +241,17 @@ class LeadModel {
         createdAt = DateTime.parse(createdAtValue.toString());
       } catch (e) {
         // If parsing fails, use current time
+      }
+    }
+
+    // Handle updatedAt (both formats)
+    DateTime? updatedAt;
+    final updatedAtValue = json['updated_at'] ?? json['updatedAt'];
+    if (updatedAtValue != null) {
+      try {
+        updatedAt = DateTime.parse(updatedAtValue.toString());
+      } catch (e) {
+        // If parsing fails, leave as null
       }
     }
 
@@ -343,6 +360,7 @@ class LeadModel {
               ? callCount
               : (int.tryParse(callCount.toString()) ?? 0),
       createdAt: createdAt,
+      updatedAt: updatedAt,
       returnDate: returnDate,
       source: json['source'],
       leadType: leadType,
