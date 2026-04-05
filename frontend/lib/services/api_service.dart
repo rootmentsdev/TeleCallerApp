@@ -268,6 +268,38 @@ class ApiService {
         requestBody['follow_up_date'] = followUpDate.toIso8601String();
       }
 
+      // Add missing feedback fields
+      if (subCategory != null && subCategory.trim().isNotEmpty) {
+        requestBody['sub_category'] = subCategory.trim();
+      }
+      if (itemCategory != null && itemCategory.trim().isNotEmpty) {
+        requestBody['item_category'] = itemCategory.trim();
+      }
+      if (functionDate != null) {
+        requestBody['function_date'] = functionDate.toIso8601String();
+      }
+      if (leadType != null && leadType.trim().isNotEmpty) {
+        requestBody['lead_type'] = leadType.trim();
+      }
+      if (markAsComplaint != null) {
+        requestBody['mark_as_complaint'] = markAsComplaint;
+      }
+      if (numberOfFunctions != null && numberOfFunctions.trim().isNotEmpty) {
+        requestBody['no_of_functions'] = numberOfFunctions.trim();
+      }
+      if (numberOfAttires != null && numberOfAttires.trim().isNotEmpty) {
+        requestBody['no_of_attires'] = numberOfAttires.trim();
+      }
+      if (competitor != null && competitor.trim().isNotEmpty) {
+        requestBody['competitor'] = competitor.trim();
+      }
+      if (service != null && service.trim().isNotEmpty) {
+        requestBody['service'] = service.trim();
+      }
+      if (refundStatus != null && refundStatus.trim().isNotEmpty) {
+        requestBody['refund_status'] = refundStatus.trim();
+      }
+
       final requestBodyJson = json.encode(requestBody);
 
       print('ApiService: Updating Return lead');
@@ -617,6 +649,7 @@ class ApiService {
         'phone': phoneNumber,
         'store': store,
         'leadtype': normalizedLeadType,
+        'leadStatus': 'completed', // Mark as completed when created
         'callStatus': _normalizeCallStatus(callStatus ?? 'Not Called'),
         'subCategory': subCategory,
         'itemCategory': itemCategory,

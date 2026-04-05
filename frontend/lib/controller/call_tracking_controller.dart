@@ -117,10 +117,8 @@ class CallTrackingController extends ChangeNotifier {
         // Reset answered flag AFTER notifying listeners
         _lastCallWasAnswered = false;
 
-        // Show add lead bottom sheet ONLY for incoming calls with duration > 0
-        // Do NOT show for outgoing calls - they are handled by the outgoing call form
-        if (_lastCallWasIncoming &&
-            (_lastDuration ?? 0) > 0 &&
+        // Show add lead bottom sheet for both incoming AND outgoing calls with duration > 0
+        if ((_lastDuration ?? 0) > 0 &&
             phoneNumber != 'Unknown' &&
             phoneNumber.isNotEmpty) {
           print(
@@ -132,7 +130,7 @@ class CallTrackingController extends ChangeNotifier {
           );
         } else {
           print(
-            'CallTrackingController: NOT showing incoming call form - isIncoming=$_lastCallWasIncoming, duration=$_lastDuration, phone=$phoneNumber',
+            'CallTrackingController: NOT showing incoming call form - duration=$_lastDuration, phone=$phoneNumber',
           );
         }
       } else if (call.method == 'onCallStateChanged') {

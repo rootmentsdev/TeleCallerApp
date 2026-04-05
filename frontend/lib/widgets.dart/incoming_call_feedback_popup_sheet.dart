@@ -195,7 +195,7 @@ class _IncomingCallFeedbackPopupSheetState
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          widget.lead.leadType ?? 'Enquiry',
+                          _formatLeadType(widget.lead.leadType),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -614,5 +614,27 @@ class _IncomingCallFeedbackPopupSheetState
         ),
       ),
     );
+  }
+
+  /// Format lead type for display - converts 'booked' to 'Booked', etc.
+  String _formatLeadType(String? leadType) {
+    if (leadType == null) return 'Enquiry';
+
+    final type = leadType.toLowerCase();
+    switch (type) {
+      case 'enquiry':
+        return 'Enquiry';
+      case 'booked':
+      case 'booking':
+        return 'Booked';
+      case 'return':
+      case 'hardout':
+        return 'Feedback';
+      case 'bookingconfirmation':
+      case 'booking confirmation':
+        return 'Booking Confirmation';
+      default:
+        return leadType;
+    }
   }
 }

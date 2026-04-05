@@ -31,7 +31,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     'All',
     'Feedback',
     'Enquiry',
-    'Booking',
+    'Booked',
     'Booking Confirmation',
   ];
 
@@ -141,7 +141,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
           }
         }).toList();
 
-    // Then filter out invalid lead types (only keep Enquiry, Feedback, Booking)
+    // Then filter out invalid lead types (only keep Enquiry, Feedback, Booked)
     final validReports =
         dateFilteredReports.where((report) {
           final callType = _getCallTypeDisplay(report['type']);
@@ -181,7 +181,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
       case 'return':
         return 'Feedback';
       case 'booking':
-        return 'Booking';
+      case 'booked':
+        return 'Booked';
       case 'bookingconfirmation':
       case 'booking confirmation':
         return 'Booking Confirmation';
@@ -196,7 +197,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFFE3F2FD);
       case 'Enquiry':
         return const Color(0xFFF3E5F5);
-      case 'Booking':
+      case 'Booked':
         return const Color(0xFFE8F5E9);
       case 'Booking Confirmation':
         return const Color(0xFFFFF3E0);
@@ -211,7 +212,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFF1976D2);
       case 'Enquiry':
         return const Color(0xFF7B1FA2);
-      case 'Booking':
+      case 'Booked':
         return const Color(0xFF388E3C);
       case 'Booking Confirmation':
         return const Color(0xFFE65100);
@@ -627,8 +628,17 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                       callType: callType,
                       reportData: report,
                     );
-                  } else {
+                  } else if (callType == 'Booking Confirmation') {
                     detailScreen = BookingDetailScreen(
+                      name: name,
+                      phone: phone,
+                      callType: callType,
+                      reportData: report,
+                    );
+                  } else {
+                    // For 'Booked' leads, show a generic detail screen or feedback screen
+                    // Since there's no specific Booked detail screen, use FeedbackDetailScreen as fallback
+                    detailScreen = FeedbackDetailScreen(
                       name: name,
                       phone: phone,
                       callType: callType,

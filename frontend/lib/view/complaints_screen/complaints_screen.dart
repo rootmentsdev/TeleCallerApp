@@ -425,7 +425,7 @@ Remarks: ${complaint.displayRemarks}
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
-                          complaint.type,
+                          _formatLeadType(complaint.type),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -766,5 +766,27 @@ Remarks: ${complaint.displayRemarks}
         ),
       ],
     );
+  }
+
+  /// Format lead type for display - converts 'booked' to 'Booked', etc.
+  String _formatLeadType(String? leadType) {
+    if (leadType == null) return 'Enquiry';
+
+    final type = leadType.toLowerCase();
+    switch (type) {
+      case 'enquiry':
+        return 'Enquiry';
+      case 'booked':
+      case 'booking':
+        return 'Booked';
+      case 'return':
+      case 'hardout':
+        return 'Feedback';
+      case 'bookingconfirmation':
+      case 'booking confirmation':
+        return 'Booking Confirmation';
+      default:
+        return leadType;
+    }
   }
 }

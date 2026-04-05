@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
 
-class BookingDetailScreen extends StatefulWidget {
+class BookingDetailScreen extends StatelessWidget {
   final String name;
   final String phone;
   final String callType;
@@ -17,36 +16,6 @@ class BookingDetailScreen extends StatefulWidget {
     required this.callType,
     this.reportData,
   });
-
-  @override
-  State<BookingDetailScreen> createState() => _BookingDetailScreenState();
-}
-
-class _BookingDetailScreenState extends State<BookingDetailScreen> {
-  late String _selectedService;
-  late bool _billReceivedYes;
-  late bool _billReceivedNo;
-  late bool _amountMismatch;
-  late TextEditingController _remarksController;
-  bool _isSaving = false;
-
-  final List<String> serviceOptions = ["Excellent", "Average", "Not satisfied"];
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedService = "Average";
-    _billReceivedYes = false;
-    _billReceivedNo = false;
-    _amountMismatch = false;
-    _remarksController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _remarksController.dispose();
-    super.dispose();
-  }
 
   String _getDisplayValue(dynamic value, String defaultValue) {
     if (value == null || value.toString().isEmpty) {
@@ -83,78 +52,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')} Mins';
   }
 
-  void _shareCallReport() {
-    final data = widget.reportData ?? {};
-    final shareText = '''
-Booking Confirmation - ${widget.callType}
-
-Customer: ${widget.name}
-Phone: ${widget.phone}
-
-Service: $_selectedService
-Bill Received: ${_billReceivedYes ? 'Yes' : (_billReceivedNo ? 'No' : 'Not specified')}
-Amount Mismatch: ${_amountMismatch ? 'Yes' : 'No'}
-
-Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'No remarks'}
-''';
-    Share.share(shareText);
-  }
-
-  Future<void> _saveCallUpdate() async {
-    if (_selectedService == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a service'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      // TODO: Add API call to save booking confirmation update
-      // await apiService.updateBookingConfirmation(
-      //   id: widget.reportData?['id'],
-      //   service: _selectedService,
-      //   billReceived: _billReceivedYes,
-      //   amountMismatch: _amountMismatch,
-      //   remarks: _remarksController.text,
-      // );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Call update saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving call update: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final data = widget.reportData ?? {};
+    final data = reportData ?? {};
     final leadData = data['leadData'] ?? data;
 
     final location = _getDisplayValue(
@@ -180,14 +80,14 @@ Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'No re
           data['sub_category'] ??
           leadData['subCategory'] ??
           leadData['sub_category'],
-      'N/A',
+      'Not specified',
     );
     final closeAction = _getDisplayValue(
       data['closingAction'] ??
           data['closing_action'] ??
           leadData['closingAction'] ??
           leadData['closing_action'],
-      'N/A',
+      'Not specified',
     );
     final remarks = _getDisplayValue(
       data['remarks'] ?? leadData['remarks'],
@@ -195,6 +95,20 @@ Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'No re
     );
     final callDuration = _formatDuration(
       data['callDuration'] ?? data['call_duration'],
+    );
+
+    // Extract booking confirmation data from backend
+    final service = _getDisplayValue(
+      data['service'] ?? leadData['service'],
+      'Not specified',
+    );
+    final billReceived = _getDisplayValue(
+      data['billReceived'] ?? leadData['billReceived'],
+      'Not specified',
+    );
+    final amountMismatch = _getDisplayValue(
+      data['amountMismatch'] ?? leadData['amountMismatch'],
+      'No',
     );
 
     return Scaffold(
@@ -267,7 +181,7 @@ Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'No re
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      widget.name,
+                                      name,
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -276,7 +190,7 @@ Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'No re
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '+91 ${widget.phone}',
+                                      '+91 $phone',
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.grey[600],
@@ -594,31 +508,92 @@ Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'No re
                     ),
                     const SizedBox(height: 24),
 
-                    // Share Call Report Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _shareCallReport,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[200],
-                          foregroundColor: ColorConstant.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Share Call Report',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: ColorConstant.primaryColor,
-                            fontFamily: TextConstant.dmSansMedium,
-                          ),
-                        ),
+                    // Booking Confirmation Section (Read-Only)
+                    Text(
+                      'Booking Confirmation',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        fontFamily: TextConstant.dmSansMedium,
                       ),
                     ),
+                    const SizedBox(height: 12),
+
+                    // Service Quality (Read-Only)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Service Quality',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontFamily: TextConstant.dmSansRegular,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          service,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 16),
+
+                    // Bill Received (Read-Only)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bill Received',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontFamily: TextConstant.dmSansRegular,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          billReceived,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Amount Mismatch (Read-Only)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Amount Mismatch',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontFamily: TextConstant.dmSansRegular,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          amountMismatch,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),

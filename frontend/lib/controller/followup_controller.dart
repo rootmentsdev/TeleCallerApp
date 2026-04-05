@@ -184,6 +184,11 @@ class FollowupController extends ChangeNotifier {
             }).toList();
         break;
 
+      case 4:
+        // All: show all follow-up leads (including those without dates)
+        currentLeads = allFollowUpLeads;
+        break;
+
       default:
         // Default: show only leads that actually have a followUpDate
         currentLeads =

@@ -283,7 +283,7 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  widget.complaint.type,
+                                  _formatLeadType(widget.complaint.type),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -689,6 +689,28 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  /// Format lead type for display - converts 'booked' to 'Booked', etc.
+  String _formatLeadType(String? leadType) {
+    if (leadType == null) return 'Enquiry';
+
+    final type = leadType.toLowerCase();
+    switch (type) {
+      case 'enquiry':
+        return 'Enquiry';
+      case 'booked':
+      case 'booking':
+        return 'Booked';
+      case 'return':
+      case 'hardout':
+        return 'Feedback';
+      case 'bookingconfirmation':
+      case 'booking confirmation':
+        return 'Booking Confirmation';
+      default:
+        return leadType;
     }
   }
 }

@@ -305,6 +305,12 @@ class LeadScreenController extends ChangeNotifier {
           _repository.allLeads
               .where((lead) => lead.category == LeadConstants.categoryRentOut)
               .toList();
+    } else if (_selectedCallTypeIndex == 2) {
+      // Just Dial tab
+      filteredLeads =
+          _repository.allLeads
+              .where((lead) => lead.category == 'Just Dial')
+              .toList();
     } else if (_selectedCallTypeIndex == 3) {
       // Marked Calls tab (Starred leads)
       filteredLeads = _repository.starredCallsLeads;

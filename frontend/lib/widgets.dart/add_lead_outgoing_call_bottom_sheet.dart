@@ -200,7 +200,7 @@ class _AddLeadOutgoingCallBottomSheetState
                   _buildDropdownField(
                     value: _selectedLeadType,
                     label: 'Select Lead Type',
-                    items: ["Enquiry", "Booking"],
+                    items: ["Enquiry", "Booked"],
                     onChanged: (value) {
                       setState(() {
                         _selectedLeadType = value;
@@ -614,7 +614,7 @@ class _AddLeadOutgoingCallBottomSheetState
                         },
                       ),
                     ] else if (!_markAsComplaint &&
-                        _selectedLeadType == "Booking") ...[
+                        _selectedLeadType == "Booked") ...[
                       Row(
                         children: [
                           Expanded(
@@ -935,8 +935,8 @@ class _AddLeadOutgoingCallBottomSheetState
       // Normalize lead type to lowercase format expected by backend
       String normalizedLeadType =
           (_selectedLeadType ?? 'Enquiry').toLowerCase();
-      if (normalizedLeadType == 'booking') {
-        normalizedLeadType = 'booked'; // Backend expects 'booked' not 'booking'
+      if (normalizedLeadType == 'booked') {
+        normalizedLeadType = 'booked'; // Backend expects 'booked'
       }
 
       final apiResponse = await apiService.createLead(
@@ -995,6 +995,29 @@ class _AddLeadOutgoingCallBottomSheetState
           'AddLeadOutgoingCallBottomSheet: Warning - Could not extract lead ID from response, using phone as temp ID',
         );
         leadId = _phoneController.text.trim();
+      }
+
+      // Update lead with feedback after creation
+      if (leadId.isNotEmpty) {
+        try {
+          await apiService.updateReturnLead(
+            id: leadId,
+            callStatus: _selectedCallStatus,
+            remarks:
+                _remarksController.text.trim().isNotEmpty
+                    ? _remarksController.text.trim()
+                    : null,
+            callDuration: _callDuration > 0 ? _callDuration : null,
+            markAsComplaint: _markAsComplaint ? true : null,
+            subCategory: _selectedSubCategory,
+            functionDate: _functionDate,
+          );
+        } catch (updateError) {
+          print(
+            'AddLeadOutgoingCallBottomSheet: Warning - Failed to update lead with feedback: $updateError',
+          );
+          // Continue anyway - lead was created, just feedback update failed
+        }
       }
 
       // Check if lead already exists locally to avoid duplicates

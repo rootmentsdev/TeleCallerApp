@@ -193,7 +193,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                     _buildDropdownField(
                       value: _selectedLeadType,
                       label: 'Select Lead Type',
-                      items: ["Enquiry", "Booking"],
+                      items: ["Enquiry", "Booked"],
                       onChanged: (value) {
                         setState(() {
                           _selectedLeadType = value;
@@ -555,7 +555,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                         },
                       ),
                     ] else if (!_markAsComplaint &&
-                        _selectedLeadType == "Booking") ...[
+                        _selectedLeadType == "Booked") ...[
                       Row(
                         children: [
                           Expanded(
@@ -853,8 +853,8 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
       // Normalize lead type to lowercase format expected by backend
       String normalizedLeadType =
           (_selectedLeadType ?? 'Enquiry').toLowerCase();
-      if (normalizedLeadType == 'booking') {
-        normalizedLeadType = 'booked'; // Backend expects 'booked' not 'booking'
+      if (normalizedLeadType == 'booked') {
+        normalizedLeadType = 'booked'; // Backend expects 'booked'
       }
 
       print(
@@ -971,6 +971,15 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         setState(() {
           _isLoading = false;
         });
+
+        // Show success notification
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lead saved successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
 
         // If call status is "Interested" or "Not Connected", show followup screen
         if (_selectedCallStatus == 'Interested' ||

@@ -313,7 +313,7 @@ class _FollowupScreenState extends State<FollowupScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      call["leadType"] as String? ?? "Lead",
+                      _formatLeadType(call["leadType"]),
                       style: const TextStyle(
                         fontSize: 12,
                         fontFamily: TextConstant.dmSansMedium,
@@ -414,6 +414,28 @@ class _FollowupScreenState extends State<FollowupScreen> {
     }
 
     return "Date";
+  }
+
+  /// Format lead type for display - converts 'booked' to 'Booked', etc.
+  String _formatLeadType(dynamic leadType) {
+    if (leadType == null) return "Lead";
+
+    final type = leadType.toString().toLowerCase();
+    switch (type) {
+      case 'enquiry':
+        return 'Enquiry';
+      case 'booked':
+      case 'booking':
+        return 'Booked';
+      case 'return':
+      case 'hardout':
+        return 'Feedback';
+      case 'bookingconfirmation':
+      case 'booking confirmation':
+        return 'Booking Confirmation';
+      default:
+        return leadType.toString();
+    }
   }
 }
 

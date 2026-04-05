@@ -8,6 +8,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/navigation_helper.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
+import 'package:telecaller_app/view/lead_screen/justdial_detail_screen.dart';
 
 class LeadScreen extends StatefulWidget {
   const LeadScreen({super.key});
@@ -20,12 +21,14 @@ class _LeadScreenState extends State<LeadScreen> {
   // Tab indices constants
   static const int _tabIndexBookingConfirmation = 0;
   static const int _tabIndexReturn = 1;
+  static const int _tabIndexJustDial = 2;
 
   // Initialization delay to allow UI to settle
   static const Duration _initializationDelay = Duration(milliseconds: 500);
 
   bool _isLoadingBookingConfirmation = false;
   bool _isLoadingReturn = false;
+  bool _isLoadingJustDial = false;
 
   @override
   void initState() {
@@ -228,7 +231,8 @@ class _LeadScreenState extends State<LeadScreen> {
   bool _isLoadingCategory(int selectedIndex) {
     return (_isLoadingBookingConfirmation &&
             selectedIndex == _tabIndexBookingConfirmation) ||
-        (_isLoadingReturn && selectedIndex == _tabIndexReturn);
+        (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
+        (_isLoadingJustDial && selectedIndex == _tabIndexJustDial);
   }
 
   // ============================ UI =============================
@@ -255,114 +259,103 @@ class _LeadScreenState extends State<LeadScreen> {
                 },
               ),
 
-              // ==================== Tabs ====================
+              // ==================== Category Cards ====================
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 16,
                 ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Booking Confirmation Tab
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          controller.setSelectedCallTypeIndex(
-                            _tabIndexBookingConfirmation,
-                          );
-                          _fetchBookingConfirmationLeads(
-                            controller,
-                            headerController,
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 8,
-                          ),
-                          constraints: const BoxConstraints(minHeight: 56),
-                          decoration: BoxDecoration(
-                            color:
-                                controller.selectedCallTypeIndex ==
-                                        _tabIndexBookingConfirmation
-                                    ? ColorConstant.primaryColor
-                                    : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color:
-                                  controller.selectedCallTypeIndex ==
-                                          _tabIndexBookingConfirmation
-                                      ? ColorConstant.primaryColor
-                                      : Colors.grey[300]!,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              "Booking Confirmation Calls (${controller.getBookingConfirmationCount()})",
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: TextConstant.dmSansMedium,
-                                color:
-                                    controller.selectedCallTypeIndex ==
-                                            _tabIndexBookingConfirmation
-                                        ? Colors.white
-                                        : const Color(0xFFFFA500),
-                              ),
-                            ),
-                          ),
-                        ),
+                    _buildCategoryCard(
+                      icon: Icons.message,
+                      label: "Feedback\nCalls",
+                      count: controller.getReturnLeadsCount(),
+                      isSelected:
+                          controller.selectedCallTypeIndex == _tabIndexReturn,
+                      onTap: () {
+                        controller.setSelectedCallTypeIndex(_tabIndexReturn);
+                        _fetchReturnLeads(controller, headerController);
+                      },
+                    ),
+                    _buildCategoryCard(
+                      icon: Icons.local_shipping_outlined,
+                      label: "Booking\nConfirmation",
+                      count: controller.getBookingConfirmationCount(),
+                      isSelected:
+                          controller.selectedCallTypeIndex ==
+                          _tabIndexBookingConfirmation,
+                      onTap: () {
+                        controller.setSelectedCallTypeIndex(
+                          _tabIndexBookingConfirmation,
+                        );
+                        _fetchBookingConfirmationLeads(
+                          controller,
+                          headerController,
+                        );
+                      },
+                    ),
+                    _buildCategoryCard(
+                      icon: Icons.headphones_outlined,
+                      label: "Just Dial",
+                      count: 3,
+                      isSelected:
+                          controller.selectedCallTypeIndex == _tabIndexJustDial,
+                      onTap: () {
+                        controller.setSelectedCallTypeIndex(_tabIndexJustDial);
+                      },
+                    ),
+                    _buildCategoryCard(
+                      icon: Icons.trending_down_outlined,
+                      label: "Loss of Sale",
+                      count: 0,
+                      isSelected: false,
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+              ),
+
+              // ==================== Section Title ====================
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      controller.selectedCallTypeIndex == _tabIndexReturn
+                          ? "Feedback Calls"
+                          : controller.selectedCallTypeIndex ==
+                              _tabIndexJustDial
+                          ? "Just Dial"
+                          : "Booking Confirmation Calls",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        fontFamily: TextConstant.dmSansMedium,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    // Feedback Calls Tab
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          controller.setSelectedCallTypeIndex(_tabIndexReturn);
-                          _fetchReturnLeads(controller, headerController);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 8,
-                          ),
-                          constraints: const BoxConstraints(minHeight: 56),
-                          decoration: BoxDecoration(
-                            color:
-                                controller.selectedCallTypeIndex ==
-                                        _tabIndexReturn
-                                    ? ColorConstant.primaryColor
-                                    : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color:
-                                  controller.selectedCallTypeIndex ==
-                                          _tabIndexReturn
-                                      ? ColorConstant.primaryColor
-                                      : Colors.grey[300]!,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              "Feedback Calls (${controller.getReturnLeadsCount()})",
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: TextConstant.dmSansMedium,
-                                color:
-                                    controller.selectedCallTypeIndex ==
-                                            _tabIndexReturn
-                                        ? Colors.white
-                                        : const Color(0xFFFFA500),
-                              ),
-                            ),
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7CC),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        "${filteredLeads.length} Calls",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFFFCC00),
+                          fontFamily: TextConstant.dmSansMedium,
                         ),
                       ),
                     ),
@@ -402,6 +395,60 @@ class _LeadScreenState extends State<LeadScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCategoryCard({
+    required IconData icon,
+    required String label,
+    required int count,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: isSelected ? ColorConstant.primaryColor : Colors.grey[200],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              icon,
+              color: isSelected ? Colors.white : ColorConstant.primaryColor,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            count.toString(),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              fontFamily: TextConstant.dmSansMedium,
+            ),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 70,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+                fontFamily: TextConstant.dmSansRegular,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -460,11 +507,23 @@ class _LeadScreenState extends State<LeadScreen> {
           lead: lead.toMap(),
           onTap: () {
             if (lead.leadModel != null) {
-              NavigationHelper.navigateToDetails(
-                context,
-                lead.leadModel!,
-                lead.date,
-              );
+              // Navigate to appropriate detail screen based on category
+              if (lead.leadModel!.category == 'Just Dial') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) =>
+                            JustDialDetailScreen(lead: lead.leadModel!),
+                  ),
+                );
+              } else {
+                NavigationHelper.navigateToDetails(
+                  context,
+                  lead.leadModel!,
+                  lead.date,
+                );
+              }
             }
           },
         );
@@ -486,8 +545,50 @@ class LeadListItem extends StatelessWidget {
 
   const LeadListItem({super.key, required this.lead, this.onTap});
 
+  IconData _getIconForCategory(String? category) {
+    switch (category?.toLowerCase()) {
+      case 'feedback':
+      case 'rentout':
+      case 'rent out':
+        return Icons.favorite_outline;
+      case 'booking confirmation':
+      case 'bookingconfirmation':
+        return Icons.local_shipping_outlined;
+      case 'just dial':
+        return Icons.headphones_outlined;
+      case 'loss of sale':
+      case 'lossofsale':
+        return Icons.trending_down_outlined;
+      default:
+        return Icons.chat_bubble_outline;
+    }
+  }
+
+  Color _getColorForCategory(String? category) {
+    switch (category?.toLowerCase()) {
+      case 'feedback':
+      case 'rentout':
+      case 'rent out':
+        return const Color(0xFFE91E63);
+      case 'booking confirmation':
+      case 'bookingconfirmation':
+        return ColorConstant.primaryColor;
+      case 'just dial':
+        return ColorConstant.primaryColor;
+      case 'loss of sale':
+      case 'lossofsale':
+        return const Color(0xFFFF6F00);
+      default:
+        return ColorConstant.primaryColor;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final category = lead["category"] as String?;
+    final icon = _getIconForCategory(category);
+    final color = _getColorForCategory(category);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -502,19 +603,15 @@ class LeadListItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
-              // Icon on left (speech bubble with heart)
+              // Icon on left (category-based)
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(
-                  color: ColorConstant.primaryColor.withOpacity(0.1),
+                decoration: BoxDecoration(                                                                                                                                                                 
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.chat_bubble_outline,
-                  color: ColorConstant.primaryColor,
-                  size: 24,
-                ),
+                child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 16),
               // Customer information
@@ -533,7 +630,7 @@ class LeadListItem extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      lead["phone"] as String? ?? "N/A",
+                      "+91 ${lead["phone"] as String? ?? "N/A"}",
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],

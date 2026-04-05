@@ -219,7 +219,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       case 'return':
         return 'Feedback';
       case 'booking':
-        return 'Booking';
+      case 'booked':
+        return 'Booked';
       case 'bookingconfirmation':
       case 'booking confirmation':
         return 'Booking Confirmation';
@@ -579,7 +580,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         reportController,
                                         'booking',
                                       ),
-                                      title: 'Booking Calls',
+                                      title: 'Booked Calls',
                                       iconBgColor: const Color(0xFFE3F2FD),
                                     ),
                                   ),

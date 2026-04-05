@@ -75,6 +75,7 @@ class LeadRepository extends ChangeNotifier {
     if (_isInitialized) return;
     await _loadLeads();
     await _addTestBookingConfirmationDataIfNeeded();
+    await _addTestJustDialLeadsIfNeeded();
     _isInitialized = true;
   }
 
@@ -205,6 +206,9 @@ class LeadRepository extends ChangeNotifier {
   /// Test lead ID for UI checking (used when kDebugMode)
   static const String _testBookingConfirmationLeadId =
       'test_booking_confirmation_lead_001';
+  static const String _testJustDialLeadId1 = 'test_justdial_lead_001';
+  static const String _testJustDialLeadId2 = 'test_justdial_lead_002';
+  static const String _testJustDialLeadId3 = 'test_justdial_lead_003';
 
   /// Add test booking confirmation lead data for UI checking (debug mode only)
   Future<void> _addTestBookingConfirmationDataIfNeeded() async {
@@ -248,6 +252,81 @@ class LeadRepository extends ChangeNotifier {
       'productAmount': 7500,
       'product_amount': 7500,
     };
+  }
+
+  /// Add test Just Dial leads for UI checking (debug mode only)
+  Future<void> _addTestJustDialLeadsIfNeeded() async {
+    if (!kDebugMode) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Check if test leads already exist
+    final existingTestLeads =
+        _leads
+            .where(
+              (l) =>
+                  l.id == _testJustDialLeadId1 ||
+                  l.id == _testJustDialLeadId2 ||
+                  l.id == _testJustDialLeadId3,
+            )
+            .length;
+
+    if (existingTestLeads < 3) {
+      // Add test Just Dial lead 1
+      if (!_leads.any((l) => l.id == _testJustDialLeadId1)) {
+        final testLead1 = LeadModel(
+          id: _testJustDialLeadId1,
+          name: 'Rajesh Kumar',
+          phone: '9876543211',
+          brand: 'Zorucci',
+          location: 'Edappally',
+          category: 'Just Dial',
+          callStatus: 'Not called yet',
+          leadStatus: 'New Lead',
+          createdAt: today,
+          isStarred: false,
+        );
+        _leads.add(testLead1);
+      }
+
+      // Add test Just Dial lead 2
+      if (!_leads.any((l) => l.id == _testJustDialLeadId2)) {
+        final testLead2 = LeadModel(
+          id: _testJustDialLeadId2,
+          name: 'Priya Sharma',
+          phone: '9876543212',
+          brand: 'Zorucci',
+          location: 'Kozhikode',
+          category: 'Just Dial',
+          callStatus: 'Not called yet',
+          leadStatus: 'New Lead',
+          createdAt: today,
+          isStarred: false,
+        );
+        _leads.add(testLead2);
+      }
+
+      // Add test Just Dial lead 3
+      if (!_leads.any((l) => l.id == _testJustDialLeadId3)) {
+        final testLead3 = LeadModel(
+          id: _testJustDialLeadId3,
+          name: 'Arun Nair',
+          phone: '9876543213',
+          brand: 'Zorucci',
+          location: 'Trivandrum',
+          category: 'Just Dial',
+          callStatus: 'Not called yet',
+          leadStatus: 'New Lead',
+          createdAt: today,
+          isStarred: false,
+        );
+        _leads.add(testLead3);
+      }
+
+      await _saveLeads();
+      print('LeadRepository: Added test Just Dial leads for UI check');
+    }
   }
 
   // ========== Helper Methods ==========
@@ -559,6 +638,23 @@ class LeadRepository extends ChangeNotifier {
   /// Parse date string from API - handles multiple date formats
   DateTime? _parseDate(dynamic dateValue) {
     if (dateValue == null) return null;
+
+    // Handle MongoDB date format: {"$date": "2026-04-05T..."}
+    if (dateValue is Map) {
+      final dateStr =
+          dateValue['\$date']?.toString() ?? dateValue['date']?.toString();
+      if (dateStr != null && dateStr.isNotEmpty) {
+        try {
+          return DateTime.parse(dateStr);
+        } catch (e) {
+          print(
+            'LeadRepository: Failed to parse MongoDB date: $dateStr, error: $e',
+          );
+          return null;
+        }
+      }
+    }
+
     final dateStr = dateValue.toString().trim();
     if (dateStr.isEmpty) return null;
 
@@ -663,7 +759,7 @@ class LeadRepository extends ChangeNotifier {
             'customer',
             'clientName',
           ]) ??
-          '';
+          'Unknown'; // Use default name instead of empty string
       final phone =
           _extractField(leadData, [
             'phone_number',
@@ -727,7 +823,10 @@ class LeadRepository extends ChangeNotifier {
         brand = leadData['brand']?.toString();
       }
 
-      if (name.isEmpty || phone.isEmpty) return null;
+      if (phone.isEmpty) {
+        print('LeadRepository: Skipping lead - phone is empty');
+        return null;
+      }
 
       final leadStatus = _extractField(leadData, [
         'lead_status',
@@ -762,6 +861,10 @@ class LeadRepository extends ChangeNotifier {
           _parseDate(leadData['follow_up_date']) ??
           _parseDate(leadData['followUpDate']) ??
           _parseDate(leadData['followupDate']);
+
+      print(
+        'LeadRepository: Parsing followUpDate - follow_up_date=${leadData['follow_up_date']}, followUpDate=${leadData['followUpDate']}, followupDate=${leadData['followupDate']}, parsed=$followUpDate',
+      );
       final functionDate =
           _parseDate(leadData['function_date']) ??
           _parseDate(leadData['functionDate']);
