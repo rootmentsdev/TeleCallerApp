@@ -4,10 +4,11 @@ import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/controller/lead_screen_controller.dart';
 import 'package:telecaller_app/controller/report_controller.dart';
 import 'package:telecaller_app/controller/complaints_controller.dart';
+import 'package:telecaller_app/controller/performance_controller.dart';
 import 'package:telecaller_app/controller/lead_repository.dart';
-import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/model/lead_display_model.dart';
 import 'package:telecaller_app/model/store_model.dart';
+import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/responsive_helper.dart';
@@ -28,8 +29,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingFollowUps = false;
+  String _callsTodayCount = '0';
   final LeadRepository _repository = LeadRepository();
   late ComplaintsController _complaintsController;
+  late PerformanceController _performanceController;
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -37,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Initialize complaints controller
     _complaintsController = ComplaintsController();
+
+    // Initialize performance controller
+    _performanceController = PerformanceController();
 
     // Listen to repository changes to update UI when follow-ups are fetched
     _repository.addListener(_onRepositoryChanged);
@@ -64,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
       Future.delayed(const Duration(milliseconds: 500), () {
         _fetchFollowUpLeads(headerController);
         _fetchComplaints(headerController);
+        _fetchPerformanceMetrics();
+        _fetchCallsToday();
       });
     });
   }
@@ -78,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _repository.removeListener(_onRepositoryChanged);
     _complaintsController.dispose();
+    _performanceController.dispose();
     super.dispose();
   }
 
@@ -142,17 +152,103 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _fetchPerformanceMetrics() async {
+    try {
+      print('HomeScreen: Fetching performance metrics...');
+      await _performanceController.fetchTodayMetrics();
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('HomeScreen: Error fetching performance metrics: $e');
+      // Silently handle the error
+    }
+  }
+
+  Future<void> _fetchCallsToday() async {
+    try {
+      print('HomeScreen: Fetching calls today...');
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      final todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+      final dateFromStr =
+          '${todayStart.year}-${todayStart.month.toString().padLeft(2, '0')}-${todayStart.day.toString().padLeft(2, '0')}';
+      final dateToStr =
+          '${todayEnd.year}-${todayEnd.month.toString().padLeft(2, '0')}-${todayEnd.day.toString().padLeft(2, '0')}';
+
+      print(
+        'HomeScreen: Fetching reports for today - from=$dateFromStr, to=$dateToStr',
+      );
+
+      // Fetch all reports (call records) for today
+      final response = await _apiService.getReports(
+        dateFrom: dateFromStr,
+        dateTo: dateToStr,
+        limit: 1000,
+      );
+
+      print('HomeScreen: API Response keys: ${response.keys.toList()}');
+
+      // Parse reports from response
+      List<dynamic> reportsList = [];
+      if (response.containsKey('reports')) {
+        reportsList = response['reports'] ?? [];
+      } else if (response.containsKey('data')) {
+        final data = response['data'];
+        if (data is List) {
+          reportsList = data;
+        } else if (data is Map && data.containsKey('reports')) {
+          reportsList = data['reports'] ?? [];
+        }
+      }
+
+      print('HomeScreen: Found ${reportsList.length} reports for today');
+
+      // Count reports with callDuration > 0
+      int callsTodayCount = 0;
+      for (final report in reportsList) {
+        if (report is Map) {
+          final callDuration =
+              report['callDuration'] ?? report['call_duration'] ?? 0;
+          if (callDuration > 0) {
+            callsTodayCount++;
+            print('HomeScreen: Found call - duration=$callDuration');
+          }
+        }
+      }
+
+      print('HomeScreen: Total calls today: $callsTodayCount');
+
+      if (mounted) {
+        setState(() {
+          _callsTodayCount = callsTodayCount.toString();
+        });
+      }
+    } catch (e) {
+      print('HomeScreen: Error fetching calls today: $e');
+      // Silently handle the error
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Initialize responsive helper
     ResponsiveHelper.init(context);
 
-    return Consumer3<HeaderController, LeadScreenController, ReportController>(
+    return Consumer4<
+      HeaderController,
+      LeadScreenController,
+      ReportController,
+      PerformanceController
+    >(
       builder: (
         context,
         headerController,
         leadController,
         reportController,
+        performanceController,
         child,
       ) {
         // Get today's follow-ups directly from repository
@@ -174,55 +270,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   .length;
         }
 
-        // Get calls today count - calculate independently to avoid being overridden by reports screen
-        // Count leads with calls made today (updatedAt) with call duration > 0 + complaint calls with duration > 0
-        final today = DateTime.now();
-        final todayStart = DateTime(today.year, today.month, today.day);
-        final todayEnd = DateTime(
-          today.year,
-          today.month,
-          today.day,
-          23,
-          59,
-          59,
-        );
-
-        // Filter by store if a specific store is selected
-        // IMPORTANT: Exclude leads marked as complaints to avoid duplicate counting
-        List<LeadModel> callsTodayLeads =
-            _repository.allLeads
-                .where(
-                  (lead) =>
-                      (lead.updatedAt?.isAfter(todayStart) ?? false) &&
-                      (lead.updatedAt?.isBefore(todayEnd) ?? false) &&
-                      (lead.callDuration ?? 0) > 0 &&
-                      (lead.markAsComplaint !=
-                          true), // Exclude complaint-marked leads
-                )
-                .toList();
-
-        if (selectedStore.normalizedName != 'All Stores') {
-          final storeLocation = selectedStore.location;
-          callsTodayLeads =
-              callsTodayLeads
-                  .where(
-                    (lead) =>
-                        lead.location?.toLowerCase() ==
-                        storeLocation.toLowerCase(),
-                  )
-                  .toList();
-        }
-
-        // Add complaint calls with duration > 0
-        int complaintCallsCount = 0;
-        for (final complaint in _complaintsController.complaints) {
-          if ((complaint.callDuration ?? 0) > 0) {
-            complaintCallsCount++;
-          }
-        }
-
-        final callsTodayCount =
-            (callsTodayLeads.length + complaintCallsCount).toString();
+        // Always use local calculation for now - backend endpoint may not be ready
+        // TODO: Switch to backend metrics once /leads/performance endpoint is stable
+        final callsTodayCount = _callsTodayCount;
 
         return Scaffold(
           backgroundColor: Colors.white,

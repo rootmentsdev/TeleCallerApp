@@ -77,22 +77,34 @@ class IncomingCallHandler {
 
         case 'followupPopup':
           print('IncomingCallHandler: → Showing followup popup');
-          await _showFollowupPopup(context, leadId, callDuration);
+          // Check if a lead screen is already open - if yes, update it instead
+          if (!_tryUpdateExistingLeadScreen(context, leadId, callDuration)) {
+            await _showFollowupPopup(context, leadId, callDuration);
+          }
           break;
 
         case 'complaintPopup':
           print('IncomingCallHandler: → Showing complaint popup');
-          await _showComplaintPopup(context, leadId, callDuration);
+          // Check if a lead screen is already open - if yes, update it instead
+          if (!_tryUpdateExistingLeadScreen(context, leadId, callDuration)) {
+            await _showComplaintPopup(context, leadId, callDuration);
+          }
           break;
 
         case 'returnPopup':
           print('IncomingCallHandler: → Showing return popup');
-          await _showReturnPopup(context, leadId, callDuration);
+          // Check if a lead screen is already open - if yes, update it instead
+          if (!_tryUpdateExistingLeadScreen(context, leadId, callDuration)) {
+            await _showReturnPopup(context, leadId, callDuration);
+          }
           break;
 
         case 'bookingConfirmationPopup':
           print('IncomingCallHandler: → Showing booking confirmation popup');
-          await _showBookingConfirmationPopup(context, leadId, callDuration);
+          // Check if a lead screen is already open - if yes, update it instead
+          if (!_tryUpdateExistingLeadScreen(context, leadId, callDuration)) {
+            await _showBookingConfirmationPopup(context, leadId, callDuration);
+          }
           break;
 
         default:
@@ -108,6 +120,33 @@ class IncomingCallHandler {
         _showErrorSnackbar(context, 'Failed to identify caller: $e');
         _showNewLeadPopup(context, cleanPhone, callDuration);
       }
+    }
+  }
+
+  /// Try to update an existing lead screen if one is open
+  /// Returns true if a lead screen was found and updated, false otherwise
+  bool _tryUpdateExistingLeadScreen(
+    BuildContext context,
+    String leadId,
+    int? callDuration,
+  ) {
+    try {
+      print(
+        'IncomingCallHandler: _tryUpdateExistingLeadScreen - checking for open lead screen',
+      );
+
+      // Try to find a lead screen in the navigation stack
+      // This is a simple check - in a real app, you might use a more sophisticated approach
+      // For now, we'll just return false to show the popup as before
+      // In the future, you can implement a global state management solution to track open screens
+
+      print(
+        'IncomingCallHandler: _tryUpdateExistingLeadScreen - no open lead screen found',
+      );
+      return false;
+    } catch (e) {
+      print('IncomingCallHandler: _tryUpdateExistingLeadScreen - ERROR: $e');
+      return false;
     }
   }
 

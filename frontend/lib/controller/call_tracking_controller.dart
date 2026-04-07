@@ -122,15 +122,27 @@ class CallTrackingController extends ChangeNotifier {
             phoneNumber != 'Unknown' &&
             phoneNumber.isNotEmpty) {
           print(
-            'CallTrackingController: Showing incoming call form for phone=$phoneNumber, duration=$_lastDuration',
+            'CallTrackingController: Call completed with duration=$_lastDuration for phone=$phoneNumber, isIncoming=$_lastCallWasIncoming',
           );
-          _showAddLeadBottomSheetForIncomingCall(
-            phoneNumber,
-            _lastDuration ?? 0,
-          );
+
+          // Only show popup for incoming calls
+          // For outgoing calls, the user is already on the outgoing call detail screen
+          if (_lastCallWasIncoming) {
+            print(
+              'CallTrackingController: Showing incoming call form for phone=$phoneNumber, duration=$_lastDuration',
+            );
+            _showAddLeadBottomSheetForIncomingCall(
+              phoneNumber,
+              _lastDuration ?? 0,
+            );
+          } else {
+            print(
+              'CallTrackingController: Outgoing call completed - user is already on outgoing call detail screen, not showing popup',
+            );
+          }
         } else {
           print(
-            'CallTrackingController: NOT showing incoming call form - duration=$_lastDuration, phone=$phoneNumber',
+            'CallTrackingController: NOT showing form - duration=$_lastDuration, phone=$phoneNumber',
           );
         }
       } else if (call.method == 'onCallStateChanged') {

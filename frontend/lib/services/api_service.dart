@@ -1480,4 +1480,70 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// Get performance metrics (total call count, today's calls, etc.)
+  /// GET /leads/performance?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD
+  Future<Map<String, dynamic>> getPerformanceMetrics({
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    try {
+      final headers = await _getAuthHeaders();
+
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (fromDate != null) {
+        queryParams['fromDate'] =
+            '${fromDate.year}-${fromDate.month.toString().padLeft(2, '0')}-${fromDate.day.toString().padLeft(2, '0')}';
+      }
+      if (toDate != null) {
+        queryParams['toDate'] =
+            '${toDate.year}-${toDate.month.toString().padLeft(2, '0')}-${toDate.day.toString().padLeft(2, '0')}';
+      }
+
+      final url = Uri.parse(
+        '${ApiConfig.baseUrl}/leads/performance',
+      ).replace(queryParameters: queryParams);
+
+      print('ApiService: getPerformanceMetrics → URL: $url');
+
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        'ApiService: getPerformanceMetrics → status=${response.statusCode}',
+      );
+      print('ApiService: getPerformanceMetrics → body=${response.body}');
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          // Handle both wrapped and unwrapped responses
+          if (decoded.containsKey('data')) {
+            final data = decoded['data'];
+            print('ApiService: getPerformanceMetrics → returning data: $data');
+            return data is Map<String, dynamic> ? data : decoded;
+          }
+          print('ApiService: getPerformanceMetrics → returning full response');
+          return decoded;
+        }
+        return {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to fetch performance metrics: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: getPerformanceMetrics → ERROR: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getPerformanceMetrics failed',
+      );
+      rethrow;
+    }
+  }
 }
