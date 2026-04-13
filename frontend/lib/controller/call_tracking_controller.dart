@@ -156,7 +156,13 @@ class CallTrackingController extends ChangeNotifier {
         // Track if call was answered
         if (state == 'answered') {
           _lastCallWasAnswered = true;
-          print('CallTrackingController: Call was answered');
+          print(
+            'CallTrackingController: Call was answered - _lastCallWasAnswered set to true',
+          );
+        } else {
+          print(
+            'CallTrackingController: Call state changed to: $state (not answered)',
+          );
         }
 
         // Track if call is incoming (ringing state without outgoing flag)

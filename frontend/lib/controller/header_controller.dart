@@ -38,7 +38,7 @@ class HeaderController extends ChangeNotifier {
     Store(brand: 'SG', location: 'Thrissur', normalizedName: 'SG-Thrissur'),
     Store(brand: 'SG', location: 'Trivandrum', normalizedName: 'SG-Trivandrum'),
     Store(brand: 'SG', location: 'Vadakara', normalizedName: 'SG-Vadakara'),
-    Store(brand: 'Z', location: 'Edapally', normalizedName: 'Z-Edapally'),
+    Store(brand: 'Z', location: 'Edappally', normalizedName: 'Z-Edappally'),
     Store(brand: 'Z', location: 'Edappal', normalizedName: 'Z-Edappal'),
     Store(brand: 'Z', location: 'Kottakkal', normalizedName: 'Z-Kottakkal'),
     Store(

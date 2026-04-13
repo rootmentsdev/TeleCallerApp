@@ -306,13 +306,6 @@ class _LeadScreenState extends State<LeadScreen> {
                         controller.setSelectedCallTypeIndex(_tabIndexJustDial);
                       },
                     ),
-                    _buildCategoryCard(
-                      icon: Icons.trending_down_outlined,
-                      label: "Loss of Sale",
-                      count: 0,
-                      isSelected: false,
-                      onTap: () {},
-                    ),
                   ],
                 ),
               ),
@@ -556,9 +549,6 @@ class LeadListItem extends StatelessWidget {
         return Icons.local_shipping_outlined;
       case 'just dial':
         return Icons.headphones_outlined;
-      case 'loss of sale':
-      case 'lossofsale':
-        return Icons.trending_down_outlined;
       default:
         return Icons.chat_bubble_outline;
     }
@@ -575,9 +565,6 @@ class LeadListItem extends StatelessWidget {
         return ColorConstant.primaryColor;
       case 'just dial':
         return ColorConstant.primaryColor;
-      case 'loss of sale':
-      case 'lossofsale':
-        return const Color(0xFFFF6F00);
       default:
         return ColorConstant.primaryColor;
     }
@@ -607,7 +594,7 @@ class LeadListItem extends StatelessWidget {
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(                                                                                                                                                                 
+                decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),

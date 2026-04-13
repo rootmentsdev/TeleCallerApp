@@ -150,6 +150,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
             reports.where((r) => r.leadType?.toLowerCase() == 'return').length;
         print('ReportsScreen: Feedback count: $count');
         return count.toString();
+      case 'lossofsale':
+        final count =
+            reports
+                .where((r) => r.leadType?.toLowerCase() == 'lossofsale')
+                .length;
+        print('ReportsScreen: Loss of Sale count: $count');
+        return count.toString();
       case 'booking':
         // Only count 'booked' type, exclude bookingconfirmation
         final count =
@@ -218,6 +225,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       case 'hardout':
       case 'return':
         return 'Feedback';
+      case 'lossofsale':
+        return 'Loss of Sale';
       case 'booking':
       case 'booked':
         return 'Booked';

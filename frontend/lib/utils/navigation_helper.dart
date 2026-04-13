@@ -5,6 +5,7 @@ import 'package:telecaller_app/utils/date_formatter.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
 import 'package:telecaller_app/view/lead_screen/return_lead_details_screen.dart';
 import 'package:telecaller_app/view/lead_screen/booking_confirmation_detail_screen.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen/loss_of_sale_detail_screen.dart';
 
 /// Helper class for navigation logic
 class NavigationHelper {
@@ -54,27 +55,32 @@ class NavigationHelper {
       return;
     }
 
-    // Special handling for Just Dial
-    // if (category == LeadConstants.categoryJustDial ||
-    //     category == "Just Dial Enquiry") {
-    //   Navigator.push(
-    //     context,
-    //     MaterialPageRoute(
-    //       builder:
-    //           (context) => JustDialDetailsScreen(
-    //             contact: {
-    //               "name": lead.name,
-    //               "phone": lead.phone,
-    //               "date": formattedDate,
-    //               "enquiryDate": formattedDate,
-    //               "functionDate": "Not available",
-    //               "storeName": lead.location ?? "Zorucci Edappally",
-    //             },
-    //           ),
-    //     ),
-    //   );
-    //   return;
-    // }
+    // Special handling for Loss of Sale
+    if (category == LeadConstants.categoryLossOfSales ||
+        category == "Loss of Sale") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => LossOfSaleDetailScreen(
+                name: lead.name,
+                phone: lead.phone,
+                callType: "Loss of Sale",
+                reportData: {
+                  "callDate": lead.createdAt?.toIso8601String(),
+                  "storeName": lead.location,
+                  "functionDate": lead.functionDate?.toIso8601String(),
+                  "subCategory": lead.subCategory,
+                  "closingAction": lead.closingAction,
+                  "remarks": lead.reason,
+                  "followUpDate": lead.followUpDate?.toIso8601String(),
+                  "callDuration": lead.callDuration,
+                },
+              ),
+        ),
+      );
+      return;
+    }
 
     // Prepare contact data
     final repository = LeadRepository();

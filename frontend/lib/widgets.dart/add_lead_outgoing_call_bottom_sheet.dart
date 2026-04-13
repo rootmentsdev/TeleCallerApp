@@ -85,6 +85,8 @@ class _AddLeadOutgoingCallBottomSheetState
     );
 
     // CRITICAL: Only capture duration if call was answered
+    // For outgoing calls, if duration > 0, it means the call was answered
+    // (Android call log only includes answered duration, not ringing time)
     if (callTrackingController.lastCallWasAnswered &&
         callTrackingController.lastDuration != null &&
         callTrackingController.lastDuration! > 0) {
@@ -94,6 +96,15 @@ class _AddLeadOutgoingCallBottomSheetState
           if (_selectedCallStatus == null) {
             _selectedCallStatus = "Connected";
           }
+        });
+      }
+    } else if (callTrackingController.lastDuration == null ||
+        callTrackingController.lastDuration! == 0) {
+      // Call was not answered, reset duration to 0
+      if (mounted) {
+        setState(() {
+          _callDuration = 0;
+          // Don't auto-set call status for unanswered calls
         });
       }
     }
@@ -200,7 +211,7 @@ class _AddLeadOutgoingCallBottomSheetState
                   _buildDropdownField(
                     value: _selectedLeadType,
                     label: 'Select Lead Type',
-                    items: ["Enquiry", "Booked"],
+                    items: ["Enquiry", "Booked", "Loss of Sale"],
                     onChanged: (value) {
                       setState(() {
                         _selectedLeadType = value;
@@ -655,6 +666,51 @@ class _AddLeadOutgoingCallBottomSheetState
                           ),
                         ],
                       ),
+                    ] else if (!_markAsComplaint &&
+                        _selectedLeadType == "Loss of Sale") ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedSubCategory,
+                              label: 'Sub Category',
+                              items: [
+                                "Price Issue",
+                                "Product Not Available",
+                                "Competitor Offer",
+                                "Delivery Time",
+                                "Quality Concern",
+                                "Others",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSubCategory = value;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedCloseReason,
+                              label: 'Close Reason',
+                              items: [
+                                "Customer Not Interested",
+                                "Went to Competitor",
+                                "Budget Constraint",
+                                "Product Unavailable",
+                                "Delivery Delay",
+                                "Follow Up Later",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCloseReason = value;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
 
                     const SizedBox(height: 16),
@@ -937,6 +993,8 @@ class _AddLeadOutgoingCallBottomSheetState
           (_selectedLeadType ?? 'Enquiry').toLowerCase();
       if (normalizedLeadType == 'booked') {
         normalizedLeadType = 'booked'; // Backend expects 'booked'
+      } else if (normalizedLeadType == 'loss of sale') {
+        normalizedLeadType = 'lossofsale'; // Backend expects 'lossofsale'
       }
 
       final apiResponse = await apiService.createLead(
@@ -1000,18 +1058,30 @@ class _AddLeadOutgoingCallBottomSheetState
       // Update lead with feedback after creation
       if (leadId.isNotEmpty) {
         try {
-          await apiService.updateReturnLead(
-            id: leadId,
-            callStatus: _selectedCallStatus,
-            remarks:
-                _remarksController.text.trim().isNotEmpty
-                    ? _remarksController.text.trim()
-                    : null,
-            callDuration: _callDuration > 0 ? _callDuration : null,
-            markAsComplaint: _markAsComplaint ? true : null,
-            subCategory: _selectedSubCategory,
-            functionDate: _functionDate,
-          );
+          // Only update if it's a return/feedback lead, not enquiry or other types
+          if (_selectedLeadType?.toLowerCase() == 'enquiry' ||
+              _selectedLeadType?.toLowerCase() == 'booked' ||
+              _selectedLeadType?.toLowerCase() == 'loss of sale') {
+            // For enquiry, booked, and loss of sale leads, skip the update
+            // as they don't have a separate update endpoint
+            print(
+              'AddLeadOutgoingCallBottomSheet: Skipping update for $_selectedLeadType lead type',
+            );
+          } else {
+            // For return/feedback leads, update with feedback
+            await apiService.updateReturnLead(
+              id: leadId,
+              callStatus: _selectedCallStatus,
+              remarks:
+                  _remarksController.text.trim().isNotEmpty
+                      ? _remarksController.text.trim()
+                      : null,
+              callDuration: _callDuration > 0 ? _callDuration : null,
+              markAsComplaint: _markAsComplaint ? true : null,
+              subCategory: _selectedSubCategory,
+              functionDate: _functionDate,
+            );
+          }
         } catch (updateError) {
           print(
             'AddLeadOutgoingCallBottomSheet: Warning - Failed to update lead with feedback: $updateError',

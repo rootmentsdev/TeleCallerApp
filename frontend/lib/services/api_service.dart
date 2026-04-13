@@ -642,6 +642,8 @@ class ApiService {
       String normalizedLeadType = leadType.toLowerCase();
       if (normalizedLeadType == 'booking') {
         normalizedLeadType = 'booked';
+      } else if (normalizedLeadType == 'loss of sale') {
+        normalizedLeadType = 'lossofsale';
       }
 
       final requestBody = <String, dynamic>{
@@ -654,7 +656,8 @@ class ApiService {
         'subCategory': subCategory,
         'itemCategory': itemCategory,
         'closingAction': closingAction,
-        'closingReason': remarks,
+        'closingReason':
+            normalizedLeadType == 'lossofsale' ? closingAction : remarks,
         'remarks': remarks,
         'functionDate': functionDate,
         'markasComplaint': markAsComplaint,
@@ -670,6 +673,8 @@ class ApiService {
 
       print('ApiService: Creating new lead');
       print('ApiService: URL => $url');
+      print('ApiService: Lead Type Received: $leadType');
+      print('ApiService: Normalized Lead Type: $normalizedLeadType');
       print('ApiService: POST BODY SENT: $requestBodyJson');
 
       final response = await http.post(
@@ -827,7 +832,7 @@ class ApiService {
     DateTime? followUpDate,
     int? callDuration,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/$id');
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/followups/$id');
 
     try {
       final headers = await _getAuthHeaders();
@@ -858,11 +863,17 @@ class ApiService {
 
       final requestBodyJson = json.encode(requestBody);
 
+      print('ApiService: Posting follow-up to $url');
+      print('ApiService: Follow-up request body: $requestBodyJson');
+
       final response = await http.post(
         url,
         headers: headers,
         body: requestBodyJson,
       );
+
+      print('ApiService: Follow-up response status: ${response.statusCode}');
+      print('ApiService: Follow-up response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decodedResponse = json.decode(response.body);

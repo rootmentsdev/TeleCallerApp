@@ -568,7 +568,7 @@ class ReportController extends ChangeNotifier {
       case "enquiry":
         return "enquiry";
       case "lossofsale":
-        return "loss";
+        return "lossofsale";
       case "rentoutfeedback":
       case "return":
         return "hardout";
@@ -856,7 +856,6 @@ class ReportController extends ChangeNotifier {
 
       // Share the file
       await Share.shareXFiles([XFile(file.path)], text: 'Call Report Export');
-      
 
       print('ReportController: CSV exported successfully: ${file.path}');
     } catch (e, s) {

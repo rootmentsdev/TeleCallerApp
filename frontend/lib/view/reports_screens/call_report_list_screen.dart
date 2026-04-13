@@ -8,6 +8,7 @@ import 'package:telecaller_app/utils/date_categorization.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/booking_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/enquiry_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/feedback_detail_screen.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen/loss_of_sale_detail_screen.dart';
 
 class CallReportListScreen extends StatefulWidget {
   const CallReportListScreen({super.key});
@@ -33,6 +34,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     'Enquiry',
     'Booked',
     'Booking Confirmation',
+    'Loss of Sale',
   ];
 
   @override
@@ -186,6 +188,9 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
       case 'bookingconfirmation':
       case 'booking confirmation':
         return 'Booking Confirmation';
+      case 'lossofsale':
+      case 'loss of sale':
+        return 'Loss of Sale';
       default:
         return 'Call'; // Unknown type - will be filtered out
     }
@@ -201,6 +206,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFFE8F5E9);
       case 'Booking Confirmation':
         return const Color(0xFFFFF3E0);
+      case 'Loss of Sale':
+        return const Color(0xFFFFE0B2);
       default:
         return const Color(0xFFE3F2FD);
     }
@@ -216,6 +223,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFF388E3C);
       case 'Booking Confirmation':
         return const Color(0xFFE65100);
+      case 'Loss of Sale':
+        return const Color(0xFFFF6F00);
       default:
         return const Color(0xFF1976D2);
     }
@@ -630,6 +639,13 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                     );
                   } else if (callType == 'Booking Confirmation') {
                     detailScreen = BookingDetailScreen(
+                      name: name,
+                      phone: phone,
+                      callType: callType,
+                      reportData: report,
+                    );
+                  } else if (callType == 'Loss of Sale') {
+                    detailScreen = LossOfSaleDetailScreen(
                       name: name,
                       phone: phone,
                       callType: callType,

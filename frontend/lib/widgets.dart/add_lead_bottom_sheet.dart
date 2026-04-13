@@ -193,7 +193,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                     _buildDropdownField(
                       value: _selectedLeadType,
                       label: 'Select Lead Type',
-                      items: ["Enquiry", "Booked"],
+                      items: ["Enquiry", "Booked", "Loss of Sale"],
                       onChanged: (value) {
                         setState(() {
                           _selectedLeadType = value;
@@ -596,6 +596,51 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                           ),
                         ],
                       ),
+                    ] else if (!_markAsComplaint &&
+                        _selectedLeadType == "Loss of Sale") ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedSubCategory,
+                              label: 'Sub Category',
+                              items: [
+                                "Price Issue",
+                                "Product Not Available",
+                                "Competitor Offer",
+                                "Delivery Time",
+                                "Quality Concern",
+                                "Others",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSubCategory = value;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDropdownField(
+                              value: _selectedCloseReason,
+                              label: 'Close Reason',
+                              items: [
+                                "Customer Not Interested",
+                                "Went to Competitor",
+                                "Budget Constraint",
+                                "Product Unavailable",
+                                "Delivery Delay",
+                                "Follow Up Later",
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCloseReason = value;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
 
                     const SizedBox(height: 16),
@@ -855,7 +900,12 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
           (_selectedLeadType ?? 'Enquiry').toLowerCase();
       if (normalizedLeadType == 'booked') {
         normalizedLeadType = 'booked'; // Backend expects 'booked'
+      } else if (normalizedLeadType == 'loss of sale') {
+        normalizedLeadType = 'lossofsale'; // Backend expects 'lossofsale'
       }
+
+      print('AddLeadBottomSheet: Selected Lead Type: $_selectedLeadType');
+      print('AddLeadBottomSheet: Normalized Lead Type: $normalizedLeadType');
 
       print(
         'AddLeadBottomSheet: Creating lead with functionDate: $_functionDate',
