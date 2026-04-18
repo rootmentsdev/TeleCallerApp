@@ -249,69 +249,83 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                               ),
                             )
                             : _complaintsController.complaints.isEmpty
-                            ? Center(
-                              child: Text(
-                                'No complaints found',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
+                            ? RefreshIndicator(
+                              onRefresh: _fetchComplaints,
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  child: Text(
+                                    'No complaints found',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ),
                               ),
                             )
-                            : SingleChildScrollView(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Recent Complaints Header
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Recent Complaints',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                          fontFamily: TextConstant.dmSansMedium,
+                            : RefreshIndicator(
+                              onRefresh: _fetchComplaints,
+                              child: SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Recent Complaints Header
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Recent Complaints',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                            fontFamily:
+                                                TextConstant.dmSansMedium,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        '${_complaintsController.totalComplaints} Complaints',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFFE23434),
+                                        Text(
+                                          '${_complaintsController.totalComplaints} Complaints',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFFE23434),
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
 
-                                  // Complaints List
-                                  ListView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    itemCount:
-                                        _complaintsController.complaints.length,
-                                    itemBuilder: (context, index) {
-                                      final complaint =
+                                    // Complaints List
+                                    ListView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount:
                                           _complaintsController
-                                              .complaints[index];
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 12,
-                                        ),
-                                        child: _buildComplaintCard(
-                                          complaint,
-                                          index,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
+                                              .complaints
+                                              .length,
+                                      itemBuilder: (context, index) {
+                                        final complaint =
+                                            _complaintsController
+                                                .complaints[index];
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _buildComplaintCard(
+                                            complaint,
+                                            index,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                   ),

@@ -20,6 +20,7 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
   bool _hasCalled = false;
   int _callDuration = 0;
   String? _selectedCallStatus;
+  String? _selectedRemarks;
   bool _isSaving = false;
   final TextEditingController _remarksController = TextEditingController();
 
@@ -29,6 +30,17 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
     "Call Back Later",
     "Connected",
     "Not Connected",
+  ];
+
+  final List<String> remarksOptions = [
+    'Satisfied',
+    'Not satisfied',
+    'Timely Delivered',
+    'Excellent customer service',
+    'Include more collections',
+    'Improve size availability',
+    'Matching shoes for rental',
+    'Others',
   ];
 
   @override
@@ -101,6 +113,12 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
     });
 
     try {
+      // Use custom remarks if "Others" is selected, otherwise use the selected remarks
+      final finalRemarks =
+          _selectedRemarks == 'Others'
+              ? _remarksController.text
+              : _selectedRemarks;
+
       final leadController = Provider.of<LeadScreenController>(
         context,
         listen: false,
@@ -109,8 +127,7 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
       await leadController.updateFollowUpLead(
         id: widget.lead.id,
         callStatus: _selectedCallStatus,
-        remarks:
-            _remarksController.text.isNotEmpty ? _remarksController.text : null,
+        remarks: finalRemarks,
         callDuration: _callDuration > 0 ? _callDuration : null,
       );
 
@@ -508,18 +525,57 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          TextField(
-                            controller: _remarksController,
-                            maxLines: 4,
-                            decoration: InputDecoration(
-                              hintText: "Enter remarks...",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.all(12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: DropdownButton<String>(
+                              value: _selectedRemarks,
+                              hint: const Text("Select remarks"),
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              items:
+                                  remarksOptions.map((String item) {
+                                    return DropdownMenuItem<String>(
+                                      value: item,
+                                      child: Text(item),
+                                    );
+                                  }).toList(),
+                              onChanged: (String? value) {
+                                setState(() {
+                                  _selectedRemarks = value;
+                                });
+                              },
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
+
+                          // Custom remarks text field (shown only if "Others" is selected)
+                          if (_selectedRemarks == 'Others') ...[
+                            Text(
+                              "Enter Custom Remarks",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontFamily: TextConstant.dmSansRegular,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _remarksController,
+                              maxLines: 4,
+                              decoration: InputDecoration(
+                                hintText: "Enter your custom remarks...",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.all(12),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
                           // Save Button
                           SizedBox(

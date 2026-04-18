@@ -1,6 +1,6 @@
 class ApiConfig {
   // Base URL
-  static const String baseUrl = "https://rootstele-vrle.onrender.com";
+  static const String baseUrl = "https://rootstele-imrn.onrender.com";
 
   // API endpoints paths
   static const String leadsEndpoint = "$baseUrl/api/leads";

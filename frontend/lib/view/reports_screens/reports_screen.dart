@@ -338,16 +338,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         topRight: Radius.circular(18),
                       ),
                     ),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Call Reports header with Custom Range
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        final headerController = Provider.of<HeaderController>(
+                          context,
+                          listen: false,
+                        );
+                        final reportController = Provider.of<ReportController>(
+                          context,
+                          listen: false,
+                        );
+                        await reportController.fetchReportsWithCurrentFilters();
+                      },
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Call Reports header with Custom Range
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
                                 'Call Reports',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -702,7 +715,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
               ),
-            ],
+          )],
           );
         },
       ),

@@ -130,7 +130,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
         children: [
           // Header
           Container(
-            color: const Color(0xFFFF6F00),
+            color: ColorConstant.primaryColor,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SafeArea(
               child: Row(
@@ -187,7 +187,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFE0B2),
+                      color: const Color(0xFFE3F2FD),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -223,7 +223,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF6F00),
+                            color: ColorConstant.primaryColor,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
@@ -284,7 +284,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFE0B2),
+                          color: const Color(0xFFE3F2FD),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -292,7 +292,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFFFF6F00),
+                            color: Color(0xFF1976D2),
                           ),
                         ),
                       ),
@@ -481,7 +481,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFE0B2),
+                          color: const Color(0xFFE3F2FD),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -489,7 +489,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFFFF6F00),
+                            color: Color(0xFF1976D2),
                           ),
                         ),
                       ),
@@ -553,7 +553,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                     child: ElevatedButton(
                       onPressed: _shareCallReport,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFE0B2),
+                        backgroundColor: const Color(0xFFE3F2FD),
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -565,7 +565,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFFFF6F00),
+                          color: ColorConstant.primaryColor,
                           fontFamily: TextConstant.dmSansMedium,
                         ),
                       ),

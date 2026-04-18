@@ -29,6 +29,7 @@ class _BookingConfirmationDetailScreenState
 
   // Form fields matching the API body
   String? _selectedService;
+  String? _selectedRemarks;
   bool _billReceived = false;
   bool _amountMismatch = false;
   bool _markAsComplaint = false;
@@ -40,6 +41,17 @@ class _BookingConfirmationDetailScreenState
     'Excellent',
     'Average',
     'Not satisfied',
+  ];
+
+  final List<String> _remarksOptions = [
+    'Satisfied',
+    'Not satisfied',
+    'Timely Delivered',
+    'Excellent customer service',
+    'Include more collections',
+    'Improve size availability',
+    'Matching shoes for rental',
+    'Others',
   ];
 
   @override
@@ -115,14 +127,19 @@ class _BookingConfirmationDetailScreenState
   Future<void> _save() async {
     setState(() => _isSaving = true);
     try {
+      // Use custom remarks if "Others" is selected, otherwise use the selected remarks
+      final finalRemarks =
+          _selectedRemarks == 'Others'
+              ? _remarksController.text
+              : _selectedRemarks;
+
       await ApiService().updateBookingConfirmation(
         id: widget.lead.id,
         service: _selectedService,
         callDuration: _callDuration > 0 ? _callDuration.toString() : null,
         billReceived: _billReceived ? 'yes' : 'no',
         amountMismatch: _amountMismatch,
-        remarks:
-            _remarksController.text.isNotEmpty ? _remarksController.text : null,
+        remarks: finalRemarks,
         markasComplaint: _markAsComplaint ? true : null,
         markasFollowup: _markAsFollowup ? true : null,
         followupDate: _markAsFollowup ? _followupDate : null,
@@ -476,23 +493,36 @@ class _BookingConfirmationDetailScreenState
         // Remarks
         _label('Remarks'),
         const SizedBox(height: 8),
-        TextField(
-          controller: _remarksController,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Add remarks...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            contentPadding: const EdgeInsets.all(12),
-          ),
+        _dropdown(
+          value: _selectedRemarks,
+          hint: 'Select remarks',
+          items: _remarksOptions,
+          onChanged: (v) => setState(() => _selectedRemarks = v),
         ),
         const SizedBox(height: 16),
+
+        // Custom remarks text field (shown only if "Others" is selected)
+        if (_selectedRemarks == 'Others') ...[
+          _label('Enter Custom Remarks'),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _remarksController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Enter your custom remarks...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
 
         // Mark as Complaint
         _toggleRow(

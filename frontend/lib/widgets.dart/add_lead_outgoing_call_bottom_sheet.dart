@@ -36,6 +36,7 @@ class _AddLeadOutgoingCallBottomSheetState
   String? _selectedSubCategory;
   String? _selectedCloseReason;
   String? _selectedItemCategory;
+  String? _selectedRemarks;
   DateTime? _functionDate;
   bool _markAsComplaint = false;
   bool _hasCalled = false;
@@ -45,6 +46,17 @@ class _AddLeadOutgoingCallBottomSheetState
   int _rating = 0;
 
   bool _isLoading = false;
+
+  final List<String> remarksOptions = [
+    'Satisfied',
+    'Not satisfied',
+    'Timely Delivered',
+    'Excellent customer service',
+    'Include more collections',
+    'Improve size availability',
+    'Matching shoes for rental',
+    'Others',
+  ];
 
   @override
   void initState() {
@@ -715,13 +727,44 @@ class _AddLeadOutgoingCallBottomSheetState
 
                     const SizedBox(height: 16),
 
-                    // Call Remarks
-                    _buildIconTextField(
-                      controller: _remarksController,
-                      label: 'Call Remarks / Notes',
-                      icon: Icons.note_outlined,
-                      keyboardType: TextInputType.multiline,
-                    ),
+                    // Call Remarks - Dropdown for Enquiry, Booked, Loss of Sale; Text field for others
+                    if (_selectedLeadType == "Enquiry" ||
+                        _selectedLeadType == "Booked" ||
+                        _selectedLeadType == "Loss of Sale")
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDropdownField(
+                            value: _selectedRemarks,
+                            label: 'Call Remarks / Notes',
+                            items: remarksOptions,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedRemarks = value;
+                                if (value != 'Others') {
+                                  _remarksController.clear();
+                                }
+                              });
+                            },
+                          ),
+                          if (_selectedRemarks == 'Others') ...[
+                            const SizedBox(height: 16),
+                            _buildIconTextField(
+                              controller: _remarksController,
+                              label: 'Enter Custom Remarks',
+                              icon: Icons.note_outlined,
+                              keyboardType: TextInputType.multiline,
+                            ),
+                          ],
+                        ],
+                      )
+                    else
+                      _buildIconTextField(
+                        controller: _remarksController,
+                        label: 'Call Remarks / Notes',
+                        icon: Icons.note_outlined,
+                        keyboardType: TextInputType.multiline,
+                      ),
 
                     const SizedBox(height: 32),
                   ],
@@ -1004,9 +1047,11 @@ class _AddLeadOutgoingCallBottomSheetState
         source: 'Outgoing Call',
         leadType: normalizedLeadType,
         remarks:
-            _remarksController.text.trim().isEmpty
-                ? null
-                : _remarksController.text.trim(),
+            _selectedRemarks == 'Others'
+                ? (_remarksController.text.trim().isEmpty
+                    ? null
+                    : _remarksController.text.trim())
+                : _selectedRemarks,
         functionDate: _functionDate?.toIso8601String(),
         createdAt: DateTime.now().toIso8601String(),
         callDuration: _callDuration,

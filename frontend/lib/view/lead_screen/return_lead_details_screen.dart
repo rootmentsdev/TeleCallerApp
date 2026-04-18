@@ -28,6 +28,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
 
   // Form fields
   String? _selectedCallStatus;
+  String? _selectedRemarks;
   bool _markAsComplaint = false;
   String? _selectedComplaintSubCategory;
   int _rating = 0;
@@ -75,6 +76,17 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
     "Product-Return-Damage",
     "Store Ambience",
     "Product Damage",
+  ];
+
+  final List<String> remarksOptions = [
+    'Satisfied',
+    'Not satisfied',
+    'Timely Delivered',
+    'Excellent customer service',
+    'Include more collections',
+    'Improve size availability',
+    'Matching shoes for rental',
+    'Others',
   ];
 
   @override
@@ -222,6 +234,12 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
     });
 
     try {
+      // Use custom remarks if "Others" is selected, otherwise use the selected remarks
+      final finalRemarks =
+          _selectedRemarks == 'Others'
+              ? _remarksController.text
+              : _selectedRemarks;
+
       final leadController = Provider.of<LeadScreenController>(
         context,
         listen: false,
@@ -231,8 +249,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
         id: widget.lead.id,
         callStatus: _selectedCallStatus,
         rating: _markAsComplaint ? null : (_rating > 0 ? _rating : null),
-        remarks:
-            _remarksController.text.isNotEmpty ? _remarksController.text : null,
+        remarks: finalRemarks,
         callDuration: _callDuration > 0 ? _callDuration : null,
         markAsComplaint: _markAsComplaint ? true : null,
         subCategory: _selectedComplaintSubCategory,
@@ -1192,43 +1209,85 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        TextField(
-                                          controller: _remarksController,
-                                          maxLines: 3,
-                                          decoration: InputDecoration(
-                                            hintText: "Enter your remarks",
-                                            hintStyle: TextStyle(
-                                              color: Colors.grey[400],
-                                              fontFamily:
-                                                  TextConstant.dmSansRegular,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
                                             ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide(
-                                                color: Colors.grey[300]!,
-                                              ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
                                             ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide(
-                                                color: Colors.grey[300]!,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide(
-                                                color:
-                                                    ColorConstant.primaryColor,
-                                                width: 2,
-                                              ),
-                                            ),
-                                            contentPadding:
-                                                const EdgeInsets.all(12),
+                                          ),
+                                          child: DropdownButton<String>(
+                                            value: _selectedRemarks,
+                                            hint: const Text("Select remarks"),
+                                            isExpanded: true,
+                                            underline: const SizedBox(),
+                                            items:
+                                                remarksOptions.map((
+                                                  String item,
+                                                ) {
+                                                  return DropdownMenuItem<
+                                                    String
+                                                  >(
+                                                    value: item,
+                                                    child: Text(item),
+                                                  );
+                                                }).toList(),
+                                            onChanged: (String? value) {
+                                              setState(() {
+                                                _selectedRemarks = value;
+                                              });
+                                            },
                                           ),
                                         ),
+                                        const SizedBox(height: 8),
+                                        // Custom remarks text field (shown only if "Others" is selected)
+                                        if (_selectedRemarks == 'Others') ...[
+                                          const SizedBox(height: 8),
+                                          TextField(
+                                            controller: _remarksController,
+                                            maxLines: 3,
+                                            decoration: InputDecoration(
+                                              hintText:
+                                                  "Enter your custom remarks",
+                                              hintStyle: TextStyle(
+                                                color: Colors.grey[400],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide(
+                                                  color: Colors.grey[300]!,
+                                                ),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide(
+                                                  color: Colors.grey[300]!,
+                                                ),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide(
+                                                  color:
+                                                      ColorConstant
+                                                          .primaryColor,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.all(12),
+                                            ),
+                                          ),
+                                        ],
                                         const SizedBox(height: 16),
                                       ],
                                     ),
@@ -1250,43 +1309,85 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
-                                        TextField(
-                                          controller: _remarksController,
-                                          maxLines: 3,
-                                          decoration: InputDecoration(
-                                            hintText: "Enter your remarks",
-                                            hintStyle: TextStyle(
-                                              color: Colors.grey[400],
-                                              fontFamily:
-                                                  TextConstant.dmSansRegular,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
                                             ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide(
-                                                color: Colors.grey[300]!,
-                                              ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
                                             ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide(
-                                                color: Colors.grey[300]!,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide(
-                                                color:
-                                                    ColorConstant.primaryColor,
-                                                width: 2,
-                                              ),
-                                            ),
-                                            contentPadding:
-                                                const EdgeInsets.all(12),
+                                          ),
+                                          child: DropdownButton<String>(
+                                            value: _selectedRemarks,
+                                            hint: const Text("Select remarks"),
+                                            isExpanded: true,
+                                            underline: const SizedBox(),
+                                            items:
+                                                remarksOptions.map((
+                                                  String item,
+                                                ) {
+                                                  return DropdownMenuItem<
+                                                    String
+                                                  >(
+                                                    value: item,
+                                                    child: Text(item),
+                                                  );
+                                                }).toList(),
+                                            onChanged: (String? value) {
+                                              setState(() {
+                                                _selectedRemarks = value;
+                                              });
+                                            },
                                           ),
                                         ),
+                                        const SizedBox(height: 8),
+                                        // Custom remarks text field (shown only if "Others" is selected)
+                                        if (_selectedRemarks == 'Others') ...[
+                                          const SizedBox(height: 8),
+                                          TextField(
+                                            controller: _remarksController,
+                                            maxLines: 3,
+                                            decoration: InputDecoration(
+                                              hintText:
+                                                  "Enter your custom remarks",
+                                              hintStyle: TextStyle(
+                                                color: Colors.grey[400],
+                                                fontFamily:
+                                                    TextConstant.dmSansRegular,
+                                              ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide(
+                                                  color: Colors.grey[300]!,
+                                                ),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide(
+                                                  color: Colors.grey[300]!,
+                                                ),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide(
+                                                  color:
+                                                      ColorConstant
+                                                          .primaryColor,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.all(12),
+                                            ),
+                                          ),
+                                        ],
                                         const SizedBox(height: 16),
                                       ],
                                     ),

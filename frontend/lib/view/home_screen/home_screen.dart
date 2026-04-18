@@ -168,55 +168,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchCallsToday() async {
     try {
-      print('HomeScreen: Fetching calls today...');
+      print('HomeScreen: Fetching calls today from performance endpoint...');
+
+      final headerController = Provider.of<HeaderController>(
+        context,
+        listen: false,
+      );
+
       final today = DateTime.now();
       final todayStart = DateTime(today.year, today.month, today.day);
       final todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59);
 
-      final dateFromStr =
-          '${todayStart.year}-${todayStart.month.toString().padLeft(2, '0')}-${todayStart.day.toString().padLeft(2, '0')}';
-      final dateToStr =
-          '${todayEnd.year}-${todayEnd.month.toString().padLeft(2, '0')}-${todayEnd.day.toString().padLeft(2, '0')}';
+      // Get store parameter
+      final storeParam = _getStoreParam(headerController.selectedStore);
 
-      print(
-        'HomeScreen: Fetching reports for today - from=$dateFromStr, to=$dateToStr',
+      // Fetch from /leads/performance endpoint
+      final response = await _apiService.getPerformanceMetrics(
+        fromDate: todayStart,
+        toDate: todayEnd,
+        store: storeParam,
       );
 
-      // Fetch all reports (call records) for today
-      final response = await _apiService.getReports(
-        dateFrom: dateFromStr,
-        dateTo: dateToStr,
-        limit: 1000,
-      );
+      print('HomeScreen: Performance metrics response: $response');
 
-      print('HomeScreen: API Response keys: ${response.keys.toList()}');
-
-      // Parse reports from response
-      List<dynamic> reportsList = [];
-      if (response.containsKey('reports')) {
-        reportsList = response['reports'] ?? [];
-      } else if (response.containsKey('data')) {
-        final data = response['data'];
-        if (data is List) {
-          reportsList = data;
-        } else if (data is Map && data.containsKey('reports')) {
-          reportsList = data['reports'] ?? [];
-        }
-      }
-
-      print('HomeScreen: Found ${reportsList.length} reports for today');
-
-      // Count reports with callDuration > 0
+      // Extract total calls from response
       int callsTodayCount = 0;
-      for (final report in reportsList) {
-        if (report is Map) {
-          final callDuration =
-              report['callDuration'] ?? report['call_duration'] ?? 0;
-          if (callDuration > 0) {
-            callsTodayCount++;
-            print('HomeScreen: Found call - duration=$callDuration');
-          }
-        }
+      if (response.containsKey('totalCalls')) {
+        callsTodayCount = response['totalCalls'] ?? 0;
+      } else if (response.containsKey('calls_today')) {
+        callsTodayCount = response['calls_today'] ?? 0;
+      } else if (response.containsKey('total')) {
+        callsTodayCount = response['total'] ?? 0;
+      } else if (response.containsKey('callsToday')) {
+        callsTodayCount = response['callsToday'] ?? 0;
       }
 
       print('HomeScreen: Total calls today: $callsTodayCount');

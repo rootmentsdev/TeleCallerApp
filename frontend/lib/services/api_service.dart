@@ -1493,10 +1493,12 @@ class ApiService {
   }
 
   /// Get performance metrics (total call count, today's calls, etc.)
-  /// GET /leads/performance?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD
+  /// Get performance metrics (total call count, today's calls, etc.)
+  /// GET /leads/performance?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD&store=storeName
   Future<Map<String, dynamic>> getPerformanceMetrics({
     DateTime? fromDate,
     DateTime? toDate,
+    String? store,
   }) async {
     try {
       final headers = await _getAuthHeaders();
@@ -1510,6 +1512,9 @@ class ApiService {
       if (toDate != null) {
         queryParams['toDate'] =
             '${toDate.year}-${toDate.month.toString().padLeft(2, '0')}-${toDate.day.toString().padLeft(2, '0')}';
+      }
+      if (store != null && store.isNotEmpty) {
+        queryParams['store'] = store;
       }
 
       final url = Uri.parse(
