@@ -625,6 +625,28 @@ class LeadScreenController extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchJustDialLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await _repository.fetchJustDialLeadsFromApi(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'fetchJustDialLeadsFromApi failed',
+      );
+      rethrow;
+    }
+  }
+
   Future<void> updateBookingConfirmationLead({
     required String id,
     String? callStatus,

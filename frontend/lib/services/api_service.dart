@@ -609,6 +609,125 @@ class ApiService {
     }
   }
 
+  // Get JustDial Leads
+  Future<Map<String, dynamic>> getJustDialLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) async {
+    final url = Uri.parse(
+      ApiConfig.getJustDialLeads(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+        page: page,
+        limit: limit,
+      ),
+    );
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: Fetching JustDial leads');
+      print('ApiService: URL => $url');
+
+      final response = await http.get(url, headers: headers);
+
+      print(
+        'ApiService: JustDial leads response status: ${response.statusCode}',
+      );
+      print('ApiService: JustDial leads response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decodedResponse = json.decode(response.body);
+        if (decodedResponse is Map<String, dynamic>) {
+          if (decodedResponse.containsKey('data')) {
+            return {'data': decodedResponse['data']};
+          }
+          if (decodedResponse.containsKey('leads')) {
+            return {'data': decodedResponse['leads']};
+          }
+          return decodedResponse;
+        } else if (decodedResponse is List) {
+          return {'data': decodedResponse};
+        }
+        return {'data': []};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load JustDial leads: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: Error fetching JustDial leads: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getJustDialLeads failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Get JustDial Lead Details
+  Future<Map<String, dynamic>> getJustDialLeadById(String id) async {
+    final url = Uri.parse(ApiConfig.getJustDialLeadById(id));
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      print('ApiService: getJustDialLeadById - URL: $url');
+      print('ApiService: getJustDialLeadById - Headers: $headers');
+
+      final response = await http.get(url, headers: headers);
+
+      print(
+        'ApiService: getJustDialLeadById - Response status: ${response.statusCode}',
+      );
+      print(
+        'ApiService: getJustDialLeadById - Response body: ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final normalized = <String, dynamic>{};
+          decoded.forEach((key, value) {
+            final camelKey = _snakeToCamel(key);
+            normalized[camelKey] = value;
+          });
+          return normalized;
+        }
+        return decoded;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception(
+          'Failed to load JustDial lead: Status ${response.statusCode}',
+        );
+      }
+    } catch (e, s) {
+      print('ApiService: Error fetching JustDial lead by ID: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'getJustDialLeadById failed',
+      );
+      rethrow;
+    }
+  }
+
   // Create Lead
   Future<Map<String, dynamic>> createLead({
     required String leadName,

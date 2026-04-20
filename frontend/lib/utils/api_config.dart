@@ -169,6 +169,43 @@ class ApiConfig {
     return url;
   }
 
+  // ===== JustDial Leads =====
+  static String getJustDialLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) {
+    String url = "$leadsEndpoint/justdial";
+    List<String> queryParams = [];
+
+    if (store != null && store.isNotEmpty) {
+      queryParams.add("store=${Uri.encodeComponent(store)}");
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      queryParams.add("fromDate=${Uri.encodeComponent(fromDate)}");
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      queryParams.add("toDate=${Uri.encodeComponent(toDate)}");
+    }
+    if (page != null) {
+      queryParams.add("page=$page");
+    }
+    if (limit != null) {
+      queryParams.add("limit=$limit");
+    }
+
+    if (queryParams.isNotEmpty) {
+      url += "?${queryParams.join('&')}";
+    }
+    return url;
+  }
+
+  static String getJustDialLeadById(String id) {
+    return "$leadsEndpoint/justdial/$id";
+  }
+
   // ===== Completed Leads (Reports) =====
   static String getCompletedLeads({
     String? store,

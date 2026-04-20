@@ -51,6 +51,7 @@ class _LeadScreenState extends State<LeadScreen> {
         // Fetch Booking Confirmation and Feedback Calls
         _fetchBookingConfirmationLeads(leadController, headerController);
         _fetchReturnLeads(leadController, headerController);
+        _fetchJustDialLeads(leadController, headerController);
       });
     });
   }
@@ -190,6 +191,67 @@ class _LeadScreenState extends State<LeadScreen> {
     }
   }
 
+  Future<void> _fetchJustDialLeads(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingJustDial) return;
+
+    setState(() => _isLoadingJustDial = true);
+
+    try {
+      final storeParam = _getStoreParam(headerController.selectedStore);
+
+      // Format date parameters
+      String? dateFrom;
+      String? dateTo;
+
+      if (headerController.isRangeMode &&
+          headerController.dateRangeStart != null &&
+          headerController.dateRangeEnd != null) {
+        dateFrom = _formatDateForApi(headerController.dateRangeStart!);
+        final endOfDay = DateTime(
+          headerController.dateRangeEnd!.year,
+          headerController.dateRangeEnd!.month,
+          headerController.dateRangeEnd!.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      } else {
+        final selectedDate = headerController.selectedDate;
+        dateFrom = _formatDateForApi(selectedDate);
+        final endOfDay = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      }
+
+      await controller.fetchJustDialLeadsFromApi(
+        store: storeParam,
+        fromDate: dateFrom,
+        toDate: dateTo,
+      );
+
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexJustDial) {
+        _showError("Failed to load JustDial leads", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingJustDial = false);
+    }
+  }
+
   void _showError(String title, dynamic e) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -223,6 +285,9 @@ class _LeadScreenState extends State<LeadScreen> {
       }
       if (!_isLoadingReturn) {
         _fetchReturnLeads(leadController, headerController);
+      }
+      if (!_isLoadingJustDial) {
+        _fetchJustDialLeads(leadController, headerController);
       }
     });
   }

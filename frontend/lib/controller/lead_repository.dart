@@ -1062,6 +1062,56 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
+  /// Fetch JustDial leads from the dedicated API endpoint
+  Future<void> fetchJustDialLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await ensureInitialized();
+
+      final storeFilter =
+          (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getJustDialLeads(
+        store: storeFilter,
+        fromDate: fromDate,
+        toDate: toDate,
+        limit: 1000,
+      );
+
+      final leadsData = _parseResponseData(response);
+
+      // Remove existing JustDial leads (avoid duplicates)
+      _leads.removeWhere(
+        (lead) =>
+            lead.category == LeadConstants.categoryJustDial &&
+            !lead.needsFollowUp,
+      );
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            final justDialLead = _createLeadWithCategory(
+              lead,
+              LeadConstants.categoryJustDial,
+            );
+            _leads.add(justDialLead);
+          }
+        } catch (e) {
+          print('LeadRepository: Error parsing JustDial lead: $e');
+        }
+      }
+
+      await _saveLeads();
+      notifyListeners();
+    } catch (e) {
+      print('LeadRepository: Error fetching JustDial leads: $e');
+      rethrow;
+    }
+  }
+
   /// Update Booking Confirmation lead via API
   Future<void> updateReturnLeadFromApi({
     required String id,
