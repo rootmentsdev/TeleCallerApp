@@ -7,6 +7,9 @@ import 'package:telecaller_app/widgets.dart/incoming_call_followup_popup_sheet.d
 import 'package:telecaller_app/widgets.dart/incoming_call_booking_popup_sheet.dart';
 import 'package:telecaller_app/widgets.dart/incoming_call_feedback_popup_sheet.dart';
 import 'package:telecaller_app/widgets.dart/incoming_call_complaint_popup_sheet.dart';
+import 'package:telecaller_app/widgets.dart/incoming_call_report_popup_sheet.dart';
+import 'package:telecaller_app/widgets.dart/incoming_call_justdial_popup_sheet.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen/justdial_detail_screen.dart';
 
 /// Handles incoming call flow based on popupType from /customers/check-phone API
 /// Routes to appropriate popup sheet based on popupType:
@@ -15,6 +18,7 @@ import 'package:telecaller_app/widgets.dart/incoming_call_complaint_popup_sheet.
 /// - complaintPopup → IncomingCallComplaintPopupSheet
 /// - returnPopup → IncomingCallFeedbackPopupSheet
 /// - bookingConfirmationPopup → IncomingCallBookingPopupSheet
+/// - reportPopup → IncomingCallReportPopupSheet (completed leads from reports)
 class IncomingCallHandler {
   final ApiService _api = ApiService();
 
@@ -107,6 +111,22 @@ class IncomingCallHandler {
           }
           break;
 
+        case 'reportPopup':
+          print('IncomingCallHandler: → Showing report popup');
+          // Check if a lead screen is already open - if yes, update it instead
+          if (!_tryUpdateExistingLeadScreen(context, leadId, callDuration)) {
+            await _showReportPopup(context, leadId, callDuration, data);
+          }
+          break;
+
+        case 'justdialPopup':
+          print('IncomingCallHandler: → Showing JustDial popup');
+          // Check if a lead screen is already open - if yes, update it instead
+          if (!_tryUpdateExistingLeadScreen(context, leadId, callDuration)) {
+            await _showJustDialPopup(context, leadId, callDuration, data);
+          }
+          break;
+
         default:
           print(
             'IncomingCallHandler: → Unknown popupType, showing new lead popup',
@@ -153,13 +173,13 @@ class IncomingCallHandler {
   /// Step 1: Call /customers/check-phone API
   Future<Map<String, dynamic>?> checkPhone(String phone) async {
     try {
-      print('IncomingCallHandler: checkPhone → calling API for $phone');
-      final response = await _api.checkPhone(phone);
-      print('IncomingCallHandler: checkPhone → response: $response');
-      return response;
+      print('IncomingCallHandler: checkPhone → phone: $phone');
+      final result = await _api.checkPhone(phone);
+      print('IncomingCallHandler: checkPhone → result: $result');
+      return result;
     } catch (e) {
       print('IncomingCallHandler: checkPhone → ERROR: $e');
-      rethrow;
+      return null;
     }
   }
 
@@ -189,13 +209,14 @@ class IncomingCallHandler {
             (_) => IncomingCallFollowupPopupSheet(
               lead: lead,
               callDuration: callDuration,
-              onSave: (closingAction, remarks) async {
+              onSave: (closingAction, remarks, followupDate) async {
                 await _saveFollowup(
                   context,
                   leadId,
                   closingAction,
                   remarks,
                   callDuration,
+                  followupDate,
                 );
               },
             ),
@@ -373,6 +394,157 @@ class IncomingCallHandler {
     }
   }
 
+  /// Show report popup or navigate to detail screen
+  /// If JustDial lead, navigate to JustDialDetailScreen instead of showing popup
+  Future<void> _showReportPopup(
+    BuildContext context,
+    String leadId,
+    int? callDuration,
+    Map<String, dynamic>? leadDataFromResponse,
+  ) async {
+    try {
+      print('IncomingCallHandler: _showReportPopup → leadId: $leadId');
+
+      Map<String, dynamic> leadData;
+
+      // If leadData is provided directly (e.g., from checkPhone response), use it
+      if (leadDataFromResponse != null && leadDataFromResponse.isNotEmpty) {
+        print(
+          'IncomingCallHandler: _showReportPopup → using lead data from response',
+        );
+        leadData = leadDataFromResponse;
+      } else if (leadId.isNotEmpty) {
+        // Otherwise, fetch using leadId
+        print('IncomingCallHandler: _showReportPopup → fetching lead $leadId');
+        leadData = await _api.getLeadDetails('/api/leads/$leadId');
+        print('IncomingCallHandler: _showReportPopup → fetched: $leadData');
+      } else {
+        // No leadId and no lead data - show error
+        print(
+          'IncomingCallHandler: _showReportPopup → ERROR: No leadId or lead data provided',
+        );
+        if (context.mounted) {
+          _showErrorSnackbar(
+            context,
+            'Failed to load report lead: Missing lead ID',
+          );
+        }
+        return;
+      }
+
+      if (!context.mounted) return;
+
+      final lead = LeadModel.fromApiJson(leadData);
+      final name = lead.name;
+      final phone = lead.phone;
+
+      // Check if this is a JustDial lead - navigate to detail screen instead of popup
+      if (lead.leadType?.toLowerCase() == 'justdial') {
+        print(
+          'IncomingCallHandler: _showReportPopup → Detected JustDial lead, navigating to detail screen',
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => JustDialDetailScreen(
+                  name: name,
+                  phone: phone,
+                  callType: 'JustDial',
+                  reportData: leadData,
+                ),
+          ),
+        );
+      } else {
+        // Show generic report popup for non-JustDial leads
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder:
+              (_) => IncomingCallReportPopupSheet(
+                lead: lead,
+                callDuration: callDuration,
+                onSave: (remarks) async {
+                  await _saveReport(context, leadId, remarks, callDuration);
+                },
+              ),
+        );
+      }
+    } catch (e) {
+      print('IncomingCallHandler: _showReportPopup → ERROR: $e');
+      if (context.mounted) {
+        _showErrorSnackbar(context, 'Failed to load report lead: $e');
+      }
+    }
+  }
+
+  /// Show JustDial popup - fetch data from /leads/{id}
+  /// Can also accept lead data directly if leadId is empty
+  Future<void> _showJustDialPopup(
+    BuildContext context,
+    String leadId,
+    int? callDuration,
+    Map<String, dynamic>? leadDataFromResponse,
+  ) async {
+    try {
+      print('IncomingCallHandler: _showJustDialPopup → leadId: $leadId');
+
+      Map<String, dynamic> leadData;
+
+      // If leadData is provided directly (e.g., from checkPhone response), use it
+      if (leadDataFromResponse != null && leadDataFromResponse.isNotEmpty) {
+        print(
+          'IncomingCallHandler: _showJustDialPopup → using lead data from response',
+        );
+        leadData = leadDataFromResponse;
+      } else if (leadId.isNotEmpty) {
+        // Otherwise, fetch using leadId
+        print(
+          'IncomingCallHandler: _showJustDialPopup → fetching lead $leadId',
+        );
+        leadData = await _api.getLeadDetails('/api/leads/$leadId');
+        print('IncomingCallHandler: _showJustDialPopup → fetched: $leadData');
+      } else {
+        // No leadId and no lead data - show error
+        print(
+          'IncomingCallHandler: _showJustDialPopup → ERROR: No leadId or lead data provided',
+        );
+        if (context.mounted) {
+          _showErrorSnackbar(
+            context,
+            'Failed to load JustDial lead: Missing lead ID',
+          );
+        }
+        return;
+      }
+
+      if (!context.mounted) return;
+
+      final lead = LeadModel.fromApiJson(leadData);
+
+      // Show JustDial popup with save callback
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder:
+            (_) => IncomingCallJustDialPopupSheet(
+              lead: lead,
+              callDuration: callDuration,
+              onSave: (remarks) async {
+                await _saveReport(context, leadId, remarks, callDuration);
+              },
+            ),
+      );
+    } catch (e) {
+      print('IncomingCallHandler: _showJustDialPopup → ERROR: $e');
+      if (context.mounted) {
+        _showErrorSnackbar(context, 'Failed to load JustDial lead: $e');
+      }
+    }
+  }
+
   /// Save followup - POST to /leads/followups/{id}
   Future<void> _saveFollowup(
     BuildContext context,
@@ -380,6 +552,7 @@ class IncomingCallHandler {
     String closingAction,
     String remarks,
     int? callDuration,
+    DateTime? followupDate,
   ) async {
     try {
       print(
@@ -390,6 +563,8 @@ class IncomingCallHandler {
         'followupclosingAction': closingAction,
         'followupremarks': remarks,
         'followupcallDuration': callDuration?.toString() ?? '0',
+        if (followupDate != null)
+          'followupDate': followupDate.toIso8601String(),
       };
 
       print('IncomingCallHandler: _saveFollowup → body: $body');
@@ -559,6 +734,44 @@ class IncomingCallHandler {
       print('IncomingCallHandler: _saveBookingConfirmation → ERROR: $e');
       if (context.mounted) {
         _showErrorSnackbar(context, 'Failed to save booking confirmation: $e');
+      }
+    }
+  }
+
+  /// Save report - POST to /leads/{id}
+  Future<void> _saveReport(
+    BuildContext context,
+    String leadId,
+    String remarks,
+    int? callDuration,
+  ) async {
+    try {
+      print('IncomingCallHandler: _saveReport → saving to /api/leads/$leadId');
+
+      final body = <String, dynamic>{
+        'remarks': remarks,
+        if (callDuration != null) 'callDuration': callDuration.toString(),
+      };
+
+      print('IncomingCallHandler: _saveReport → body: $body');
+
+      final response = await _api.postLeadUpdate(leadId, body);
+      print('IncomingCallHandler: _saveReport → response: $response');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Report lead updated successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.pop(context); // Close popup
+      }
+    } catch (e) {
+      print('IncomingCallHandler: _saveReport → ERROR: $e');
+      if (context.mounted) {
+        _showErrorSnackbar(context, 'Failed to save report lead: $e');
       }
     }
   }

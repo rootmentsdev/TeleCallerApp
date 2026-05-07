@@ -978,6 +978,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                     : _remarksController.text.trim())
                 : _selectedRemarks,
         functionDate: functionDateString,
+        followUpDate: _followUpDate?.toIso8601String(),
         createdAt: DateTime.now().toIso8601String(),
         callDuration: _callDuration,
         subCategory: _selectedSubCategory,

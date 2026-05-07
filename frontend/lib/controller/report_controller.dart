@@ -6,7 +6,9 @@ import 'package:telecaller_app/model/report_model.dart';
 import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/utils/lead_constants.dart';
-import 'package:csv/csv.dart';
+import 'package:telecaller_app/utils/date_formatter_util.dart';
+import 'package:telecaller_app/utils/csv_formatter.dart';
+import 'package:telecaller_app/utils/logger.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -211,7 +213,9 @@ class ReportController extends ChangeNotifier {
           "name": lead.name,
           "phone": lead.phone,
           "date": _formatDate(lead.createdAt),
-          "callDate": _formatDate(lead.createdAt),
+          "callDate": lead.createdAt.toIso8601String(),
+          "callDateFormatted": _formatDate(lead.createdAt),
+          "callDateObj": lead.createdAt,
           "storeName": lead.location ?? lead.brand ?? "Not available",
           "type": "followup",
           "callStatus": lead.callStatus ?? "Not called yet",
@@ -299,38 +303,29 @@ class ReportController extends ChangeNotifier {
               leadData['item_category']?.toString() ??
               '';
 
-          DateTime? parseDate(dynamic dateValue) {
-            if (dateValue == null) return null;
-            try {
-              return DateTime.parse(dateValue.toString());
-            } catch (e) {
-              return null;
-            }
-          }
-
           final createdAt =
-              parseDate(leadData['createdAt']) ??
-              parseDate(leadData['created_at']) ??
+              DateFormatterUtil.parseDate(leadData['createdAt']) ??
+              DateFormatterUtil.parseDate(leadData['created_at']) ??
               report.editedAt ??
               report.createdAt;
           final followUpDate =
-              parseDate(leadData['followUpDate']) ??
-              parseDate(leadData['follow_up_date']);
+              DateFormatterUtil.parseDate(leadData['followUpDate']) ??
+              DateFormatterUtil.parseDate(leadData['follow_up_date']);
           final enquiryDate =
-              parseDate(leadData['enquiryDate']) ??
-              parseDate(leadData['enquiry_date']);
+              DateFormatterUtil.parseDate(leadData['enquiryDate']) ??
+              DateFormatterUtil.parseDate(leadData['enquiry_date']);
           final functionDate =
-              parseDate(leadData['functionDate']) ??
-              parseDate(leadData['function_date']);
+              DateFormatterUtil.parseDate(leadData['functionDate']) ??
+              DateFormatterUtil.parseDate(leadData['function_date']);
           final visitDate =
-              parseDate(leadData['visitDate']) ??
-              parseDate(leadData['visit_date']);
+              DateFormatterUtil.parseDate(leadData['visitDate']) ??
+              DateFormatterUtil.parseDate(leadData['visit_date']);
           final returnDate =
-              parseDate(leadData['returnDate']) ??
-              parseDate(leadData['return_date']);
+              DateFormatterUtil.parseDate(leadData['returnDate']) ??
+              DateFormatterUtil.parseDate(leadData['return_date']);
           final bookingDate =
-              parseDate(leadData['bookingDate']) ??
-              parseDate(leadData['booking_date']) ??
+              DateFormatterUtil.parseDate(leadData['bookingDate']) ??
+              DateFormatterUtil.parseDate(leadData['booking_date']) ??
               enquiryDate;
 
           final attendedBy =
@@ -351,15 +346,17 @@ class ReportController extends ChangeNotifier {
               leadData['no_of_attires']?.toString();
           final competitor = leadData['competitor']?.toString();
 
+          // Use updatedAt for display and filtering (when report was called or updated today)
+          final dateToUse = report.updatedAt;
+
           return {
             "id": report.originalId,
             "name": leadName,
             "phone": leadPhone,
             "date": _formatDate(createdAt),
-            "callDate":
-                report.editedAt != null
-                    ? _formatDate(report.editedAt!)
-                    : _formatDate(createdAt),
+            "callDate": dateToUse.toIso8601String(),
+            "callDateFormatted": _formatDate(dateToUse),
+            "callDateObj": dateToUse,
             "enquiryDate":
                 enquiryDate != null
                     ? _formatDate(enquiryDate)
@@ -449,12 +446,15 @@ class ReportController extends ChangeNotifier {
       final reportIds = filteredReports.map((r) => r["id"]).toSet();
       for (final lead in filteredByDate) {
         if (!reportIds.contains(lead.id)) {
+          final dateToUse = lead.updatedAt ?? lead.createdAt;
           filteredReports.add({
             "id": lead.id,
             "name": lead.name,
             "phone": lead.phone,
             "date": _formatDate(lead.createdAt),
-            "callDate": _formatDate(lead.updatedAt ?? lead.createdAt),
+            "callDate": dateToUse.toIso8601String(),
+            "callDateFormatted": _formatDate(dateToUse),
+            "callDateObj": dateToUse,
             "storeName": lead.location ?? lead.brand ?? "Not available",
             "type": "general",
             "callStatus": lead.callStatus ?? "Not called yet",
@@ -469,17 +469,56 @@ class ReportController extends ChangeNotifier {
       }
     }
 
+    // Filter by call type index (1=Feedback, 2=Enquiry, 3=Booked, 4=Booking Confirmation, 5=Loss of Sale)
+    if (_selectedCallTypeIndex > 0 && _selectedCallTypeIndex < 6) {
+      final callTypeMap = {
+        1: 'hardout', // Feedback
+        2: 'enquiry', // Enquiry
+        3: 'booking', // Booked
+        4: 'bookingconfirmation', // Booking Confirmation
+        5: 'lossofsale', // Loss of Sale
+      };
+
+      final selectedType = callTypeMap[_selectedCallTypeIndex];
+      if (selectedType != null) {
+        filteredReports =
+            filteredReports.where((report) {
+              final reportType = report["type"] as String? ?? "";
+              return reportType == selectedType;
+            }).toList();
+      }
+    }
+
     if (storeFilter != null) {
+      print(
+        'ReportController: Filtering by store - storeFilter.location: ${storeFilter.location}, storeFilter.normalizedName: ${storeFilter.normalizedName}',
+      );
       filteredReports =
           filteredReports.where((report) {
             final storeName = report["storeName"] as String? ?? "";
-            return storeName.toLowerCase().contains(
+            final matches =
+                storeName.toLowerCase().contains(
                   storeFilter.location.toLowerCase(),
                 ) ||
                 storeFilter.location.toLowerCase().contains(
                   storeName.toLowerCase(),
+                ) ||
+                storeName.toLowerCase().contains(
+                  storeFilter.normalizedName.toLowerCase(),
+                ) ||
+                storeFilter.normalizedName.toLowerCase().contains(
+                  storeName.toLowerCase(),
                 );
+            if (!matches) {
+              print(
+                'ReportController: Report filtered out - storeName: "$storeName" does not match filter: "${storeFilter.location}" or "${storeFilter.normalizedName}"',
+              );
+            }
+            return matches;
           }).toList();
+      print(
+        'ReportController: After store filter - ${filteredReports.length} reports remaining',
+      );
     }
 
     return filteredReports;
@@ -564,23 +603,35 @@ class ReportController extends ChangeNotifier {
   String _getTypeFromLeadType(String? leadType) {
     if (leadType == null) return "general";
 
-    switch (leadType.toLowerCase()) {
+    final normalizedType = leadType.toLowerCase().trim();
+    print(
+      'ReportController: _getTypeFromLeadType - Input: "$leadType", Normalized: "$normalizedType"',
+    );
+
+    switch (normalizedType) {
       case "enquiry":
         return "enquiry";
       case "lossofsale":
+      case "loss of sale":
         return "lossofsale";
       case "rentoutfeedback":
       case "return":
+      case "feedback":
         return "hardout";
       case "bookingconfirmation":
       case "booking confirmation":
+      case "booking_confirmation":
         return "bookingconfirmation";
       case "booked":
       case "booking":
         return "booking";
       case "justdial":
+      case "just dial":
         return "justdial";
       default:
+        print(
+          'ReportController: Unknown leadType: "$leadType" -> mapping to "general"',
+        );
         return "general";
     }
   }
@@ -601,21 +652,7 @@ class ReportController extends ChangeNotifier {
   }
 
   String _formatDate(DateTime date) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return "${date.day} ${months[date.month - 1]}, ${date.year}";
+    return DateFormatterUtil.formatDate(date);
   }
 
   void refresh() {
@@ -672,22 +709,22 @@ class ReportController extends ChangeNotifier {
   }
 
   Future<void> fetchReportsWithCurrentFilters() async {
-    String formatDateForApi(DateTime date) {
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    }
-
     String dateFromStr;
     String dateToStr;
 
     if (_headerController?.isRangeMode == true &&
         _headerController?.dateRangeStart != null &&
         _headerController?.dateRangeEnd != null) {
-      dateFromStr = formatDateForApi(_headerController!.dateRangeStart!);
-      dateToStr = formatDateForApi(_headerController!.dateRangeEnd!);
+      dateFromStr = DateFormatterUtil.formatDateForApi(
+        _headerController!.dateRangeStart!,
+      );
+      dateToStr = DateFormatterUtil.formatDateForApi(
+        _headerController!.dateRangeEnd!,
+      );
     } else {
       final selectedDate = _headerController?.selectedDate ?? DateTime.now();
-      dateFromStr = formatDateForApi(selectedDate);
-      dateToStr = formatDateForApi(selectedDate);
+      dateFromStr = DateFormatterUtil.formatDateForApi(selectedDate);
+      dateToStr = DateFormatterUtil.formatDateForApi(selectedDate);
     }
 
     String? storeParam;
@@ -701,8 +738,10 @@ class ReportController extends ChangeNotifier {
     );
 
     try {
+      // Don't pass store to API - filter on frontend instead
+      // Backend /api/leads/completed may not support store filtering
       await fetchCompletedLeadsFromApi(
-        store: storeParam,
+        store: null,
         fromDate: dateFromStr,
         toDate: dateToStr,
       );
@@ -785,87 +824,212 @@ class ReportController extends ChangeNotifier {
     return allReports;
   }
 
-  /// Export filtered reports to CSV
+  /// Export filtered reports to CSV with fresh data from backend API
   Future<void> exportReportsCsv() async {
     try {
-      final leads = getFilteredReportsByDateCategory();
+      // Show loading indicator
+      _isLoadingReports = true;
+      notifyListeners();
 
-      if (leads.isEmpty) {
+      // Get date range parameters
+      String dateFromStr;
+      String dateToStr;
+
+      if (_headerController?.isRangeMode == true &&
+          _headerController?.dateRangeStart != null &&
+          _headerController?.dateRangeEnd != null) {
+        dateFromStr = DateFormatterUtil.formatDateForApi(
+          _headerController!.dateRangeStart!,
+        );
+        dateToStr = DateFormatterUtil.formatDateForApi(
+          _headerController!.dateRangeEnd!,
+        );
+      } else {
+        final selectedDate = _headerController?.selectedDate ?? DateTime.now();
+        dateFromStr = DateFormatterUtil.formatDateForApi(selectedDate);
+        dateToStr = DateFormatterUtil.formatDateForApi(selectedDate);
+      }
+
+      // Get store filter if applied
+      String? storeParam;
+      final store = _headerController?.selectedStore;
+      if (store != null && store.normalizedName != 'All Stores') {
+        storeParam = store.normalizedName;
+      }
+
+      Logger.info(
+        'CSV Export: Fetching reports from backend - store: $storeParam, dateFrom: $dateFromStr, dateTo: $dateToStr',
+      );
+
+      // Fetch fresh data from backend API
+      final response = await _apiService.getCompletedLeads(
+        store: storeParam,
+        fromDate: dateFromStr,
+        toDate: dateToStr,
+        limit: 10000, // Get all records for export
+      );
+
+      // Parse response
+      final reportsResponse = ReportsResponse.fromJson(response);
+      final apiReports = reportsResponse.reports;
+
+      if (apiReports.isEmpty) {
+        _isLoadingReports = false;
+        notifyListeners();
         throw Exception('No reports available to export');
       }
 
-      List<List<dynamic>> rows = [];
+      // Convert API reports to display format
+      final displayReports = _convertApiReportsToDisplayFormat(apiReports);
 
-      // Header row
-      rows.add([
-        "ID",
-        "Customer Name",
-        "Phone",
-        "Store",
-        "Lead Type",
-        "Lead Status",
-        "Call Duration",
-        "Sub Category",
-        "Remarks",
-        "Closing Action",
-        "Function Date",
-        "Followup Date",
-        "Return Date",
-        "Booking Date",
-        "Delivery Date",
-        "Created At",
-        "Updated At",
-        "Attended By",
-      ]);
+      Logger.info(
+        'CSV Export: Fetched ${displayReports.length} reports from backend',
+      );
 
-      // Data rows
-      for (var lead in leads) {
-        rows.add([
-          lead['id'] ?? "",
-          lead['name'] ?? "",
-          lead['phone'] ?? "",
-          lead['storeName'] ?? "",
-          lead['type'] ?? "",
-          lead['leadStatus'] ?? "",
-          lead['callDuration']?.toString() ?? "",
-          lead['subCategory'] ?? "",
-          lead['remarks'] ?? "",
-          lead['closingAction'] ?? "",
-          lead['functionDate'] ?? "",
-          lead['followUpDate'] ?? "",
-          lead['returnDate'] ?? "",
-          lead['bookingDate'] ?? "",
-          lead['deliveryDate'] ?? "",
-          lead['callDate'] ?? "",
-          lead['updatedAt'] ?? "",
-          lead['attendedBy'] ?? "",
-        ]);
-      }
+      // Get date range label
+      final dateRangeLabel = _getDateRangeLabel();
 
-      // Convert to CSV
-      String csvData = const ListToCsvConverter().convert(rows);
+      // Format reports to CSV
+      final csvData = CsvFormatter.formatReportsToCsv(
+        reports: displayReports,
+        dateRangeLabel: dateRangeLabel,
+        exportDate: DateTime.now(),
+        storeFilter: storeParam,
+      );
+
+      // Generate filename
+      final fileName = CsvFormatter.generateFileName(dateRangeLabel);
 
       // Get application documents directory
       final directory = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'call_report_$timestamp.csv';
       final file = File("${directory.path}/$fileName");
 
       // Write CSV to file
       await file.writeAsString(csvData);
 
       // Share the file
-      await Share.shareXFiles([XFile(file.path)], text: 'Call Report Export');
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Call Report Export - $dateRangeLabel');
 
-      print('ReportController: CSV exported successfully: ${file.path}');
+      _isLoadingReports = false;
+      notifyListeners();
+
+      Logger.info('CSV exported successfully: ${file.path}');
     } catch (e, s) {
-      print('ReportController: CSV Export Error: $e');
+      _isLoadingReports = false;
+      notifyListeners();
+      Logger.error('CSV Export Error', e, s);
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
         reason: 'exportReportsCsv failed',
       );
       rethrow;
+    }
+  }
+
+  /// Convert API reports to display format for CSV export
+  List<Map<String, dynamic>> _convertApiReportsToDisplayFormat(
+    List<ReportModel> apiReports,
+  ) {
+    return apiReports.map((report) {
+      final leadData = report.leadData ?? {};
+
+      final leadName =
+          leadData['name']?.toString() ??
+          leadData['lead_name']?.toString() ??
+          leadData['customerName']?.toString() ??
+          '';
+      final leadPhone =
+          leadData['phone']?.toString() ??
+          leadData['phone_number']?.toString() ??
+          '';
+
+      var leadLocation =
+          leadData['store']?.toString() ??
+          leadData['location']?.toString() ??
+          '';
+
+      if (leadLocation.isNotEmpty && !leadLocation.contains(' - ')) {
+        leadLocation = _normalizeStoreName(leadLocation);
+      } else if (leadLocation.isNotEmpty && leadLocation.contains(' - ')) {
+        final parts = leadLocation.split(' - ');
+        if (parts.length == 2) {
+          final normalizedLocation = _normalizeStoreName(parts[1]);
+          leadLocation = '${parts[0]} - $normalizedLocation';
+        }
+      }
+
+      final leadStatus =
+          leadData['leadStatus']?.toString() ??
+          leadData['lead_status']?.toString();
+      final reason =
+          leadData['remarks']?.toString() ??
+          leadData['reason']?.toString() ??
+          leadData['reason_collected_from_store']?.toString() ??
+          '';
+
+      final callDuration = () {
+        final callDur =
+            leadData['callDuration'] ??
+            leadData['call_duration'] ??
+            report.callDuration;
+        if (callDur == null) return null;
+        if (callDur is int) return callDur;
+        if (callDur is String) {
+          try {
+            return int.parse(callDur);
+          } catch (_) {
+            return null;
+          }
+        }
+        return null;
+      }();
+
+      final createdAt =
+          DateFormatterUtil.parseDate(leadData['createdAt']) ??
+          DateFormatterUtil.parseDate(leadData['created_at']) ??
+          report.editedAt ??
+          report.createdAt;
+
+      return {
+        "id": report.originalId,
+        "name": leadName,
+        "phone": leadPhone,
+        "date": _formatDate(createdAt),
+        "callDate":
+            report.editedAt != null
+                ? report.editedAt!.toIso8601String()
+                : createdAt.toIso8601String(),
+        "callDateFormatted":
+            report.editedAt != null
+                ? _formatDate(report.editedAt!)
+                : _formatDate(createdAt),
+        "callDateObj": report.editedAt ?? createdAt,
+        "storeName": leadLocation.isNotEmpty ? leadLocation : "Not available",
+        "type": _getTypeFromLeadType(report.leadType),
+        "leadStatus": leadStatus,
+        "callDuration": callDuration,
+        "remarks": report.note ?? reason,
+      };
+    }).toList();
+  }
+
+  /// Get human-readable date range label for CSV export
+  String _getDateRangeLabel() {
+    if (_headerController?.isRangeMode == true &&
+        _headerController?.dateRangeStart != null &&
+        _headerController?.dateRangeEnd != null) {
+      final startDate = DateFormatterUtil.formatDate(
+        _headerController!.dateRangeStart!,
+      );
+      final endDate = DateFormatterUtil.formatDate(
+        _headerController!.dateRangeEnd!,
+      );
+      return '$startDate to $endDate';
+    } else {
+      return _selectedDateCategory;
     }
   }
 }

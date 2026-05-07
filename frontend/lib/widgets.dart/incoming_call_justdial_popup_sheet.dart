@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:telecaller_app/model/lead_model.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 
-/// Popup sheet for incoming call with followup lead details
-/// Shows lead information in a bottom sheet with editable fields
-class IncomingCallFollowupPopupSheet extends StatefulWidget {
+/// Popup sheet for incoming call with JustDial report lead details
+/// Shows JustDial lead information in a bottom sheet with editable remarks field
+class IncomingCallJustDialPopupSheet extends StatefulWidget {
   final LeadModel lead;
   final int? callDuration;
-  final Function(String closingAction, String remarks, DateTime? followupDate)
-  onSave;
+  final Function(String remarks) onSave;
 
-  const IncomingCallFollowupPopupSheet({
+  const IncomingCallJustDialPopupSheet({
     super.key,
     required this.lead,
     this.callDuration,
@@ -18,24 +17,14 @@ class IncomingCallFollowupPopupSheet extends StatefulWidget {
   });
 
   @override
-  State<IncomingCallFollowupPopupSheet> createState() =>
-      _IncomingCallFollowupPopupSheetState();
+  State<IncomingCallJustDialPopupSheet> createState() =>
+      _IncomingCallJustDialPopupSheetState();
 }
 
-class _IncomingCallFollowupPopupSheetState
-    extends State<IncomingCallFollowupPopupSheet> {
+class _IncomingCallJustDialPopupSheetState
+    extends State<IncomingCallJustDialPopupSheet> {
   late TextEditingController _remarksController;
-  String? _selectedClosingAction;
-  DateTime? _followupDate;
   bool _isSaving = false;
-
-  final List<String> closingActionOptions = [
-    "Interested",
-    "Not Interested",
-    "Call Back Later",
-    "Connected",
-    "Not Connected",
-  ];
 
   @override
   void initState() {
@@ -47,11 +36,6 @@ class _IncomingCallFollowupPopupSheetState
   void dispose() {
     _remarksController.dispose();
     super.dispose();
-  }
-
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'N/A';
-    return '${date.day}/${date.month}/${date.year}';
   }
 
   String _formatCallDate(DateTime date) {
@@ -77,24 +61,10 @@ class _IncomingCallFollowupPopupSheetState
   }
 
   Future<void> _handleSave() async {
-    if (_selectedClosingAction == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a closing action'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isSaving = true);
 
     try {
-      await widget.onSave(
-        _selectedClosingAction!,
-        _remarksController.text.trim(),
-        _followupDate,
-      );
+      await widget.onSave(_remarksController.text.trim());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +108,7 @@ class _IncomingCallFollowupPopupSheetState
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFE6F3FF),
+                color: const Color(0xFFFFF3E0),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -163,12 +133,12 @@ class _IncomingCallFollowupPopupSheetState
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0A2540),
+                          color: const Color(0xFFE65100),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          _formatLeadType(widget.lead.leadType),
-                          style: const TextStyle(
+                        child: const Text(
+                          'JustDial',
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -232,7 +202,7 @@ class _IncomingCallFollowupPopupSheetState
 
             const SizedBox(height: 12),
 
-            // Location and Function Date
+            // Location and Store
             Row(
               children: [
                 Expanded(
@@ -270,7 +240,7 @@ class _IncomingCallFollowupPopupSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Function Date',
+                        'Source',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -279,7 +249,7 @@ class _IncomingCallFollowupPopupSheetState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _formatDate(widget.lead.functionDate),
+                        widget.lead.source ?? 'JustDial',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -294,7 +264,7 @@ class _IncomingCallFollowupPopupSheetState
 
             const SizedBox(height: 12),
 
-            // Sub Category and Close Action
+            // Sub Category and Status
             Row(
               children: [
                 Expanded(
@@ -327,7 +297,7 @@ class _IncomingCallFollowupPopupSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Close Action',
+                        'Status',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -336,7 +306,7 @@ class _IncomingCallFollowupPopupSheetState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.lead.closingAction ?? 'Not specified',
+                        widget.lead.closingAction ?? 'Completed',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -353,7 +323,7 @@ class _IncomingCallFollowupPopupSheetState
 
             // Editable Fields Section
             Text(
-              'Close Action / Reason',
+              'Additional Notes',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -363,30 +333,6 @@ class _IncomingCallFollowupPopupSheetState
             ),
 
             const SizedBox(height: 12),
-
-            // Closing Action Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedClosingAction,
-              decoration: InputDecoration(
-                labelText: 'Closing Action',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 14,
-                ),
-              ),
-              items:
-                  closingActionOptions.map((action) {
-                    return DropdownMenuItem(value: action, child: Text(action));
-                  }).toList(),
-              onChanged: (value) {
-                setState(() => _selectedClosingAction = value);
-              },
-            ),
-
-            const SizedBox(height: 16),
 
             // Remarks TextField
             TextField(
@@ -402,69 +348,6 @@ class _IncomingCallFollowupPopupSheetState
                 ),
               ),
               maxLines: 4,
-            ),
-
-            const SizedBox(height: 16),
-
-            // Follow-up Date Picker
-            GestureDetector(
-              onTap: () async {
-                final selectedDate = await showDatePicker(
-                  context: context,
-                  initialDate: _followupDate ?? DateTime.now(),
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
-                if (selectedDate != null) {
-                  setState(() => _followupDate = selectedDate);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[400]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Follow-up Date',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _followupDate != null
-                              ? _formatDate(_followupDate)
-                              : 'Select date',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color:
-                                _followupDate != null
-                                    ? const Color(0xFF333333)
-                                    : Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Icon(
-                      Icons.calendar_today,
-                      color: Colors.grey[600],
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
             ),
 
             const SizedBox(height: 32),
@@ -500,7 +383,7 @@ class _IncomingCallFollowupPopupSheetState
                   child: ElevatedButton(
                     onPressed: _isSaving ? null : _handleSave,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF003D7A),
+                      backgroundColor: const Color(0xFFE65100),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -521,7 +404,7 @@ class _IncomingCallFollowupPopupSheetState
                               ),
                             )
                             : const Text(
-                              'Save Call Update',
+                              'Save Notes',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -535,27 +418,5 @@ class _IncomingCallFollowupPopupSheetState
         ),
       ),
     );
-  }
-
-  /// Format lead type for display - converts 'booked' to 'Booked', etc.
-  String _formatLeadType(String? leadType) {
-    if (leadType == null) return 'Enquiry';
-
-    final type = leadType.toLowerCase();
-    switch (type) {
-      case 'enquiry':
-        return 'Enquiry';
-      case 'booked':
-      case 'booking':
-        return 'Booked';
-      case 'return':
-      case 'hardout':
-        return 'Feedback';
-      case 'bookingconfirmation':
-      case 'booking confirmation':
-        return 'Booking Confirmation';
-      default:
-        return leadType;
-    }
   }
 }

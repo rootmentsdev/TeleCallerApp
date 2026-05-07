@@ -6,7 +6,6 @@ import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/services/phone_call_service.dart';
 import 'package:telecaller_app/controller/call_tracking_controller.dart';
-import 'package:telecaller_app/controller/lead_screen_controller.dart';
 
 class JustDialDetailScreen extends StatefulWidget {
   final LeadModel lead;
@@ -149,17 +148,14 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
               ? _remarksController.text
               : _selectedRemarks;
 
-      final leadController = Provider.of<LeadScreenController>(
-        context,
-        listen: false,
-      );
+      final apiService = ApiService();
 
-      await leadController.updateFollowUpLead(
-        id: widget.lead.id,
-        callStatus: _selectedCallStatus,
-        remarks: finalRemarks,
-        callDuration: _callDuration > 0 ? _callDuration : null,
-      );
+      // Update JustDial lead directly using the API service
+      await apiService.updateJustDialLead(widget.lead.id, {
+        'leadStatus': _selectedCallStatus,
+        'remarks': finalRemarks,
+        if (_callDuration > 0) 'callDuration': _callDuration,
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

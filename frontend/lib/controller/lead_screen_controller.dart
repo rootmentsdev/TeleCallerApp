@@ -382,6 +382,16 @@ class LeadScreenController extends ChangeNotifier {
     return leads.length;
   }
 
+  int getJustDialLeadsCount() {
+    // Backend already filters by store and date, just count by category
+    List<LeadModel> leads =
+        _repository.allLeads
+            .where((lead) => lead.category == LeadConstants.categoryJustDial)
+            .toList();
+
+    return leads.length;
+  }
+
   int getFollowUpLeadsCount() {
     List<LeadModel> leads = _repository.followUpLeads;
 

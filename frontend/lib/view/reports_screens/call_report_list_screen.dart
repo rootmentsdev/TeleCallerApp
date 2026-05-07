@@ -5,10 +5,13 @@ import 'package:telecaller_app/controller/header_controller.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/date_categorization.dart';
+import 'package:telecaller_app/utils/date_formatter_util.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/booking_detail_screen.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen/booked_report_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/enquiry_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/feedback_detail_screen.dart';
 import 'package:telecaller_app/view/reports_screens/report_details_screen/loss_of_sale_detail_screen.dart';
+import 'package:telecaller_app/view/reports_screens/report_details_screen/justdial_detail_screen.dart';
 
 class CallReportListScreen extends StatefulWidget {
   const CallReportListScreen({super.key});
@@ -35,6 +38,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     'Booked',
     'Booking Confirmation',
     'Loss of Sale',
+    'JustDial',
   ];
 
   @override
@@ -104,30 +108,51 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     List<Map<String, dynamic>> allReports,
   ) {
     // First, filter by date category using local filtering
+    // Use updatedAt to show reports called or updated today
     final dateFilteredReports =
         allReports.where((report) {
           try {
-            // Use callDate which is already formatted and available
-            dynamic callDateValue = report['callDate'];
+            // Use callDateObj which is the actual DateTime object (uses updatedAt if available)
+            dynamic callDateObj = report['callDateObj'];
 
-            if (callDateValue == null) return false;
+            if (callDateObj == null) {
+              // Fallback to callDate if callDateObj is not available
+              dynamic callDateValue = report['callDate'];
+              if (callDateValue == null) return false;
 
-            // callDate is already formatted as string (e.g., "25 Mar, 2026")
-            // We need to parse it back to DateTime for comparison
-            DateTime reportDate;
-            if (callDateValue is String) {
-              // Try to parse the formatted date
-              try {
-                reportDate = DateTime.parse(callDateValue);
-              } catch (_) {
-                // If parsing fails, assume it's today's date
-                reportDate = DateTime.now();
+              DateTime reportDate;
+              if (callDateValue is String) {
+                // Try to parse ISO 8601 format
+                try {
+                  reportDate = DateTime.parse(callDateValue);
+                } catch (_) {
+                  // If parsing fails, try using DateFormatterUtil
+                  reportDate =
+                      DateFormatterUtil.parseDate(callDateValue) ??
+                      DateTime.now();
+                }
+              } else if (callDateValue is DateTime) {
+                reportDate = callDateValue;
+              } else {
+                return false;
               }
-            } else if (callDateValue is DateTime) {
-              reportDate = callDateValue;
-            } else {
-              return false;
+
+              final normalizedReportDate = DateTime(
+                reportDate.year,
+                reportDate.month,
+                reportDate.day,
+              );
+              return DateCategorization.isDateInCategory(
+                normalizedReportDate,
+                _selectedTimeRange,
+              );
             }
+
+            // Use callDateObj directly (which uses updatedAt from report_controller)
+            DateTime reportDate =
+                callDateObj is DateTime
+                    ? callDateObj
+                    : DateTime.parse(callDateObj.toString());
 
             final normalizedReportDate = DateTime(
               reportDate.year,
@@ -139,6 +164,7 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
               _selectedTimeRange,
             );
           } catch (e) {
+            print('CallReportListScreen: Error filtering by date: $e');
             return false;
           }
         }).toList();
@@ -147,7 +173,13 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
     final validReports =
         dateFilteredReports.where((report) {
           final callType = _getCallTypeDisplay(report['type']);
-          return callType != 'Call'; // Exclude unknown types
+          final isValid = callType != 'Call';
+          if (!isValid) {
+            print(
+              'CallReportListScreen: Filtering out report - type: ${report['type']}, callType: $callType, name: ${report['name']}',
+            );
+          }
+          return isValid; // Exclude unknown types
         }).toList();
 
     // Remove duplicates based on phone number and lead type
@@ -191,6 +223,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
       case 'lossofsale':
       case 'loss of sale':
         return 'Loss of Sale';
+      case 'justdial':
+        return 'JustDial';
       default:
         return 'Call'; // Unknown type - will be filtered out
     }
@@ -208,6 +242,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFFFFF3E0);
       case 'Loss of Sale':
         return const Color(0xFFFFE0B2);
+      case 'JustDial':
+        return const Color(0xFFE0F2F1);
       default:
         return const Color(0xFFE3F2FD);
     }
@@ -225,6 +261,8 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
         return const Color(0xFFE65100);
       case 'Loss of Sale':
         return const Color(0xFFFF6F00);
+      case 'JustDial':
+        return const Color(0xFF00695C);
       default:
         return const Color(0xFF1976D2);
     }
@@ -637,6 +675,13 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                       callType: callType,
                       reportData: report,
                     );
+                  } else if (callType == 'Booked') {
+                    detailScreen = BookedReportDetailScreen(
+                      name: name,
+                      phone: phone,
+                      callType: callType,
+                      reportData: report,
+                    );
                   } else if (callType == 'Booking Confirmation') {
                     detailScreen = BookingDetailScreen(
                       name: name,
@@ -651,10 +696,17 @@ class _CallReportListScreenState extends State<CallReportListScreen> {
                       callType: callType,
                       reportData: report,
                     );
+                  } else if (callType == 'JustDial') {
+                    // Use JustDial detail screen for JustDial reports
+                    detailScreen = JustDialDetailScreen(
+                      name: name,
+                      phone: phone,
+                      callType: callType,
+                      reportData: report,
+                    );
                   } else {
-                    // For 'Booked' leads, show a generic detail screen or feedback screen
-                    // Since there's no specific Booked detail screen, use FeedbackDetailScreen as fallback
-                    detailScreen = FeedbackDetailScreen(
+                    // Fallback to Enquiry screen for unknown types
+                    detailScreen = EnquiryDetailScreen(
                       name: name,
                       phone: phone,
                       callType: callType,

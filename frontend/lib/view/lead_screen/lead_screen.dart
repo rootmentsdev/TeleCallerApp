@@ -45,6 +45,10 @@ class _LeadScreenState extends State<LeadScreen> {
       );
 
       leadController.init(headerController);
+
+      // Add listener to header controller for auto-refresh on store/date changes
+      headerController.addListener(_onHeaderChanged);
+
       leadController.refresh();
 
       Future.delayed(_initializationDelay, () {
@@ -54,6 +58,44 @@ class _LeadScreenState extends State<LeadScreen> {
         _fetchJustDialLeads(leadController, headerController);
       });
     });
+  }
+
+  /// Called when header controller changes (store or date filter)
+  void _onHeaderChanged() {
+    final leadController = Provider.of<LeadScreenController>(
+      context,
+      listen: false,
+    );
+    final headerController = Provider.of<HeaderController>(
+      context,
+      listen: false,
+    );
+
+    // Refresh the currently selected tab
+    if (leadController.selectedCallTypeIndex == _tabIndexBookingConfirmation) {
+      _fetchBookingConfirmationLeads(leadController, headerController);
+    } else if (leadController.selectedCallTypeIndex == _tabIndexReturn) {
+      _fetchReturnLeads(leadController, headerController);
+    } else if (leadController.selectedCallTypeIndex == _tabIndexJustDial) {
+      _fetchJustDialLeads(leadController, headerController);
+    }
+  }
+
+  @override
+  void dispose() {
+    // Remove listener when screen is disposed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final headerController = Provider.of<HeaderController>(
+          context,
+          listen: false,
+        );
+        headerController.removeListener(_onHeaderChanged);
+      } catch (e) {
+        // Context may not be available during dispose
+      }
+    });
+    super.dispose();
   }
 
   /// Helper method to normalize store parameter (null if "All Stores")
@@ -162,16 +204,6 @@ class _LeadScreenState extends State<LeadScreen> {
         dateTo = _formatDateForApi(endOfDay);
       }
 
-      print('═══════════════════════════════════════════════════════════');
-      print('LeadScreen: FETCHING FEEDBACK CALLS');
-      print('═══════════════════════════════════════════════════════════');
-      print('Store: $storeParam');
-      print('Date From: $dateFrom');
-      print('Date To: $dateTo');
-      print('Date Range Mode: ${headerController.isRangeMode}');
-      print('Selected Date: ${headerController.selectedDate}');
-      print('═══════════════════════════════════════════════════════════');
-
       await controller.fetchReturnLeadsFromApi(
         store: storeParam,
         fromDate: dateFrom,
@@ -264,34 +296,6 @@ class _LeadScreenState extends State<LeadScreen> {
 
   // =============================================================
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final headerController = Provider.of<HeaderController>(
-        context,
-        listen: false,
-      );
-      final leadController = Provider.of<LeadScreenController>(
-        context,
-        listen: false,
-      );
-
-      leadController.refresh();
-
-      if (!_isLoadingBookingConfirmation) {
-        _fetchBookingConfirmationLeads(leadController, headerController);
-      }
-      if (!_isLoadingReturn) {
-        _fetchReturnLeads(leadController, headerController);
-      }
-      if (!_isLoadingJustDial) {
-        _fetchJustDialLeads(leadController, headerController);
-      }
-    });
-  }
-
   /// Helper method to check if a category is currently loading
   bool _isLoadingCategory(int selectedIndex) {
     return (_isLoadingBookingConfirmation &&
@@ -364,7 +368,7 @@ class _LeadScreenState extends State<LeadScreen> {
                     _buildCategoryCard(
                       icon: Icons.headphones_outlined,
                       label: "Just Dial",
-                      count: 3,
+                      count: controller.getJustDialLeadsCount(),
                       isSelected:
                           controller.selectedCallTypeIndex == _tabIndexJustDial,
                       onTap: () {

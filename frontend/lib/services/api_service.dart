@@ -2,10 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:telecaller_app/services/auth_service.dart';
+import 'package:telecaller_app/services/http_client.dart';
+import 'package:telecaller_app/exceptions/api_exceptions.dart';
 import 'package:telecaller_app/utils/api_config.dart';
 
 class ApiService {
   static Function? onSessionExpired;
+  static final _httpClient = HttpClient();
 
   Future<Map<String, String>> _getAuthHeaders() async {
     final headers = <String, String>{
@@ -112,48 +115,23 @@ class ApiService {
     int? page,
     int? limit,
   }) async {
-    final url = Uri.parse(
-      ApiConfig.getReturnLeads(
-        store: store,
-        fromDate: fromDate,
-        toDate: toDate,
-        page: page,
-        limit: limit,
-      ),
+    final url = ApiConfig.getReturnLeads(
+      store: store,
+      fromDate: fromDate,
+      toDate: toDate,
+      page: page,
+      limit: limit,
     );
 
     try {
-      final headers = await _getAuthHeaders();
-
       print('ApiService: Fetching Return leads from: $url');
-
-      final response = await http.get(url, headers: headers);
-
-      print('ApiService: Return response status: ${response.statusCode}');
-      print('ApiService: Return response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          if (decoded.containsKey('data')) {
-            return {'data': decoded['data']};
-          }
-          if (decoded.containsKey('leads')) {
-            return {'data': decoded['leads']};
-          }
-          return decoded;
-        } else if (decoded is List) {
-          return {'data': decoded};
-        }
-        return {'data': []};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load Return leads: Status ${response.statusCode}',
-        );
-      }
+      final response = await _httpClient.get(url);
+      print('ApiService: Return response status: 200');
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
+      print('ApiService: Error fetching Return leads: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -165,42 +143,24 @@ class ApiService {
 
   // Get Return Lead Details
   Future<Map<String, dynamic>> getReturn(String id) async {
-    final url = Uri.parse(ApiConfig.updateReturnLead(id));
+    final url = ApiConfig.updateReturnLead(id);
 
     try {
-      final headers = await _getAuthHeaders();
-
       print('ApiService: getReturn - URL: $url');
-      print('ApiService: getReturn - Headers: $headers');
 
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
+      final response = await _httpClient.get(url);
 
-      final response = await http.get(url, headers: headers);
-
-      print('ApiService: getReturn - Response status: ${response.statusCode}');
-      print('ApiService: getReturn - Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          final normalized = <String, dynamic>{};
-          decoded.forEach((key, value) {
-            final camelKey = _snakeToCamel(key);
-            normalized[camelKey] = value;
-          });
-          return normalized;
-        }
-        return decoded;
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load Return lead: Status ${response.statusCode}',
-        );
-      }
+      // Normalize snake_case keys to camelCase
+      final normalized = <String, dynamic>{};
+      response.forEach((key, value) {
+        final camelKey = _snakeToCamel(key);
+        normalized[camelKey] = value;
+      });
+      return normalized;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
+      print('ApiService: Error fetching Return lead: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
@@ -232,15 +192,9 @@ class ApiService {
     String? service,
     String? refundStatus,
   }) async {
-    final url = Uri.parse(ApiConfig.updateReturnLead(id));
+    final url = ApiConfig.updateReturnLead(id);
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       final requestBody = <String, dynamic>{
         'call_status': callStatus ?? 'Not Called',
         'lead_status': leadStatus ?? 'No Status',
@@ -268,7 +222,6 @@ class ApiService {
         requestBody['follow_up_date'] = followUpDate.toIso8601String();
       }
 
-      // Add missing feedback fields
       if (subCategory != null && subCategory.trim().isNotEmpty) {
         requestBody['sub_category'] = subCategory.trim();
       }
@@ -300,31 +253,13 @@ class ApiService {
         requestBody['refund_status'] = refundStatus.trim();
       }
 
-      final requestBodyJson = json.encode(requestBody);
-
       print('ApiService: Updating Return lead');
       print('ApiService: POST URL => $url');
-      print('ApiService: Request body => $requestBodyJson');
 
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: requestBodyJson,
-      );
-
-      print('ApiService: Update response status: ${response.statusCode}');
-      print('ApiService: Update response body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final decoded = json.decode(response.body);
-        return decoded is Map<String, dynamic> ? decoded : {};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to update Return lead: Status ${response.statusCode}',
-        );
-      }
+      final response = await _httpClient.post(url, requestBody);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error updating Return lead: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -341,44 +276,16 @@ class ApiService {
     String? store,
     int? limit,
   }) async {
-    final url = Uri.parse(
-      ApiConfig.getFollowupLeads(store: store, limit: limit),
-    );
+    final url = ApiConfig.getFollowupLeads(store: store, limit: limit);
 
     try {
-      final headers = await _getAuthHeaders();
-
       print('ApiService: Fetching follow-up leads');
       print('ApiService: URL => $url');
 
-      final response = await http.get(url, headers: headers);
-
-      print(
-        'ApiService: Follow-up leads response status: ${response.statusCode}',
-      );
-      print('ApiService: Follow-up leads response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          if (decoded.containsKey('data')) {
-            return {'data': decoded['data']};
-          }
-          if (decoded.containsKey('leads')) {
-            return {'data': decoded['leads']};
-          }
-          return decoded;
-        } else if (decoded is List) {
-          return {'data': decoded};
-        }
-        return {'data': []};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load follow-up leads: Status ${response.statusCode}',
-        );
-      }
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error fetching follow-up leads: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -403,52 +310,27 @@ class ApiService {
     int? page,
     int? limit,
   }) async {
-    final url = Uri.parse(
-      ApiConfig.getReports(
-        leadType: leadType,
-        editedBy: editedBy,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        createdAtFrom: createdAtFrom,
-        createdAtTo: createdAtTo,
-        editedAtFrom: editedAtFrom,
-        editedAtTo: editedAtTo,
-        page: page,
-        limit: limit,
-      ),
+    final url = ApiConfig.getReports(
+      leadType: leadType,
+      editedBy: editedBy,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      createdAtFrom: createdAtFrom,
+      createdAtTo: createdAtTo,
+      editedAtFrom: editedAtFrom,
+      editedAtTo: editedAtTo,
+      page: page,
+      limit: limit,
     );
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       print('ApiService: Fetching reports');
       print('ApiService: URL => $url');
 
-      final response = await http.get(url, headers: headers);
-
-      print('ApiService: Reports response status: ${response.statusCode}');
-      print('ApiService: Reports response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-        if (decodedResponse is Map<String, dynamic>) {
-          return decodedResponse;
-        } else if (decodedResponse is List) {
-          return {'reports': decodedResponse, 'pagination': {}};
-        } else {
-          throw Exception('Unexpected response format from server');
-        }
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load reports: Status ${response.statusCode}',
-        );
-      }
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error fetching reports: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -467,49 +349,21 @@ class ApiService {
     String? toDate,
     int? limit,
   }) async {
-    final url = Uri.parse(
-      ApiConfig.getCompletedLeads(
-        store: store,
-        fromDate: fromDate,
-        toDate: toDate,
-      ),
+    final url = ApiConfig.getCompletedLeads(
+      store: store,
+      fromDate: fromDate,
+      toDate: toDate,
+      limit: limit,
     );
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       print('ApiService: Fetching completed leads');
       print('ApiService: URL => $url');
 
-      final response = await http.get(url, headers: headers);
-
-      print(
-        'ApiService: Completed leads response status: ${response.statusCode}',
-      );
-      print('ApiService: Completed leads response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-        if (decodedResponse is Map<String, dynamic>) {
-          return decodedResponse;
-        } else if (decodedResponse is List) {
-          return {
-            'data': {'leads': decodedResponse},
-          };
-        } else {
-          throw Exception('Unexpected response format from server');
-        }
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load completed leads: Status ${response.statusCode}',
-        );
-      }
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error fetching completed leads: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -529,41 +383,22 @@ class ApiService {
     int? page,
     int? limit,
   }) async {
-    final url = Uri.parse(
-      ApiConfig.getComplaintLeads(
-        store: store,
-        fromDate: dateFrom,
-        toDate: dateTo,
-        page: page,
-        limit: limit,
-      ),
+    final url = ApiConfig.getComplaintLeads(
+      store: store,
+      fromDate: dateFrom,
+      toDate: dateTo,
+      page: page,
+      limit: limit,
     );
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       print('ApiService: Fetching complaints');
       print('ApiService: URL => $url');
 
-      final response = await http.get(url, headers: headers);
-
-      print('ApiService: Complaints response status: ${response.statusCode}');
-      print('ApiService: Complaints response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load complaints: Status ${response.statusCode}',
-        );
-      }
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error fetching complaints: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -577,27 +412,14 @@ class ApiService {
 
   // Get Complaint by ID
   Future<Map<String, dynamic>> getComplaintById(String id) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/complaints/$id');
+    final url = '${ApiConfig.baseUrl}/api/leads/complaints/$id';
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
-      final response = await http.get(url, headers: headers);
-
-      if (response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load complaint: Status ${response.statusCode}',
-        );
-      }
+      print('ApiService: Fetching complaint by ID: $id');
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error fetching complaint by ID: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -617,54 +439,22 @@ class ApiService {
     int? page,
     int? limit,
   }) async {
-    final url = Uri.parse(
-      ApiConfig.getJustDialLeads(
-        store: store,
-        fromDate: fromDate,
-        toDate: toDate,
-        page: page,
-        limit: limit,
-      ),
+    final url = ApiConfig.getJustDialLeads(
+      store: store,
+      fromDate: fromDate,
+      toDate: toDate,
+      page: page,
+      limit: limit,
     );
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       print('ApiService: Fetching JustDial leads');
       print('ApiService: URL => $url');
 
-      final response = await http.get(url, headers: headers);
-
-      print(
-        'ApiService: JustDial leads response status: ${response.statusCode}',
-      );
-      print('ApiService: JustDial leads response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-        if (decodedResponse is Map<String, dynamic>) {
-          if (decodedResponse.containsKey('data')) {
-            return {'data': decodedResponse['data']};
-          }
-          if (decodedResponse.containsKey('leads')) {
-            return {'data': decodedResponse['leads']};
-          }
-          return decodedResponse;
-        } else if (decodedResponse is List) {
-          return {'data': decodedResponse};
-        }
-        return {'data': []};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load JustDial leads: Status ${response.statusCode}',
-        );
-      }
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error fetching JustDial leads: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -678,51 +468,69 @@ class ApiService {
 
   // Get JustDial Lead Details
   Future<Map<String, dynamic>> getJustDialLeadById(String id) async {
-    final url = Uri.parse(ApiConfig.getJustDialLeadById(id));
+    final url = ApiConfig.getJustDialLeadById(id);
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       print('ApiService: getJustDialLeadById - URL: $url');
-      print('ApiService: getJustDialLeadById - Headers: $headers');
 
-      final response = await http.get(url, headers: headers);
+      final response = await _httpClient.get(url);
 
-      print(
-        'ApiService: getJustDialLeadById - Response status: ${response.statusCode}',
-      );
-      print(
-        'ApiService: getJustDialLeadById - Response body: ${response.body}',
-      );
-
-      if (response.statusCode == 200) {
-        final decoded = json.decode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          final normalized = <String, dynamic>{};
-          decoded.forEach((key, value) {
-            final camelKey = _snakeToCamel(key);
-            normalized[camelKey] = value;
-          });
-          return normalized;
-        }
-        return decoded;
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception(
-          'Failed to load JustDial lead: Status ${response.statusCode}',
-        );
-      }
+      // Normalize snake_case keys to camelCase
+      final normalized = <String, dynamic>{};
+      response.forEach((key, value) {
+        final camelKey = _snakeToCamel(key);
+        normalized[camelKey] = value;
+      });
+      return normalized;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error fetching JustDial lead by ID: $e');
       FirebaseCrashlytics.instance.recordError(
         e,
         s,
         reason: 'getJustDialLeadById failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Update JustDial Lead
+  Future<Map<String, dynamic>> updateJustDialLead(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    final url = ApiConfig.updateJustDialLead(id);
+
+    try {
+      // Convert camelCase keys to snake_case for API
+      final requestBody = <String, dynamic>{};
+      data.forEach((key, value) {
+        final snakeKey = _camelToSnake(key);
+        requestBody[snakeKey] = value;
+      });
+
+      print('ApiService: updateJustDialLead - URL: $url');
+      print('ApiService: updateJustDialLead - Request Body: $requestBody');
+
+      // Use POST method like other update endpoints
+      final response = await _httpClient.post(url, requestBody);
+
+      // Normalize snake_case keys to camelCase
+      final normalized = <String, dynamic>{};
+      response.forEach((key, value) {
+        final camelKey = _snakeToCamel(key);
+        normalized[camelKey] = value;
+      });
+      return normalized;
+    } on AuthenticationException {
+      throw AuthenticationException();
+    } catch (e, s) {
+      print('ApiService: Error updating JustDial lead: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateJustDialLead failed',
       );
       rethrow;
     }
@@ -749,15 +557,9 @@ class ApiService {
     bool markAsComplaint = false,
     String? callStatus,
   }) async {
-    final url = Uri.parse(ApiConfig.addLead());
+    final url = ApiConfig.addLead();
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       String normalizedLeadType = leadType.toLowerCase();
       if (normalizedLeadType == 'booking') {
         normalizedLeadType = 'booked';
@@ -770,7 +572,7 @@ class ApiService {
         'phone': phoneNumber,
         'store': store,
         'leadtype': normalizedLeadType,
-        'leadStatus': 'completed', // Mark as completed when created
+        'leadStatus': 'completed',
         'callStatus': _normalizeCallStatus(callStatus ?? 'Not Called'),
         'subCategory': subCategory,
         'itemCategory': itemCategory,
@@ -782,39 +584,23 @@ class ApiService {
         'markasComplaint': markAsComplaint,
         'markasFollowup': followUpFlag,
         'followupDate':
-            followUpFlag && followUpDate != null ? followUpDate : null,
+            _shouldSendFollowupDate(callStatus, followUpFlag, followUpDate)
+                ? followUpDate
+                : null,
         'callDuration': callDuration?.toString() ?? '0',
       };
 
       requestBody.removeWhere((key, value) => value == null);
 
-      final requestBodyJson = json.encode(requestBody);
-
       print('ApiService: Creating new lead');
       print('ApiService: URL => $url');
       print('ApiService: Lead Type Received: $leadType');
       print('ApiService: Normalized Lead Type: $normalizedLeadType');
-      print('ApiService: POST BODY SENT: $requestBodyJson');
 
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: requestBodyJson,
-      );
-
-      print('ApiService: Create lead response status: ${response.statusCode}');
-      print('ApiService: CREATED LEAD RESPONSE: ${response.body}');
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-        return decodedResponse is Map<String, dynamic>
-            ? decodedResponse
-            : {'success': true, 'data': decodedResponse};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception('Failed to create lead: Status ${response.statusCode}');
-      }
+      final response = await _httpClient.post(url, requestBody);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error creating lead: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -842,9 +628,24 @@ class ApiService {
       case 'not called':
       case '':
       default:
-        // Backend doesn't accept 'not called', use 'not connected' as default
         return 'not connected';
     }
+  }
+
+  /// Determines if followupDate should be sent to backend
+  /// Backend requires followupDate when callStatus is "interested" or "not connected"
+  bool _shouldSendFollowupDate(
+    String? callStatus,
+    bool followUpFlag,
+    String? followUpDate,
+  ) {
+    if (followUpDate == null) return false;
+
+    final normalizedStatus = _normalizeCallStatus(callStatus ?? '');
+    final requiresFollowup =
+        normalizedStatus == 'interested' || normalizedStatus == 'not connected';
+
+    return followUpFlag || requiresFollowup;
   }
 
   // Update Lead
@@ -866,15 +667,9 @@ class ApiService {
     int? callDuration,
     bool isStarred = false,
   }) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/$id');
+    final url = '${ApiConfig.baseUrl}/api/leads/$id';
 
     try {
-      final headers = await _getAuthHeaders();
-
-      if (!headers.containsKey('Authorization')) {
-        throw Exception('Authentication required. Please login again.');
-      }
-
       final requestBody = <String, dynamic>{
         'customer_name': leadName,
         'phone_number': phoneNumber,
@@ -905,31 +700,13 @@ class ApiService {
 
       requestBody['mark_as_issue'] = isStarred;
 
-      final requestBodyJson = json.encode(requestBody);
-
       print('ApiService: Updating lead');
       print('ApiService: POST URL: $url');
-      print('ApiService: POST BODY SENT: $requestBodyJson');
 
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: requestBodyJson,
-      );
-
-      print('ApiService: Update lead response status: ${response.statusCode}');
-      print('ApiService: Update lead response body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final decodedResponse = json.decode(response.body);
-        return decodedResponse is Map<String, dynamic>
-            ? decodedResponse
-            : {'success': true, 'data': decodedResponse};
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please login again.');
-      } else {
-        throw Exception('Failed to update lead: Status ${response.statusCode}');
-      }
+      final response = await _httpClient.post(url, requestBody);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
     } catch (e, s) {
       print('ApiService: Error updating lead: $e');
       FirebaseCrashlytics.instance.recordError(
@@ -1526,6 +1303,18 @@ class ApiService {
     return camel;
   }
 
+  String _camelToSnake(String str) {
+    String snake = '';
+    for (int i = 0; i < str.length; i++) {
+      if (str[i].toUpperCase() == str[i] && i > 0) {
+        snake += '_${str[i].toLowerCase()}';
+      } else {
+        snake += str[i];
+      }
+    }
+    return snake;
+  }
+
   // ===== Phone Identification =====
   /// GET /api/customers/check-phone?phone=$phone
   /// Returns the popup type and lead data for an incoming call.
@@ -1677,6 +1466,53 @@ class ApiService {
         e,
         s,
         reason: 'getPerformanceMetrics failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Post Lead Update - for incoming call report popup
+  Future<Map<String, dynamic>> postLeadUpdate(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/leads/$id');
+
+    try {
+      final headers = await _getAuthHeaders();
+
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final requestBodyJson = json.encode(body);
+
+      print('ApiService: postLeadUpdate - URL: $url');
+      print('ApiService: postLeadUpdate - Body: $requestBodyJson');
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print('ApiService: postLeadUpdate - Status: ${response.statusCode}');
+      print('ApiService: postLeadUpdate - Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception('Failed to update lead: Status ${response.statusCode}');
+      }
+    } catch (e, s) {
+      print('ApiService: postLeadUpdate - Error: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'postLeadUpdate failed',
       );
       rethrow;
     }

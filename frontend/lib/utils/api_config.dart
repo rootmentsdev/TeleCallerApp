@@ -206,6 +206,10 @@ class ApiConfig {
     return "$leadsEndpoint/justdial/$id";
   }
 
+  static String updateJustDialLead(String id) {
+    return "$leadsEndpoint/justdial/$id";
+  }
+
   // ===== Completed Leads (Reports) =====
   static String getCompletedLeads({
     String? store,
