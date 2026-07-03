@@ -68,6 +68,10 @@ class ReportModel {
       "phone": json["phone"] ?? json["phone_number"],
       "store": json["store"],
       "location": json["store"],
+      // JustDial-specific location fields
+      "city": json["city"],
+      "area": json["area"],
+      "brancharea": json["brancharea"],
       "lead_type": json["leadType"] ?? json["lead_type"],
       "leadType": json["leadType"] ?? json["lead_type"],
       "call_status": json["callStatus"] ?? json["call_status"],

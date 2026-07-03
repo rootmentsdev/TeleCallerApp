@@ -29,6 +29,7 @@ class _IncomingCallJustDialPopupSheetState
   @override
   void initState() {
     super.initState();
+    // Initialize with existing reason from the lead
     _remarksController = TextEditingController(text: widget.lead.reason ?? '');
   }
 
@@ -201,6 +202,30 @@ class _IncomingCallJustDialPopupSheetState
             ),
 
             const SizedBox(height: 12),
+
+            // Call Duration Badge (if available)
+            if (widget.callDuration != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Duration: ${widget.callDuration}s',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFE65100),
+                    ),
+                  ),
+                ),
+              ),
 
             // Location and Store
             Row(

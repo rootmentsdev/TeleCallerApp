@@ -111,17 +111,27 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
       listen: false,
     );
 
+    print('ReturnLeadDetailsScreen: _onCallDurationUpdate called');
+    print('  - lastDuration: ${callTrackingController.lastDuration}');
+    print(
+      '  - lastCallWasAnswered: ${callTrackingController.lastCallWasAnswered}',
+    );
+    print('  - current _callDuration: $_callDuration');
+
     if (callTrackingController.lastDuration != null &&
         callTrackingController.lastDuration! > 0) {
       if (mounted) {
         setState(() {
           _callDuration = callTrackingController.lastDuration!;
+          print('  - Updated _callDuration to: $_callDuration');
           // Auto-set call status to Connected if duration > 0
           if (_selectedCallStatus == null) {
             _selectedCallStatus = "Connected";
           }
         });
       }
+    } else {
+      print('  - Duration not captured (null or 0)');
     }
   }
 
@@ -234,6 +244,20 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
     });
 
     try {
+      // FIX: Get latest duration from CallTrackingController before saving
+      final callTrackingController = Provider.of<CallTrackingController>(
+        context,
+        listen: false,
+      );
+
+      // Use the latest duration from controller if available
+      final finalCallDuration =
+          callTrackingController.lastDuration ?? _callDuration;
+
+      print(
+        'ReturnLeadDetailsScreen: Saving with duration=$finalCallDuration (controller=${callTrackingController.lastDuration}, local=$_callDuration)',
+      );
+
       // Use custom remarks if "Others" is selected, otherwise use the selected remarks
       final finalRemarks =
           _selectedRemarks == 'Others'
@@ -250,7 +274,7 @@ class _ReturnLeadDetailsScreenState extends State<ReturnLeadDetailsScreen> {
         callStatus: _selectedCallStatus,
         rating: _markAsComplaint ? null : (_rating > 0 ? _rating : null),
         remarks: finalRemarks,
-        callDuration: _callDuration > 0 ? _callDuration : null,
+        callDuration: finalCallDuration,
         markAsComplaint: _markAsComplaint ? true : null,
         subCategory: _selectedComplaintSubCategory,
         numberOfFunctions:

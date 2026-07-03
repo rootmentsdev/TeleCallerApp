@@ -209,9 +209,8 @@ class ApiService {
       if (remarks != null && remarks.trim().isNotEmpty) {
         requestBody['remarks'] = remarks.trim();
       }
-      if (callDuration != null) {
-        requestBody['call_duration'] = callDuration;
-      }
+      // Always include call_duration field to ensure backend consistency
+      requestBody['call_duration'] = callDuration ?? 0;
       if (followUpFlag != null) {
         requestBody['follow_up_flag'] = followUpFlag;
         if (followUpFlag && followUpDate != null) {
@@ -1426,7 +1425,7 @@ class ApiService {
       }
 
       final url = Uri.parse(
-        '${ApiConfig.baseUrl}/leads/performance',
+        '${ApiConfig.baseUrl}/api/leads/performance',
       ).replace(queryParameters: queryParams);
 
       print('ApiService: getPerformanceMetrics → URL: $url');

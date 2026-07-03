@@ -208,6 +208,19 @@ class LeadModel {
       location = json['location'];
     }
 
+    // JustDial leads don't have a 'store' field — use city/area/brancharea instead
+    if (location == null || location.isEmpty) {
+      final branchArea = json['brancharea']?.toString();
+      final area = json['area']?.toString();
+      final city = json['city']?.toString();
+      location =
+          (branchArea != null && branchArea.isNotEmpty)
+              ? branchArea
+              : (area != null && area.isNotEmpty)
+              ? area
+              : city;
+    }
+
     // Handle both snake_case and camelCase for status fields
     final leadStatus = json['lead_status'] ?? json['leadStatus'];
     final callStatus = json['call_status'] ?? json['callStatus'];
@@ -233,9 +246,10 @@ class LeadModel {
     // Handle call count
     final callCount = json['call_count'] ?? json['callCount'] ?? 0;
 
-    // Handle createdAt (both formats)
+    // Handle createdAt (both formats) — also check JustDial 'date' field
     DateTime createdAt = DateTime.now();
-    final createdAtValue = json['created_at'] ?? json['createdAt'];
+    final createdAtValue =
+        json['created_at'] ?? json['createdAt'] ?? json['date'];
     if (createdAtValue != null) {
       try {
         createdAt = DateTime.parse(createdAtValue.toString());

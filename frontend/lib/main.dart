@@ -17,6 +17,7 @@ import 'package:telecaller_app/view/login_screen.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/services/notification_service.dart';
+import 'package:telecaller_app/view/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -63,7 +64,7 @@ class MyApp extends StatelessWidget {
         title: 'Demo',
         theme: ThemeData(useMaterial3: true),
         navigatorKey: navigatorKey,
-        home: const RootScreen(),
+        home: const VideoSplashScreen(),
         routes: {'/login': (context) => const LoginScreen()},
       ),
     );

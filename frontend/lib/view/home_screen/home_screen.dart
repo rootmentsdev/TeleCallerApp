@@ -191,16 +191,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       print('HomeScreen: Performance metrics response: $response');
 
-      // Extract total calls from response
+      // Extract calls today count from response (prioritize daily count fields)
       int callsTodayCount = 0;
-      if (response.containsKey('totalCalls')) {
-        callsTodayCount = response['totalCalls'] ?? 0;
+      if (response.containsKey('callsToday')) {
+        callsTodayCount = response['callsToday'] ?? 0;
       } else if (response.containsKey('calls_today')) {
         callsTodayCount = response['calls_today'] ?? 0;
+      } else if (response.containsKey('totalCalls')) {
+        callsTodayCount = response['totalCalls'] ?? 0;
       } else if (response.containsKey('total')) {
         callsTodayCount = response['total'] ?? 0;
-      } else if (response.containsKey('callsToday')) {
-        callsTodayCount = response['callsToday'] ?? 0;
       }
 
       print('HomeScreen: Total calls today: $callsTodayCount');

@@ -55,6 +55,7 @@ Call Details:
 Call Date: ${_getDisplayValue(data['callDate'], 'Not available')}
 Location: ${_getDisplayValue(data['storeName'], 'Not available')}
 Sub Category: ${_getDisplayValue(data['subCategory'], 'Not available')}
+Item Category: ${_getDisplayValue(data['itemCategory'], 'Not available')}
 Close Action: ${_getDisplayValue(data['closingAction'], 'Not available')}
 Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
 ''';
@@ -64,44 +65,118 @@ Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
   @override
   Widget build(BuildContext context) {
     final data = widget.reportData ?? {};
-    final leadData = data['leadData'] ?? data;
 
+    // Extract leadSnapshot from reportData (ReportModel structure)
+    // If reportData is a ReportModel converted to map, it has 'leadSnapshot' key
+    // If reportData is just lead data, use it directly
+    final leadSnapshot = data['leadSnapshot'] as Map<String, dynamic>? ?? data;
+    final leadData = data['leadData'] as Map<String, dynamic>? ?? leadSnapshot;
+
+    // Extract call date - check multiple possible field names
     final callDateRaw = _getDisplayValue(
       data['callDate'] ??
           data['date'] ??
+          data['createdAt'] ??
+          data['created_at'] ??
           leadData['created_at'] ??
-          leadData['createdAt'],
+          leadData['createdAt'] ??
+          leadSnapshot['created_at'] ??
+          leadSnapshot['createdAt'],
       'Not available',
     );
     final callDate = _formatDateString(callDateRaw);
+
+    // Extract location - JustDial uses city, area, brancharea fields
     final location = _getDisplayValue(
-      data['storeName'] ?? leadData['store'] ?? leadData['storeName'],
+      data['storeName'] ??
+          data['store'] ??
+          data['location'] ??
+          leadData['store'] ??
+          leadData['storeName'] ??
+          leadData['location'] ??
+          leadData['brancharea'] ??
+          leadData['area'] ??
+          leadData['city'] ??
+          leadSnapshot['store'] ??
+          leadSnapshot['storeName'] ??
+          leadSnapshot['location'] ??
+          leadSnapshot['brancharea'] ??
+          leadSnapshot['area'] ??
+          leadSnapshot['city'],
       'Not available',
     );
+
+    // Extract sub category
     final subCategory = _getDisplayValue(
       data['subCategory'] ??
           data['sub_category'] ??
           leadData['subCategory'] ??
-          leadData['sub_category'],
+          leadData['sub_category'] ??
+          leadSnapshot['subCategory'] ??
+          leadSnapshot['sub_category'],
       'Not available',
     );
+
+    // Extract item category
+    final itemCategory = _getDisplayValue(
+      data['itemCategory'] ??
+          data['item_category'] ??
+          leadData['itemCategory'] ??
+          leadData['item_category'] ??
+          leadSnapshot['itemCategory'] ??
+          leadSnapshot['item_category'],
+      'Not available',
+    );
+
+    // Extract closing action / status
     final closingAction = _getDisplayValue(
       data['closingAction'] ??
           data['closing_action'] ??
           leadData['closingAction'] ??
-          leadData['closing_action'],
+          leadData['closing_action'] ??
+          leadSnapshot['closingAction'] ??
+          leadSnapshot['closing_action'],
       'Not available',
     );
+
+    // Extract remarks - check multiple field names
     final remarks = _getDisplayValue(
-      data['remarks'] ?? leadData['remarks'] ?? leadData['reason'],
+      data['remarks'] ??
+          data['reason'] ??
+          leadData['remarks'] ??
+          leadData['reason'] ??
+          leadSnapshot['remarks'] ??
+          leadSnapshot['reason'],
       'Not available',
     );
+
+    // Extract call duration - check both top-level and nested
     final callDuration =
         data['callDuration'] != null
             ? '${data['callDuration']}s'
             : (data['call_duration'] != null
                 ? '${data['call_duration']}s'
-                : 'Not available');
+                : (leadData['callDuration'] != null
+                    ? '${leadData['callDuration']}s'
+                    : (leadData['call_duration'] != null
+                        ? '${leadData['call_duration']}s'
+                        : (leadSnapshot['callDuration'] != null
+                            ? '${leadSnapshot['callDuration']}s'
+                            : (leadSnapshot['call_duration'] != null
+                                ? '${leadSnapshot['call_duration']}s'
+                                : 'Not available')))));
+
+    // Extract follow-up date
+    final followUpDateRaw = _getDisplayValue(
+      data['followUpDate'] ??
+          data['follow_up_date'] ??
+          leadData['followUpDate'] ??
+          leadData['follow_up_date'] ??
+          leadSnapshot['followUpDate'] ??
+          leadSnapshot['follow_up_date'],
+      'Not available',
+    );
+    final followUpDate = _formatDateString(followUpDateRaw);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -360,7 +435,140 @@ Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
                   ),
                   const SizedBox(height: 16),
 
-                  // Remarks / Notes
+                  // Item Category
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Item Category',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        itemCategory,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Remarks / Notes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        remarks,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Follow Up Section
+                  Text(
+                    'Follow Up',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                      fontFamily: TextConstant.dmSansMedium,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Follow Up Call Date with badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Call Date',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontFamily: TextConstant.dmSansRegular,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            followUpDate,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3E0),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          callDuration,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Closing Action in Follow Up
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Closing Action',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontFamily: TextConstant.dmSansRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        closingAction,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Remarks in Follow Up
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

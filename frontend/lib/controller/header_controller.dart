@@ -46,6 +46,7 @@ class HeaderController extends ChangeNotifier {
       location: 'Perinthalmanna',
       normalizedName: 'Z-Perinthalmanna',
     ),
+    Store(brand: 'DS', location: 'Edappally', normalizedName: 'DS-Edappally'),
   ];
 
   HeaderController() {

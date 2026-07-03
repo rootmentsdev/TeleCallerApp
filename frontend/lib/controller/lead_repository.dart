@@ -823,6 +823,21 @@ class LeadRepository extends ChangeNotifier {
         brand = leadData['brand']?.toString();
       }
 
+      // Fallback for JustDial leads: use city/area/brancharea fields
+      // JustDial API does not return a 'store' field — it returns city, area, brancharea
+      if (location == null || location.isEmpty) {
+        final city = leadData['city']?.toString();
+        final area = leadData['area']?.toString();
+        final branchArea = leadData['brancharea']?.toString();
+        // Prefer brancharea (most specific), then area, then city
+        location =
+            (branchArea != null && branchArea.isNotEmpty)
+                ? branchArea
+                : (area != null && area.isNotEmpty)
+                ? area
+                : city;
+      }
+
       if (phone.isEmpty) {
         print('LeadRepository: Skipping lead - phone is empty');
         return null;
@@ -1495,12 +1510,17 @@ class LeadRepository extends ChangeNotifier {
         // Store called leads and follow-up leads before clearing
         // Exclude called return leads and booking confirmation leads (moved to reports)
         // In debug mode, also preserve test booking confirmation lead for UI checking
+        // IMPORTANT: Also preserve JustDial, Return, and BookingConfirmation leads that were
+        // fetched by their dedicated endpoints — fetchAllLeadsFromApi only manages the
+        // "completed" feed and must not wipe out leads owned by other fetch methods.
         final preservedLeads =
             _leads.where((lead) {
               final isReturnLead =
                   lead.category == LeadConstants.categoryRentOut;
               final isBookingConfirmationLead =
                   lead.category == LeadConstants.categoryBookingConfirmation;
+              final isJustDialLead =
+                  lead.category == LeadConstants.categoryJustDial;
               final isCalled = LeadConstants.isCalledStatus(lead.callStatus);
 
               // Preserve test lead in debug mode for UI checking
@@ -1511,6 +1531,12 @@ class LeadRepository extends ChangeNotifier {
               // Don't preserve called return leads or booking confirmation leads
               if ((isReturnLead || isBookingConfirmationLead) && isCalled) {
                 return false;
+              }
+
+              // Preserve JustDial, Return, and BookingConfirmation leads regardless of call status
+              // These are managed by their own dedicated fetch methods and must not be cleared here
+              if (isJustDialLead || isReturnLead || isBookingConfirmationLead) {
+                return true;
               }
 
               // Preserve other called leads and follow-up leads

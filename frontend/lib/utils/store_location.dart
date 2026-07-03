@@ -129,10 +129,13 @@ class StoreLocations {
     'Kottakkal',
   ];
 
+  static const List<String> dapperSquadStores = ['Edappally'];
+
   /// Map of brand -> store list
   static const Map<String, List<String>> brandStores = {
     'Suitor Guy': suitorGuyStores,
     'Zorucci': zorucciStores,
+    'Dapper Squad': dapperSquadStores,
   };
 
   /// Normalize store name from backend format

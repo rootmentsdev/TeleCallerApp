@@ -1,0 +1,21 @@
+{
+  "file_name": "PixVerse_V6_Image_Text_360P_Animate_a_sleek_lo.mp4",
+  "duration_seconds": 5.04,
+  "fps": 24.0,
+  "resolution": {
+    "width": 640,
+    "height": 360
+  },
+  "audio_present": true,
+  "format": "mp4",
+  "app_animation_config": {
+    "type": "logo_animation",
+    "loop": true,
+    "autoplay": true,
+    "recommended_usage": [
+      "Splash Screen",
+      "Loading Animation",
+      "Hero Logo Animation"
+    ]
+  }
+}

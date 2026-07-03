@@ -449,60 +449,12 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                   ),
                   const SizedBox(height: 12),
 
-                  // Follow Up Call Date with badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Call Date',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontFamily: TextConstant.dmSansRegular,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            followUpDate,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          callDuration,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1976D2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Closing Action in Follow Up
+                  // Follow Up Date
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Closing Action',
+                        'Follow Up Date',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -511,32 +463,7 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        closingAction,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Remarks in Follow Up
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Remarks / Notes',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontFamily: TextConstant.dmSansRegular,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        remarks,
+                        followUpDate,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,

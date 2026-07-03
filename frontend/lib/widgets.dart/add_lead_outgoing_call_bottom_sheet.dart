@@ -96,6 +96,13 @@ class _AddLeadOutgoingCallBottomSheetState
       listen: false,
     );
 
+    print('AddLeadOutgoingCallBottomSheet: _onCallDurationUpdate called');
+    print('  - lastDuration: ${callTrackingController.lastDuration}');
+    print(
+      '  - lastCallWasAnswered: ${callTrackingController.lastCallWasAnswered}',
+    );
+    print('  - current _callDuration: $_callDuration');
+
     // CRITICAL: Only capture duration if call was answered
     // For outgoing calls, if duration > 0, it means the call was answered
     // (Android call log only includes answered duration, not ringing time)
@@ -105,6 +112,7 @@ class _AddLeadOutgoingCallBottomSheetState
       if (mounted) {
         setState(() {
           _callDuration = callTrackingController.lastDuration!;
+          print('  - Updated _callDuration to: $_callDuration');
           if (_selectedCallStatus == null) {
             _selectedCallStatus = "Connected";
           }
@@ -116,6 +124,7 @@ class _AddLeadOutgoingCallBottomSheetState
       if (mounted) {
         setState(() {
           _callDuration = 0;
+          print('  - Call not answered, _callDuration set to 0');
           // Don't auto-set call status for unanswered calls
         });
       }
@@ -1114,6 +1123,18 @@ class _AddLeadOutgoingCallBottomSheetState
             );
           } else {
             // For return/feedback leads, update with feedback
+            // Get latest duration from CallTrackingController
+            final callTrackingController = Provider.of<CallTrackingController>(
+              context,
+              listen: false,
+            );
+            final finalCallDuration =
+                callTrackingController.lastDuration ?? _callDuration;
+
+            print(
+              'AddLeadOutgoingCallBottomSheet: Updating with duration=$finalCallDuration (controller=${callTrackingController.lastDuration}, local=$_callDuration)',
+            );
+
             await apiService.updateReturnLead(
               id: leadId,
               callStatus: _selectedCallStatus,
@@ -1121,7 +1142,7 @@ class _AddLeadOutgoingCallBottomSheetState
                   _remarksController.text.trim().isNotEmpty
                       ? _remarksController.text.trim()
                       : null,
-              callDuration: _callDuration > 0 ? _callDuration : null,
+              callDuration: finalCallDuration,
               markAsComplaint: _markAsComplaint ? true : null,
               subCategory: _selectedSubCategory,
               functionDate: _functionDate,

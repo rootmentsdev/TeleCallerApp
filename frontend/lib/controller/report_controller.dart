@@ -251,6 +251,10 @@ class ReportController extends ChangeNotifier {
           var leadLocation =
               leadData['store']?.toString() ??
               leadData['location']?.toString() ??
+              // JustDial leads use city/area/brancharea instead of store
+              leadData['brancharea']?.toString() ??
+              leadData['area']?.toString() ??
+              leadData['city']?.toString() ??
               '';
 
           if (leadLocation.isNotEmpty && !leadLocation.contains(' - ')) {
