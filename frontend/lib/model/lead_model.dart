@@ -181,7 +181,7 @@ class LeadModel {
         json['customer_name'] ??
         '';
     final phone =
-        json['phone_number'] ?? json['phone'] ?? json['phoneNumber'] ?? '';
+        json['phone_number'] ?? json['phone'] ?? json['phoneNumber'] ?? json['customerPhone'] ?? '';
 
     // Parse store field to extract brand and location
     String? brand;

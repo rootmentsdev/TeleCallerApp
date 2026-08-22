@@ -64,7 +64,7 @@ class MyApp extends StatelessWidget {
         title: 'Demo',
         theme: ThemeData(useMaterial3: true),
         navigatorKey: navigatorKey,
-        home: const VideoSplashScreen(),
+        home: const SplashScreen(),
         routes: {'/login': (context) => const LoginScreen()},
       ),
     );

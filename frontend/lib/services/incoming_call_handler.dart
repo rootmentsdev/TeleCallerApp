@@ -68,7 +68,7 @@ class IncomingCallHandler {
 
       // Check popupType from response
       final popupType = data['popupType']?.toString() ?? '';
-      final leadId = data['leadId']?.toString() ?? '';
+      final leadId = data['leadId']?.toString() ?? data['_id']?.toString() ?? data['id']?.toString() ?? '';
 
       print('IncomingCallHandler: popupType=$popupType, leadId=$leadId');
 
@@ -466,7 +466,7 @@ class IncomingCallHandler {
                 lead: lead,
                 callDuration: callDuration,
                 onSave: (remarks) async {
-                  await _saveReport(context, leadId, remarks, callDuration);
+                  await _saveReport(context, lead, remarks, callDuration);
                 },
               ),
         );
@@ -533,7 +533,7 @@ class IncomingCallHandler {
               lead: lead,
               callDuration: callDuration,
               onSave: (remarks) async {
-                await _saveReport(context, leadId, remarks, callDuration);
+                await _saveReport(context, lead, remarks, callDuration);
               },
             ),
       );
@@ -738,25 +738,35 @@ class IncomingCallHandler {
     }
   }
 
-  /// Save report - POST to /leads/{id}
+  /// Save report - POST to /leads
   Future<void> _saveReport(
     BuildContext context,
-    String leadId,
+    LeadModel lead,
     String remarks,
     int? callDuration,
   ) async {
     try {
-      print('IncomingCallHandler: _saveReport → saving to /api/leads/$leadId');
-
+      final isJustDial = lead.leadType?.toLowerCase() == 'justdial';
+      
       final body = <String, dynamic>{
+        'name': lead.name ?? 'Unknown',
         'remarks': remarks,
+        'phone': lead.phone,
+        'leadtype': lead.leadType?.toLowerCase() ?? 'enquiry',
+        'callStatus': 'connected',
+        'store': lead.brand ?? lead.location ?? 'Unknown',
         if (callDuration != null) 'callDuration': callDuration.toString(),
       };
 
       print('IncomingCallHandler: _saveReport → body: $body');
 
-      final response = await _api.postLeadUpdate(leadId, body);
-      print('IncomingCallHandler: _saveReport → response: $response');
+      if (isJustDial) {
+        print('IncomingCallHandler: _saveReport → saving JustDial to /api/leads/justdial/${lead.id}');
+        await _api.updateJustDialLead(lead.id, body);
+      } else {
+        print('IncomingCallHandler: _saveReport → saving to /api/leads');
+        await _api.postLeadUpdate(body);
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

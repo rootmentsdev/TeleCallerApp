@@ -1,4 +1,4 @@
-package com.example.telecaller_app
+package com.dialex.app
 
 import android.Manifest
 import android.content.BroadcastReceiver

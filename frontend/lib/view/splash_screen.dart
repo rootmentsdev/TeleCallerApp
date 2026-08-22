@@ -1,65 +1,51 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:telecaller_app/main.dart'; // To access RootScreen
+import 'package:telecaller_app/utils/color_constant.dart';
 
-class VideoSplashScreen extends StatefulWidget {
-  const VideoSplashScreen({Key? key}) : super(key: key);
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key? key}) : super(key: key);
 
   @override
-  State<VideoSplashScreen> createState() => _VideoSplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _VideoSplashScreenState extends State<VideoSplashScreen> {
-  late VideoPlayerController _controller;
-  bool _isVideoInitialized = false;
-  bool _hasNavigated = false;
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    _initializeVideoPlayer();
-  }
-
-  Future<void> _initializeVideoPlayer() async {
-    _controller = VideoPlayerController.asset(
-      'assets/PixVerse_V6_Image_Text_360P_Animate_a_sleek_lo.mp4',
+    
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
     );
 
-    try {
-      await _controller.initialize();
-      await _controller.setLooping(false);
-      await _controller.setVolume(1.0);
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutBack,
+      ),
+    );
 
-      setState(() {
-        _isVideoInitialized = true;
-      });
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeIn,
+      ),
+    );
 
-      _controller.play();
-      _controller.addListener(_videoListener);
-    } catch (e) {
-      debugPrint("Error initializing video: $e");
-      _navigateToHome();
-    }
+    _animationController.forward();
+    _navigateToHome();
   }
 
-  void _videoListener() {
-    if (_hasNavigated) return;
-
-    if (_controller.value.isInitialized &&
-        _controller.value.position >= _controller.value.duration) {
-      _navigateToHome();
-    }
-  }
-
-  void _navigateToHome() {
-    if (_hasNavigated) return;
+  Future<void> _navigateToHome() async {
+    // Wait for animation plus a little extra delay
+    await Future.delayed(const Duration(milliseconds: 2500));
+    if (!mounted) return;
     
-    setState(() {
-      _hasNavigated = true;
-    });
-
-    _controller.removeListener(_videoListener);
-
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => const RootScreen(),
@@ -73,30 +59,26 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
 
   @override
   void dispose() {
-    _controller.removeListener(_videoListener);
-    _controller.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // TODO: Change this to match the exact background color of your video
-      // You can use a hex color like this: Color(0xFF1A1A1A)
-      backgroundColor: Colors.black, 
+      backgroundColor: ColorConstant.primaryColor, 
       body: Center(
-        child: _isVideoInitialized
-            ? SizedBox.expand(
-                child: FittedBox(
-                  fit: BoxFit.contain, // Changed from cover to contain
-                  child: SizedBox(
-                    width: _controller.value.size.width,
-                    height: _controller.value.size.height,
-                    child: VideoPlayer(_controller),
-                  ),
-                ),
-              )
-            : const SizedBox.shrink(), // Replaced CircularProgressIndicator with empty space
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Image.asset(
+              'assets/images/primary_2_dark_no_bg.png',
+              fit: BoxFit.contain,
+              width: 250, // Ensures the logo doesn't become too large
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -52,6 +52,11 @@ class ReportModel {
         json['leadType']?.toString() ??
         json['lead_type']?.toString() ??
         json['leadtype']?.toString() ??
+        (json['leadSnapshot'] != null
+            ? (json['leadSnapshot']['leadType']?.toString() ??
+                json['leadSnapshot']['lead_type']?.toString() ??
+                json['leadSnapshot']['leadtype']?.toString())
+            : null) ??
         '';
 
     print(
