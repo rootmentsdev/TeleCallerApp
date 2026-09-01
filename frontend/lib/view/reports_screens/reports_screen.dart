@@ -7,6 +7,7 @@ import 'package:telecaller_app/model/store_model.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/reports_screens/call_report_list_screen.dart';
+import 'package:telecaller_app/widgets.dart/chat_fab.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -249,6 +250,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorConstant.primaryColor,
+      floatingActionButton: ChatFab(
+        onTap: () {
+          // Navigate to chat section
+        },
+      ),
       body: Consumer2<ReportController, HeaderController>(
         builder: (context, reportController, headerController, _) {
           return Column(

@@ -8,6 +8,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/navigation_helper.dart';
 import 'package:telecaller_app/widgets.dart/app_header.dart';
 import 'package:telecaller_app/view/profile_screen.dart';
+import 'package:telecaller_app/widgets.dart/chat_fab.dart';
 import 'package:telecaller_app/view/lead_screen/justdial_detail_screen.dart';
 
 class LeadScreen extends StatefulWidget {
@@ -314,6 +315,11 @@ class _LeadScreenState extends State<LeadScreen> {
 
         return Scaffold(
           backgroundColor: Colors.white,
+          floatingActionButton: ChatFab(
+            onTap: () {
+              // Navigate to chat section
+            },
+          ),
           body: Column(
             children: [
               AppHeader(
