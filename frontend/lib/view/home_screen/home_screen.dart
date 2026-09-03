@@ -261,11 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           backgroundColor: Colors.white,
-          floatingActionButton: ChatFab(
-            onTap: () {
-              // Navigate to chat section
-            },
-          ),
+          floatingActionButton: const ChatFab(),
           body: Column(
             children: [
               AppHeader(

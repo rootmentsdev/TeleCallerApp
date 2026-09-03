@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
+import 'package:telecaller_app/view/chat_screen/chat_inbox_screen.dart';
 
 class ChatFab extends StatefulWidget {
-  final VoidCallback onTap;
-
-  const ChatFab({Key? key, required this.onTap}) : super(key: key);
+  const ChatFab({Key? key}) : super(key: key);
 
   @override
   State<ChatFab> createState() => _ChatFabState();
@@ -44,7 +43,14 @@ class _ChatFabState extends State<ChatFab> with SingleTickerProviderStateMixin {
         );
       },
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ChatInboxScreen(),
+            ),
+          );
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           decoration: BoxDecoration(

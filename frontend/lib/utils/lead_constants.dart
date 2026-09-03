@@ -7,6 +7,8 @@ class LeadConstants {
   static const String categoryJustDial = "Just Dial";
   static const String categoryFollowUp = "Follow Up";
   static const String categoryFeedback = "Feedback";
+  static const String categoryEnquiry = "Enquiry";
+  static const String categoryBooked = "Booked";
 
   // Call Statuses
   static const String callStatusNotCalled = "Not Called";

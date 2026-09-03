@@ -250,11 +250,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorConstant.primaryColor,
-      floatingActionButton: ChatFab(
-        onTap: () {
-          // Navigate to chat section
-        },
-      ),
+      floatingActionButton: const ChatFab(),
       body: Consumer2<ReportController, HeaderController>(
         builder: (context, reportController, headerController, _) {
           return Column(

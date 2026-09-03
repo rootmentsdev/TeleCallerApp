@@ -20,9 +20,12 @@ class LeadScreen extends StatefulWidget {
 
 class _LeadScreenState extends State<LeadScreen> {
   // Tab indices constants
-  static const int _tabIndexBookingConfirmation = 0;
-  static const int _tabIndexReturn = 1;
+  static const int _tabIndexReturn = 0;
+  static const int _tabIndexBookingConfirmation = 1;
   static const int _tabIndexJustDial = 2;
+  static const int _tabIndexEnquiry = 3;
+  static const int _tabIndexBooked = 4;
+  static const int _tabIndexLossOfSale = 5;
 
   // Initialization delay to allow UI to settle
   static const Duration _initializationDelay = Duration(milliseconds: 500);
@@ -30,6 +33,9 @@ class _LeadScreenState extends State<LeadScreen> {
   bool _isLoadingBookingConfirmation = false;
   bool _isLoadingReturn = false;
   bool _isLoadingJustDial = false;
+  bool _isLoadingEnquiry = false;
+  bool _isLoadingBooked = false;
+  bool _isLoadingLossOfSale = false;
 
   @override
   void initState() {
@@ -57,6 +63,9 @@ class _LeadScreenState extends State<LeadScreen> {
         _fetchBookingConfirmationLeads(leadController, headerController);
         _fetchReturnLeads(leadController, headerController);
         _fetchJustDialLeads(leadController, headerController);
+        _fetchEnquiries(leadController, headerController);
+        _fetchBookedLeads(leadController, headerController);
+        _fetchLossOfSaleLeads(leadController, headerController);
       });
     });
   }
@@ -285,6 +294,180 @@ class _LeadScreenState extends State<LeadScreen> {
     }
   }
 
+  Future<void> _fetchEnquiries(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingEnquiry) return;
+    setState(() => _isLoadingEnquiry = true);
+
+    try {
+      final storeParam = _getStoreParam(headerController.selectedStore);
+      String? dateFrom;
+      String? dateTo;
+
+      if (headerController.isRangeMode &&
+          headerController.dateRangeStart != null &&
+          headerController.dateRangeEnd != null) {
+        dateFrom = _formatDateForApi(headerController.dateRangeStart!);
+        final endOfDay = DateTime(
+          headerController.dateRangeEnd!.year,
+          headerController.dateRangeEnd!.month,
+          headerController.dateRangeEnd!.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      } else {
+        final selectedDate = headerController.selectedDate;
+        dateFrom = _formatDateForApi(selectedDate);
+        final endOfDay = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      }
+
+      await controller.fetchEnquiriesFromApi(
+        store: storeParam,
+        fromDate: dateFrom,
+        toDate: dateTo,
+      );
+
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexEnquiry) {
+        _showError("Failed to load Enquiries", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingEnquiry = false);
+    }
+  }
+
+  Future<void> _fetchBookedLeads(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingBooked) return;
+    setState(() => _isLoadingBooked = true);
+
+    try {
+      final storeParam = _getStoreParam(headerController.selectedStore);
+      String? dateFrom;
+      String? dateTo;
+
+      if (headerController.isRangeMode &&
+          headerController.dateRangeStart != null &&
+          headerController.dateRangeEnd != null) {
+        dateFrom = _formatDateForApi(headerController.dateRangeStart!);
+        final endOfDay = DateTime(
+          headerController.dateRangeEnd!.year,
+          headerController.dateRangeEnd!.month,
+          headerController.dateRangeEnd!.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      } else {
+        final selectedDate = headerController.selectedDate;
+        dateFrom = _formatDateForApi(selectedDate);
+        final endOfDay = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      }
+
+      await controller.fetchBookedLeadsFromApi(
+        store: storeParam,
+        fromDate: dateFrom,
+        toDate: dateTo,
+      );
+
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexBooked) {
+        _showError("Failed to load Booked leads", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingBooked = false);
+    }
+  }
+
+  Future<void> _fetchLossOfSaleLeads(
+    LeadScreenController controller,
+    HeaderController headerController,
+  ) async {
+    if (_isLoadingLossOfSale) return;
+    setState(() => _isLoadingLossOfSale = true);
+
+    try {
+      final storeParam = _getStoreParam(headerController.selectedStore);
+      String? dateFrom;
+      String? dateTo;
+
+      if (headerController.isRangeMode &&
+          headerController.dateRangeStart != null &&
+          headerController.dateRangeEnd != null) {
+        dateFrom = _formatDateForApi(headerController.dateRangeStart!);
+        final endOfDay = DateTime(
+          headerController.dateRangeEnd!.year,
+          headerController.dateRangeEnd!.month,
+          headerController.dateRangeEnd!.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      } else {
+        final selectedDate = headerController.selectedDate;
+        dateFrom = _formatDateForApi(selectedDate);
+        final endOfDay = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          23,
+          59,
+          59,
+        );
+        dateTo = _formatDateForApi(endOfDay);
+      }
+
+      await controller.fetchLossOfSaleLeadsFromApi(
+        store: storeParam,
+        fromDate: dateFrom,
+        toDate: dateTo,
+      );
+
+      if (mounted) {
+        controller.refresh();
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted && controller.selectedCallTypeIndex == _tabIndexLossOfSale) {
+        _showError("Failed to load Loss of Sale leads", e);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingLossOfSale = false);
+    }
+  }
+
   void _showError(String title, dynamic e) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -302,7 +485,10 @@ class _LeadScreenState extends State<LeadScreen> {
     return (_isLoadingBookingConfirmation &&
             selectedIndex == _tabIndexBookingConfirmation) ||
         (_isLoadingReturn && selectedIndex == _tabIndexReturn) ||
-        (_isLoadingJustDial && selectedIndex == _tabIndexJustDial);
+        (_isLoadingJustDial && selectedIndex == _tabIndexJustDial) ||
+        (_isLoadingEnquiry && selectedIndex == _tabIndexEnquiry) ||
+        (_isLoadingBooked && selectedIndex == _tabIndexBooked) ||
+        (_isLoadingLossOfSale && selectedIndex == _tabIndexLossOfSale);
   }
 
   // ============================ UI =============================
@@ -315,11 +501,7 @@ class _LeadScreenState extends State<LeadScreen> {
 
         return Scaffold(
           backgroundColor: Colors.white,
-          floatingActionButton: ChatFab(
-            onTap: () {
-              // Navigate to chat section
-            },
-          ),
+          floatingActionButton: const ChatFab(),
           body: Column(
             children: [
               AppHeader(
@@ -340,48 +522,88 @@ class _LeadScreenState extends State<LeadScreen> {
                   horizontal: 16,
                   vertical: 16,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildCategoryCard(
-                      icon: Icons.message,
-                      label: "Feedback\nCalls",
-                      count: controller.getReturnLeadsCount(),
-                      isSelected:
-                          controller.selectedCallTypeIndex == _tabIndexReturn,
-                      onTap: () {
-                        controller.setSelectedCallTypeIndex(_tabIndexReturn);
-                        _fetchReturnLeads(controller, headerController);
-                      },
-                    ),
-                    _buildCategoryCard(
-                      icon: Icons.local_shipping_outlined,
-                      label: "Booking\nConfirmation",
-                      count: controller.getBookingConfirmationCount(),
-                      isSelected:
-                          controller.selectedCallTypeIndex ==
-                          _tabIndexBookingConfirmation,
-                      onTap: () {
-                        controller.setSelectedCallTypeIndex(
-                          _tabIndexBookingConfirmation,
-                        );
-                        _fetchBookingConfirmationLeads(
-                          controller,
-                          headerController,
-                        );
-                      },
-                    ),
-                    _buildCategoryCard(
-                      icon: Icons.headphones_outlined,
-                      label: "Just Dial",
-                      count: controller.getJustDialLeadsCount(),
-                      isSelected:
-                          controller.selectedCallTypeIndex == _tabIndexJustDial,
-                      onTap: () {
-                        controller.setSelectedCallTypeIndex(_tabIndexJustDial);
-                      },
-                    ),
-                  ],
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildCategoryCard(
+                        icon: Icons.message,
+                        label: "Feedback\nCalls",
+                        count: controller.getReturnLeadsCount(),
+                        isSelected:
+                            controller.selectedCallTypeIndex == _tabIndexReturn,
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(_tabIndexReturn);
+                          _fetchReturnLeads(controller, headerController);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        icon: Icons.local_shipping_outlined,
+                        label: "Booking\nConfirmation",
+                        count: controller.getBookingConfirmationCount(),
+                        isSelected:
+                            controller.selectedCallTypeIndex ==
+                            _tabIndexBookingConfirmation,
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(
+                            _tabIndexBookingConfirmation,
+                          );
+                          _fetchBookingConfirmationLeads(
+                            controller,
+                            headerController,
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        icon: Icons.headphones_outlined,
+                        label: "Just Dial",
+                        count: controller.getJustDialLeadsCount(),
+                        isSelected:
+                            controller.selectedCallTypeIndex == _tabIndexJustDial,
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(_tabIndexJustDial);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        icon: Icons.person_search_outlined,
+                        label: "Enquiry",
+                        count: controller.getEnquiriesCount(),
+                        isSelected:
+                            controller.selectedCallTypeIndex == _tabIndexEnquiry,
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(_tabIndexEnquiry);
+                          _fetchEnquiries(controller, headerController);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        icon: Icons.event_available_outlined,
+                        label: "Booked",
+                        count: controller.getBookedLeadsCount(),
+                        isSelected:
+                            controller.selectedCallTypeIndex == _tabIndexBooked,
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(_tabIndexBooked);
+                          _fetchBookedLeads(controller, headerController);
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        icon: Icons.trending_down,
+                        label: "Loss of Sale",
+                        count: controller.getLossOfSaleLeadsCount(),
+                        isSelected:
+                            controller.selectedCallTypeIndex == _tabIndexLossOfSale,
+                        onTap: () {
+                          controller.setSelectedCallTypeIndex(_tabIndexLossOfSale);
+                          _fetchLossOfSaleLeads(controller, headerController);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -395,12 +617,7 @@ class _LeadScreenState extends State<LeadScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      controller.selectedCallTypeIndex == _tabIndexReturn
-                          ? "Feedback Calls"
-                          : controller.selectedCallTypeIndex ==
-                              _tabIndexJustDial
-                          ? "Just Dial"
-                          : "Booking Confirmation Calls",
+                      controller.getCurrentTitle(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

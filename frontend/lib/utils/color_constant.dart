@@ -12,4 +12,12 @@ class ColorConstant {
   static const Color iconColor4 = Color(0xFFD8FFE0);
 
   static const Color grey = Color(0xFF797979);
+
+  // Chat Colors
+  static const Color chatBackground = Color(0xFFF3F6FB);
+  static const Color chatBubbleBlue = Color(0xFFB8D5ED);
+  static const Color whatsappGreen = Color(0xFF25D366);
+  static const Color instagramPink = Color(0xFFE1306C);
+  static const Color facebookBlue = Color(0xFF1877F2);
+  static const Color unreadBadgeGreen = Color(0xFF28A745);
 }

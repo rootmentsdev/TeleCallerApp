@@ -141,6 +141,84 @@ class ApiService {
     }
   }
 
+  // Get Enquiries
+  Future<Map<String, dynamic>> getEnquiries({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) async {
+    final url = ApiConfig.getEnquiries(
+      store: store,
+      fromDate: fromDate,
+      toDate: toDate,
+      page: page,
+      limit: limit,
+    );
+    try {
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getEnquiries failed');
+      rethrow;
+    }
+  }
+
+  // Get Loss of Sale Leads
+  Future<Map<String, dynamic>> getLossOfSaleLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) async {
+    final url = ApiConfig.getLossOfSaleLeads(
+      store: store,
+      fromDate: fromDate,
+      toDate: toDate,
+      page: page,
+      limit: limit,
+    );
+    try {
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getLossOfSaleLeads failed');
+      rethrow;
+    }
+  }
+
+  // Get Booked Leads
+  Future<Map<String, dynamic>> getBookedLeads({
+    String? store,
+    String? fromDate,
+    String? toDate,
+    int? page,
+    int? limit,
+  }) async {
+    final url = ApiConfig.getBookedLeads(
+      store: store,
+      fromDate: fromDate,
+      toDate: toDate,
+      page: page,
+      limit: limit,
+    );
+    try {
+      final response = await _httpClient.get(url);
+      return response;
+    } on AuthenticationException {
+      throw AuthenticationException();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'getBookedLeads failed');
+      rethrow;
+    }
+  }
+
   // Get Return Lead Details
   Future<Map<String, dynamic>> getReturn(String id) async {
     final url = ApiConfig.updateReturnLead(id);
@@ -1511,6 +1589,84 @@ class ApiService {
         e,
         s,
         reason: 'postLeadUpdate failed',
+      );
+      rethrow;
+    }
+  }
+
+  // Update Generic Lead (Enquiry, Loss of Sale, Booked)
+  Future<Map<String, dynamic>> updateGenericLead({
+    required String id,
+    required String category, // 'enquiry', 'lossOfSale', 'booked'
+    required String? newLeadType,
+    required String? store,
+    required DateTime? functionDate,
+    required String? remarks,
+    required bool markAsFollowup,
+    required DateTime? followupDate,
+    required bool markAsComplaint,
+    required int callDuration,
+  }) async {
+    String endpoint;
+    if (category.toLowerCase() == 'lossofsale') {
+      endpoint = ApiConfig.updateLossOfSaleLead(id);
+    } else if (category.toLowerCase() == 'booked') {
+      endpoint = ApiConfig.updateBookedLead(id);
+    } else {
+      // Default to enquiry
+      endpoint = ApiConfig.updateEnquiry(id);
+    }
+
+    final url = Uri.parse(endpoint);
+
+    try {
+      final headers = await _getAuthHeaders();
+      
+      if (!headers.containsKey('Authorization')) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
+      final body = <String, dynamic>{
+        'callStatus': 'connected',
+        if (newLeadType != null) 'leadType': newLeadType,
+        if (store != null) 'store': store,
+        if (functionDate != null) 'functionDate': functionDate.toIso8601String(),
+        if (remarks != null && remarks.isNotEmpty) 'remarks': remarks,
+        'markAsFollowup': markAsFollowup,
+        if (markAsFollowup && followupDate != null) 'followupDate': followupDate.toIso8601String(),
+        'markAsComplaint': markAsComplaint,
+        'callDuration': callDuration.toString(),
+      };
+
+      final requestBodyJson = json.encode(body);
+
+      print('ApiService: updateGenericLead - URL: $url');
+      print('ApiService: updateGenericLead - Body: $requestBodyJson');
+
+      // The backend uses POST for these Completion APIs
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: requestBodyJson,
+      );
+
+      print('ApiService: updateGenericLead - Status: ${response.statusCode}');
+      print('ApiService: updateGenericLead - Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decodedResponse = json.decode(response.body);
+        return decodedResponse is Map<String, dynamic> ? decodedResponse : {};
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else {
+        throw Exception('Failed to update lead: Status ${response.statusCode}');
+      }
+    } catch (e, s) {
+      print('ApiService: updateGenericLead - Error: $e');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'updateGenericLead failed',
       );
       rethrow;
     }

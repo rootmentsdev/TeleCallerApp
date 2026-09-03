@@ -1127,6 +1127,126 @@ class LeadRepository extends ChangeNotifier {
     }
   }
 
+  /// Fetch Enquiries from the API
+  Future<void> fetchEnquiriesFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await ensureInitialized();
+      final storeFilter = (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getEnquiries(
+        store: storeFilter,
+        fromDate: fromDate,
+        toDate: toDate,
+        limit: 1000,
+      );
+
+      final leadsData = _parseResponseData(response);
+      _leads.removeWhere(
+        (lead) => lead.category == LeadConstants.categoryEnquiry && !lead.needsFollowUp,
+      );
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            final enquiryLead = _createLeadWithCategory(lead, LeadConstants.categoryEnquiry);
+            _leads.add(enquiryLead);
+          }
+        } catch (e) {
+          print('LeadRepository: Error parsing Enquiry lead: $e');
+        }
+      }
+      await _saveLeads();
+      notifyListeners();
+    } catch (e) {
+      print('LeadRepository: Error fetching Enquiry leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch Loss of Sale leads from the API
+  Future<void> fetchLossOfSaleLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await ensureInitialized();
+      final storeFilter = (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getLossOfSaleLeads(
+        store: storeFilter,
+        fromDate: fromDate,
+        toDate: toDate,
+        limit: 1000,
+      );
+
+      final leadsData = _parseResponseData(response);
+      _leads.removeWhere(
+        (lead) => lead.category == LeadConstants.categoryLossOfSales && !lead.needsFollowUp,
+      );
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            final losLead = _createLeadWithCategory(lead, LeadConstants.categoryLossOfSales);
+            _leads.add(losLead);
+          }
+        } catch (e) {
+          print('LeadRepository: Error parsing Loss of Sale lead: $e');
+        }
+      }
+      await _saveLeads();
+      notifyListeners();
+    } catch (e) {
+      print('LeadRepository: Error fetching Loss of Sale leads: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch Booked leads from the API
+  Future<void> fetchBookedLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await ensureInitialized();
+      final storeFilter = (store == null || store == 'All Stores') ? null : store;
+      final response = await _apiService.getBookedLeads(
+        store: storeFilter,
+        fromDate: fromDate,
+        toDate: toDate,
+        limit: 1000,
+      );
+
+      final leadsData = _parseResponseData(response);
+      _leads.removeWhere(
+        (lead) => lead.category == LeadConstants.categoryBooked && !lead.needsFollowUp,
+      );
+
+      for (var leadData in leadsData) {
+        try {
+          final lead = _parseApiLeadToLeadModel(leadData);
+          if (lead != null) {
+            final bookedLead = _createLeadWithCategory(lead, LeadConstants.categoryBooked);
+            _leads.add(bookedLead);
+          }
+        } catch (e) {
+          print('LeadRepository: Error parsing Booked lead: $e');
+        }
+      }
+      await _saveLeads();
+      notifyListeners();
+    } catch (e) {
+      print('LeadRepository: Error fetching Booked leads: $e');
+      rethrow;
+    }
+  }
+
   /// Update Booking Confirmation lead via API
   Future<void> updateReturnLeadFromApi({
     required String id,

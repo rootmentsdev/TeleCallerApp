@@ -114,6 +114,21 @@ class LeadScreenController extends ChangeNotifier {
         fromDate: formattedDateFrom,
         toDate: formattedDateTo,
       ).catchError((_) {});
+      fetchEnquiriesFromApi(
+        store: store,
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
+      fetchLossOfSaleLeadsFromApi(
+        store: store,
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
+      fetchBookedLeadsFromApi(
+        store: store,
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
     } else {
       fetchAllLeadsFromApi(
         dateFrom: formattedDateFrom,
@@ -121,6 +136,18 @@ class LeadScreenController extends ChangeNotifier {
         dateField: 'createdAt',
       ).catchError((_) {});
       fetchReturnLeadsFromApi(
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
+      fetchEnquiriesFromApi(
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
+      fetchLossOfSaleLeadsFromApi(
+        fromDate: formattedDateFrom,
+        toDate: formattedDateTo,
+      ).catchError((_) {});
+      fetchBookedLeadsFromApi(
         fromDate: formattedDateFrom,
         toDate: formattedDateTo,
       ).catchError((_) {});
@@ -290,39 +317,43 @@ class LeadScreenController extends ChangeNotifier {
     // Backend already filters by date range and store, so just get the appropriate leads
     // based on the selected tab - NO additional local filtering
     if (_selectedCallTypeIndex == 0) {
-      // Booking Confirmation tab
-      filteredLeads =
-          _repository.allLeads
-              .where(
-                (lead) =>
-                    lead.category == LeadConstants.categoryBookingConfirmation,
-              )
-              .toList();
-    } else if (_selectedCallTypeIndex == 1) {
       // Feedback Calls tab (Return leads)
-      // Backend already filtered by store and date, just filter by category
-      filteredLeads =
-          _repository.allLeads
-              .where((lead) => lead.category == LeadConstants.categoryRentOut)
-              .toList();
+      filteredLeads = _repository.allLeads
+          .where((lead) => lead.category == LeadConstants.categoryRentOut)
+          .toList();
+    } else if (_selectedCallTypeIndex == 1) {
+      // Booking Confirmation tab
+      filteredLeads = _repository.allLeads
+          .where((lead) => lead.category == LeadConstants.categoryBookingConfirmation)
+          .toList();
     } else if (_selectedCallTypeIndex == 2) {
       // Just Dial tab
-      filteredLeads =
-          _repository.allLeads
-              .where((lead) => lead.category == 'Just Dial')
-              .toList();
+      filteredLeads = _repository.allLeads
+          .where((lead) => lead.category == LeadConstants.categoryJustDial)
+          .toList();
     } else if (_selectedCallTypeIndex == 3) {
-      // Marked Calls tab (Starred leads)
-      filteredLeads = _repository.starredCallsLeads;
+      // Enquiry tab
+      filteredLeads = _repository.allLeads
+          .where((lead) => lead.category == LeadConstants.categoryEnquiry)
+          .toList();
+    } else if (_selectedCallTypeIndex == 4) {
+      // Booked tab
+      filteredLeads = _repository.allLeads
+          .where((lead) => lead.category == LeadConstants.categoryBooked)
+          .toList();
+    } else if (_selectedCallTypeIndex == 5) {
+      // Loss of Sale tab
+      filteredLeads = _repository.allLeads
+          .where((lead) => lead.category == LeadConstants.categoryLossOfSales)
+          .toList();
     } else {
-      // Other tabs
       filteredLeads = _repository.allLeads;
     }
 
     // Handle "show only new lead" feature
     if (_showOnlyNewLead &&
         _focusedNewLeadId != null &&
-        _selectedCallTypeIndex == 0) {
+        _selectedCallTypeIndex == 1) {
       final matches =
           filteredLeads.where((l) => l.id == _focusedNewLeadId).toList();
       if (matches.isNotEmpty) {
@@ -347,13 +378,17 @@ class LeadScreenController extends ChangeNotifier {
   String getCurrentTitle() {
     switch (_selectedCallTypeIndex) {
       case 0:
-        return "Booking Confirmation";
-      case 1:
         return "Feedback Calls";
+      case 1:
+        return "Booking Confirmation Calls";
       case 2:
-        return "Loss of Sale";
+        return "Just Dial Calls";
       case 3:
-        return "Marked Calls";
+        return "Enquiries";
+      case 4:
+        return "Booked Leads";
+      case 5:
+        return "Loss of Sale Leads";
       default:
         return "Feedback Calls";
     }
@@ -384,11 +419,31 @@ class LeadScreenController extends ChangeNotifier {
 
   int getJustDialLeadsCount() {
     // Backend already filters by store and date, just count by category
-    List<LeadModel> leads =
-        _repository.allLeads
-            .where((lead) => lead.category == LeadConstants.categoryJustDial)
-            .toList();
+    List<LeadModel> leads = _repository.allLeads
+        .where((lead) => lead.category == LeadConstants.categoryJustDial)
+        .toList();
 
+    return leads.length;
+  }
+
+  int getEnquiriesCount() {
+    List<LeadModel> leads = _repository.allLeads
+        .where((lead) => lead.category == LeadConstants.categoryEnquiry)
+        .toList();
+    return leads.length;
+  }
+
+  int getBookedLeadsCount() {
+    List<LeadModel> leads = _repository.allLeads
+        .where((lead) => lead.category == LeadConstants.categoryBooked)
+        .toList();
+    return leads.length;
+  }
+
+  int getLossOfSaleLeadsCount() {
+    List<LeadModel> leads = _repository.allLeads
+        .where((lead) => lead.category == LeadConstants.categoryLossOfSales)
+        .toList();
     return leads.length;
   }
 
@@ -444,6 +499,60 @@ class LeadScreenController extends ChangeNotifier {
         s,
         reason: 'fetchReturnLeadsFromApi failed',
       );
+      rethrow;
+    }
+  }
+
+  Future<void> fetchEnquiriesFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await _repository.fetchEnquiriesFromApi(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchEnquiriesFromApi failed');
+      rethrow;
+    }
+  }
+
+  Future<void> fetchLossOfSaleLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await _repository.fetchLossOfSaleLeadsFromApi(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchLossOfSaleLeadsFromApi failed');
+      rethrow;
+    }
+  }
+
+  Future<void> fetchBookedLeadsFromApi({
+    String? store,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    try {
+      await _repository.fetchBookedLeadsFromApi(
+        store: store,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
+      notifyListeners();
+    } catch (e, s) {
+      FirebaseCrashlytics.instance.recordError(e, s, reason: 'fetchBookedLeadsFromApi failed');
       rethrow;
     }
   }
