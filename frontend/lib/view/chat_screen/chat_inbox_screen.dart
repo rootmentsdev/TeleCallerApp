@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/chat_controller.dart';
@@ -5,6 +6,7 @@ import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/view/chat_screen/chat_conversation_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
 
 class ChatInboxScreen extends StatefulWidget {
   const ChatInboxScreen({super.key});
@@ -20,6 +22,8 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> with SingleTickerProv
   // Dummy values for brand pills, can be dynamic
   final List<String> _brands = ['All Chats', 'Suitor Guy', 'Zorucci', 'Dappr Squad'];
   String _selectedBrand = 'All Chats';
+  
+  Timer? _pollingTimer;
 
   @override
   void initState() {
@@ -34,10 +38,17 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> with SingleTickerProv
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchFilteredData();
+      
+      // Poll inbox every 5 seconds
+      _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (mounted) {
+          _fetchFilteredData(showLoading: false);
+        }
+      });
     });
   }
 
-  void _fetchFilteredData() {
+  void _fetchFilteredData({bool showLoading = true}) {
     final controller = Provider.of<ChatController>(context, listen: false);
     String channelParam = _channels[_tabController.index].toLowerCase();
     String brandParam = _selectedBrand == 'All Chats' ? '' : _selectedBrand;
@@ -45,11 +56,13 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> with SingleTickerProv
     controller.fetchConversations(
       channel: channelParam,
       brand: brandParam,
+      showLoading: showLoading,
     );
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -213,7 +226,7 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> with SingleTickerProv
             
             String title = participant['name'] ?? participant['phone'] ?? 'Unknown';
             String subtitle = lastMessage['text'] ?? 'Attachment';
-            int unreadCount = chat['unreadCount'] ?? 0;
+            int unreadCount = int.tryParse(chat['unreadCount']?.toString() ?? '0') ?? 0;
             
             String channel = (chat['channel'] ?? '').toLowerCase();
             if (title.contains('(WhatsApp)')) {
@@ -227,9 +240,15 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> with SingleTickerProv
               title = title.replaceAll('(Facebook)', '').trim();
             }
             
-            // Format time roughly based on timestamp, assuming iso8601 for now
-            // Need intl package for real formatting, for now stub
-            String timeText = '11:14 AM'; // TODO: format lastMessage['timestamp']
+            String timeText = '';
+            if (lastMessage['timestamp'] != null) {
+              try {
+                DateTime parsedTime = DateTime.parse(lastMessage['timestamp'].toString()).toLocal();
+                timeText = DateFormat('hh:mm a').format(parsedTime);
+              } catch (e) {
+                timeText = '';
+              }
+            }
 
             return InkWell(
               onTap: () {

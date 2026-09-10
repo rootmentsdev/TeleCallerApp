@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/model/lead_model.dart';
@@ -22,9 +23,51 @@ import 'package:telecaller_app/view/reports_screens/report_details_screen/justdi
 class IncomingCallHandler {
   final ApiService _api = ApiService();
 
+  static final Queue<Map<String, dynamic>> _callQueue = Queue<Map<String, dynamic>>();
+  static bool _isProcessingCall = false;
+
   /// Main entry point for incoming call handling
   /// Routes based on popupType from /customers/check-phone API response
   Future<void> handleIncomingCall({
+    required BuildContext context,
+    required String phoneNumber,
+    int? callDuration,
+  }) async {
+    _callQueue.add({
+      'context': context,
+      'phoneNumber': phoneNumber,
+      'callDuration': callDuration,
+    });
+
+    if (!_isProcessingCall) {
+      await _processNextCall();
+    }
+  }
+
+  Future<void> _processNextCall() async {
+    if (_callQueue.isEmpty) {
+      _isProcessingCall = false;
+      return;
+    }
+
+    _isProcessingCall = true;
+    final callData = _callQueue.removeFirst();
+
+    final context = callData['context'] as BuildContext;
+    final phoneNumber = callData['phoneNumber'] as String;
+    final callDuration = callData['callDuration'] as int?;
+
+    await _handleSingleIncomingCall(
+      context: context,
+      phoneNumber: phoneNumber,
+      callDuration: callDuration,
+    );
+
+    // Process the next call in the queue
+    await _processNextCall();
+  }
+
+  Future<void> _handleSingleIncomingCall({
     required BuildContext context,
     required String phoneNumber,
     int? callDuration,
@@ -55,14 +98,14 @@ class IncomingCallHandler {
 
       if (checkResult == null || checkResult['success'] != true) {
         print('IncomingCallHandler: checkPhone failed or returned null');
-        _showNewLeadPopup(context, cleanPhone, callDuration);
+        await _showNewLeadPopup(context, cleanPhone, callDuration);
         return;
       }
 
       final data = checkResult['data'] as Map<String, dynamic>?;
       if (data == null) {
         print('IncomingCallHandler: no data in checkPhone response');
-        _showNewLeadPopup(context, cleanPhone, callDuration);
+        await _showNewLeadPopup(context, cleanPhone, callDuration);
         return;
       }
 
@@ -76,7 +119,7 @@ class IncomingCallHandler {
       switch (popupType) {
         case 'newLeadPopup':
           print('IncomingCallHandler: → Showing new lead popup');
-          _showNewLeadPopup(context, cleanPhone, callDuration);
+          await _showNewLeadPopup(context, cleanPhone, callDuration);
           break;
 
         case 'followupPopup':
@@ -131,14 +174,14 @@ class IncomingCallHandler {
           print(
             'IncomingCallHandler: → Unknown popupType, showing new lead popup',
           );
-          _showNewLeadPopup(context, cleanPhone, callDuration);
+          await _showNewLeadPopup(context, cleanPhone, callDuration);
       }
     } catch (e) {
       print('IncomingCallHandler: ERROR - $e');
       if (context.mounted) {
         Navigator.of(context).pop(); // dismiss loading
         _showErrorSnackbar(context, 'Failed to identify caller: $e');
-        _showNewLeadPopup(context, cleanPhone, callDuration);
+        await _showNewLeadPopup(context, cleanPhone, callDuration);
       }
     }
   }
@@ -201,7 +244,7 @@ class IncomingCallHandler {
       final lead = LeadModel.fromApiJson(leadData);
 
       // Show popup with save callback
-      showModalBottomSheet(
+      await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -251,7 +294,7 @@ class IncomingCallHandler {
       final complaint = ComplaintModel.fromJson(complaintData);
 
       // Show popup with save callback
-      showModalBottomSheet(
+      await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -288,7 +331,7 @@ class IncomingCallHandler {
       final lead = LeadModel.fromApiJson(leadData);
 
       // Show popup with save callback
-      showModalBottomSheet(
+      await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -354,7 +397,7 @@ class IncomingCallHandler {
       final lead = LeadModel.fromApiJson(leadData);
 
       // Show popup with save callback
-      showModalBottomSheet(
+      await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -443,7 +486,7 @@ class IncomingCallHandler {
         print(
           'IncomingCallHandler: _showReportPopup → Detected JustDial lead, navigating to detail screen',
         );
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder:
@@ -457,7 +500,7 @@ class IncomingCallHandler {
         );
       } else {
         // Show generic report popup for non-JustDial leads
-        showModalBottomSheet(
+        await showModalBottomSheet(
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
@@ -524,7 +567,7 @@ class IncomingCallHandler {
       final lead = LeadModel.fromApiJson(leadData);
 
       // Show JustDial popup with save callback
-      showModalBottomSheet(
+      await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -787,12 +830,12 @@ class IncomingCallHandler {
   }
 
   /// Fallback: Show new lead popup
-  void _showNewLeadPopup(
+  Future<void> _showNewLeadPopup(
     BuildContext context,
     String phone,
     int? callDuration,
-  ) {
-    showModalBottomSheet(
+  ) async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

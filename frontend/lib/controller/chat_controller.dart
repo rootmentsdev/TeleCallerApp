@@ -89,13 +89,17 @@ class ChatController extends ChangeNotifier {
     String? channel,
     String? brand,
     String status = 'open',
+    bool showLoading = true,
   }) async {
     _selectedChannel = channel;
     _selectedBrand = brand;
     _selectedStatus = status;
-    _isLoadingConversations = true;
+    
+    if (showLoading && _conversations.isEmpty) {
+      _isLoadingConversations = true;
+      notifyListeners();
+    }
     _conversationsError = null;
-    notifyListeners();
 
     try {
       List<String> queryParams = [];
@@ -176,11 +180,17 @@ class ChatController extends ChangeNotifier {
   }
 
   /// Fetch Messages for a specific thread
-  Future<void> fetchMessages(String conversationId, {int page = 1, int limit = 50}) async {
+  Future<void> fetchMessages(String conversationId, {int page = 1, int limit = 50, bool showLoading = true}) async {
+    if (_activeConversationId != conversationId) {
+      _currentMessages = []; // Clear cached messages from previous chat
+    }
     _activeConversationId = conversationId;
-    _isLoadingMessages = true;
+    
+    if (showLoading && _currentMessages.isEmpty) {
+      _isLoadingMessages = true;
+      notifyListeners();
+    }
     _messagesError = null;
-    notifyListeners();
 
     try {
       final String url = "${ApiConfig.chatEndpoint}/conversations/$conversationId/messages?page=$page&limit=$limit";
@@ -188,13 +198,18 @@ class ChatController extends ChangeNotifier {
       
       if (response != null && response['data'] != null) {
         final data = response['data'];
+        
+        List<dynamic> fetchedMessages = [];
         if (data is Map && data.containsKey('messages')) {
-          _currentMessages = data['messages'] ?? [];
+          fetchedMessages = data['messages'] ?? [];
         } else if (data is List) {
-           _currentMessages = data;
-        } else {
-          _currentMessages = [];
+           fetchedMessages = data;
         }
+        
+        // Preserve any messages that are currently in 'sending' state (optimistic)
+        final optimisticMessages = _currentMessages.where((m) => m['status'] == 'sending').toList();
+        
+        _currentMessages = [...fetchedMessages, ...optimisticMessages];
       } else if (response != null && response['success'] == true) {
         _currentMessages = response['data']?['messages'] ?? [];
       } else {
@@ -210,24 +225,99 @@ class ChatController extends ChangeNotifier {
 
   /// Send an outbound message
   Future<bool> sendMessage(String conversationId, String text, {String messageType = 'text'}) async {
+    final String? senderId = await AuthService.getUserId();
+    final String tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
+    // 1. Optimistic UI update: show message immediately with 'sending' status
+    final optimisticMsg = {
+      "_id": tempId, // Temporary ID
+      "tempId": tempId,
+      "text": text,
+      "messageType": messageType,
+      "senderType": "telecaller",
+      "senderId": senderId,
+      "status": "sending",
+      "timestamp": DateTime.now().toUtc().toIso8601String(),
+    };
+    
+    _currentMessages.add(optimisticMsg);
+    notifyListeners();
+
+    return _performSendMessage(conversationId, tempId, optimisticMsg);
+  }
+
+  Future<bool> _performSendMessage(String conversationId, String tempId, Map<String, dynamic> msgPayload) async {
     try {
       final String url = "${ApiConfig.chatEndpoint}/conversations/$conversationId/messages";
       final Map<String, dynamic> body = {
-        "text": text,
-        "messageType": messageType
+        "text": msgPayload['text'],
+        "messageType": msgPayload['messageType'],
+        "senderType": "telecaller",
+        "tempId": tempId,
+        if (msgPayload['senderId'] != null) "senderId": msgPayload['senderId'],
       };
 
       final response = await _httpClient.post(url, body);
       
-      if (response['success'] == true) {
-        // Add optimistic message or fetch messages again
+      final index = _currentMessages.indexWhere((m) => m['tempId'] == tempId || m['_id'] == tempId);
+      if (index == -1) return false;
+
+      if (response != null && response['data'] != null) {
+        // 2. Update with real ID and mark as 'sent'
+        final responseData = response['data'];
+        _currentMessages[index] = {
+          ..._currentMessages[index],
+          "_id": responseData['_id'] ?? _currentMessages[index]['_id'],
+          "status": responseData['status'] ?? "sent",
+        };
+        notifyListeners();
         return true;
+      } else if (response != null && response['success'] == true) {
+         // Just in case the backend returns success: true without data
+         _currentMessages[index] = {
+          ..._currentMessages[index],
+          "status": "sent",
+        };
+        notifyListeners();
+        return true;
+      } else {
+        // Mark as failed
+        _currentMessages[index] = {
+          ..._currentMessages[index],
+          "status": "failed",
+        };
+        notifyListeners();
+        return false;
       }
-      return false;
     } catch (e) {
       print('Error sending message: $e');
+      final index = _currentMessages.indexWhere((m) => m['tempId'] == tempId || m['_id'] == tempId);
+      if (index != -1) {
+        _currentMessages[index] = {
+          ..._currentMessages[index],
+          "status": "failed",
+        };
+        notifyListeners();
+      }
       return false;
     }
+  }
+
+  /// Retry a failed message
+  Future<bool> retryMessage(String tempId) async {
+    if (_activeConversationId == null) return false;
+    
+    final index = _currentMessages.indexWhere((m) => m['tempId'] == tempId || m['_id'] == tempId);
+    if (index == -1) return false;
+
+    // Reset status to sending
+    _currentMessages[index] = {
+      ..._currentMessages[index],
+      "status": "sending",
+    };
+    notifyListeners();
+
+    return _performSendMessage(_activeConversationId!, tempId, _currentMessages[index]);
   }
 
   /// Mark conversation as read
