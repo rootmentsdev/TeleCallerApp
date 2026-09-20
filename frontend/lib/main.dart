@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:telecaller_app/controller/header_controller.dart';
@@ -22,9 +23,36 @@ import 'package:telecaller_app/view/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("================ FCM_DEBUG (BACKGROUND) ================");
+  print("Message ID: ${message.messageId}");
+  print("Notification Data: ${message.notification?.toMap()}");
+  print("Data Payload: ${message.data}");
+  print("========================================================");
+  
+  // Initialize notification service to show custom local notification
+  await NotificationService().initialize();
+  if (message.data.isNotEmpty) {
+    if (message.data.containsKey('source')) {
+      await NotificationService().handleDataMessage(message);
+    } else {
+      // Fallback for data-only messages from backend that don't have 'source'
+      String title = message.data['title'] ?? 'New Notification';
+      String body = message.data['body'] ?? message.data['message'] ?? 'You have a new message';
+      await NotificationService().showChatNotification(
+        title: title, 
+        body: body
+      );
+    }
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await NotificationService().initialize();
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 

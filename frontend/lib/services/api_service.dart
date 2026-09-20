@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/services/http_client.dart';
 import 'package:telecaller_app/exceptions/api_exceptions.dart';
@@ -40,7 +41,22 @@ class ApiService {
     final url = Uri.parse(ApiConfig.login());
 
     try {
-      final requestBody = {"employeeId": empId, "password": password};
+      // 1. Fetch the FCM token before making the login request
+      String? fcmToken;
+      try {
+        fcmToken = await FirebaseMessaging.instance.getToken();
+        print('ApiService: FCM Token retrieved: $fcmToken');
+      } catch (e) {
+        print('ApiService: Failed to fetch FCM Token: $e');
+      }
+
+      // 2. Add the FCM token to the request body
+      final requestBody = {
+        "employeeId": empId, 
+        "password": password,
+        if (fcmToken != null) "fcmToken": fcmToken,
+      };
+      
       final requestBodyJson = json.encode(requestBody);
 
       print('ApiService: Attempting login for EMP ID: $empId');

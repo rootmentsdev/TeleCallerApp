@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -13,6 +14,7 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   Future<void> initialize() async {
     tzdata.initializeTimeZones();
@@ -33,6 +35,146 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(initSettings);
+
+    // Request FCM permissions
+    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    print('NotificationService: FCM Authorization status: ${settings.authorizationStatus}');
+
+    // Get FCM Token
+    String? token = await _firebaseMessaging.getToken();
+    print('NotificationService: FCM Token: $token');
+    
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("================ FCM_DEBUG (FOREGROUND) ================");
+      print("Message ID: ${message.messageId}");
+      print("Notification Data: ${message.notification?.toMap()}");
+      print("Data Payload: ${message.data}");
+      print("========================================================");
+
+      if (message.notification != null) {
+        print('NotificationService: Message also contained a notification: ${message.notification}');
+        showChatNotification(
+          title: message.notification!.title ?? 'New Message',
+          body: message.notification!.body ?? '',
+        );
+      } else if (message.data.isNotEmpty) {
+        if (message.data.containsKey('source')) {
+          // Handle data-only messages for custom lead notifications
+          handleDataMessage(message);
+        } else {
+          // Fallback for generic data messages
+          String title = message.data['title'] ?? 'New Notification';
+          String body = message.data['body'] ?? message.data['message'] ?? 'You have a new message';
+          showChatNotification(title: title, body: body);
+        }
+      }
+    });
+  }
+
+  /// Handle incoming data messages to construct custom local notifications
+  Future<void> handleDataMessage(RemoteMessage message) async {
+    print('NotificationService: ===== DEBUG: handleDataMessage called =====');
+    print('NotificationService: Full data payload: ${message.data}');
+    
+    try {
+      String source = message.data['source'] ?? 'Unknown';
+      String leadName = message.data['leadName'] ?? 'Someone';
+
+      print('NotificationService: Parsed source=$source, leadName=$leadName');
+
+      String title = "New Lead!";
+      String body = "You have a new lead.";
+
+      if (source.toLowerCase() == 'whatsapp') {
+        title = '🟢 New WhatsApp Lead';
+        body = '$leadName just messaged on WhatsApp!';
+      } else if (source.toLowerCase() == 'instagram') {
+        title = '🟣 New Instagram Lead';
+        body = '$leadName filled an Instagram form!';
+      } else if (source.toLowerCase() == 'facebook') {
+        title = '🔵 New Facebook Lead';
+        body = '$leadName came from Facebook Ads!';
+      }
+      
+      print('NotificationService: Final Title: "$title", Body: "$body"');
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'lead_channel',
+        'Lead Notifications',
+        channelDescription: 'Notifications for new incoming leads',
+        importance: Importance.max,
+        priority: Priority.high,
+        enableVibration: true,
+        playSound: true,
+      );
+
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      print('NotificationService: Showing local notification using flutter_local_notifications plugin...');
+      await _notificationsPlugin.show(
+        DateTime.now().millisecond, // unique ID
+        title,
+        body,
+        details,
+      );
+      print('NotificationService: Local notification triggered successfully!');
+    } catch (e) {
+      print('NotificationService: Error handling data message: $e');
+    }
+  }
+
+  /// Show chat notification
+  Future<void> showChatNotification({required String title, required String body}) async {
+    print('NotificationService: ===== DEBUG: showChatNotification called =====');
+    print('NotificationService: Title="$title", Body="$body"');
+    try {
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
+            'chat_channel',
+            'Chat Notifications',
+            channelDescription: 'Notifications for incoming chat messages',
+            importance: Importance.max,
+            priority: Priority.high,
+            enableVibration: true,
+            playSound: true,
+          );
+
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      print('NotificationService: Triggering fallback chat local notification...');
+      await _notificationsPlugin.show(
+        DateTime.now().millisecond, // unique ID for each message
+        title,
+        body,
+        details,
+      );
+      print('NotificationService: Fallback chat local notification triggered successfully!');
+    } catch (e) {
+      print('NotificationService: Error showing chat notification: $e');
+    }
   }
 
   /// Show immediate notification for today's follow-ups
