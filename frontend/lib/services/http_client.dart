@@ -3,7 +3,10 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import '../utils/api_config.dart';
+import 'auth_service.dart';
 import 'package:telecaller_app/exceptions/api_exceptions.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 
@@ -43,6 +46,67 @@ class HttpClient {
       return _handleResponse(response);
     } catch (e, s) {
       _logError('POST', url, e, s);
+      rethrow;
+    }
+  }
+
+  /// POST Multipart request for file uploads
+  Future<Map<String, dynamic>> postMultipart(
+    String url,
+    String filePath, {
+    Map<String, String>? additionalHeaders,
+    Map<String, String>? fields,
+    String fileField = 'file',
+  }) async {
+    try {
+      final headers = await _getHeaders(additionalHeaders);
+      // Remove Content-Type so http package can set multipart boundaries
+      headers.remove('Content-Type'); 
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+      request.headers.addAll(headers);
+      
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+      
+      print('[DEBUG HTTP] postMultipart Request to $url');
+      print('[DEBUG HTTP] Fields: ${request.fields}');
+      print('[DEBUG HTTP] File: $filePath');
+
+      String mimeType = 'application';
+      String mimeSubtype = 'octet-stream';
+      
+      final ext = filePath.split('.').last.toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext)) {
+        mimeType = 'image';
+        mimeSubtype = ext == 'jpg' ? 'jpeg' : ext;
+      } else if (['mp4', 'mov', 'avi'].contains(ext)) {
+        mimeType = 'video';
+        mimeSubtype = ext == 'mov' ? 'quicktime' : ext;
+      } else if (['m4a', 'mp3', 'wav', 'aac', 'ogg'].contains(ext)) {
+        mimeType = 'audio';
+        mimeSubtype = ext == 'm4a' ? 'mp4' : (ext == 'mp3' ? 'mpeg' : ext);
+      } else if (ext == 'pdf') {
+        mimeType = 'application';
+        mimeSubtype = 'pdf';
+      }
+
+      request.files.add(await http.MultipartFile.fromPath(
+        fileField,
+        filePath,
+        contentType: MediaType(mimeType, mimeSubtype),
+      ));
+
+      final streamedResponse = await request.send().timeout(Duration(seconds: _defaultTimeout));
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      print('[DEBUG HTTP] postMultipart Response status: ${response.statusCode}');
+      print('[DEBUG HTTP] postMultipart Response body: ${response.body}');
+
+      return _handleResponse(response);
+    } catch (e, s) {
+      print('[DEBUG HTTP ERROR] postMultipart failed: $e');
+      _logError('POST_MULTIPART', url, e, s);
       rethrow;
     }
   }

@@ -7,6 +7,7 @@ class ApiConfig {
   static const String authEndpoint = "$baseUrl/api/auth";
   static const String storesEndpoint = "$baseUrl/api/stores";
   static const String chatEndpoint = "$baseUrl/api/chat";
+  static const String mediaUploadEndpoint = "$baseUrl/api/upload";
 
   // Lead types
   static const String lossOfSale = "lossOfSale";
@@ -444,5 +445,13 @@ class ApiConfig {
 
   static String updateBookedLead(String id) {
     return "$leadsEndpoint/booked/$id";
+  }
+
+  // ===== Media Utilities =====
+  static String resolveMediaUrl(String? url, String? fileId) {
+    if (url != null && url.startsWith('http')) return url;
+    if (url != null && url.startsWith('/api/')) return '$baseUrl$url';
+    if (fileId != null && fileId.isNotEmpty) return '$chatEndpoint/media/$fileId';
+    return '';
   }
 }

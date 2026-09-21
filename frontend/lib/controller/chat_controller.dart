@@ -246,6 +246,115 @@ class ChatController extends ChangeNotifier {
     return _performSendMessage(conversationId, tempId, optimisticMsg);
   }
 
+  /// Upload media file
+  Future<Map<String, dynamic>?> uploadMedia(String filePath) async {
+    try {
+      final response = await _httpClient.postMultipart(
+        ApiConfig.mediaUploadEndpoint,
+        filePath,
+      );
+      if (response != null && response['success'] == true && response['data'] != null) {
+        return response['data']; // Assuming it returns the media details
+      } else if (response != null && response['data'] != null) {
+        return response['data'];
+      }
+      return null;
+    } catch (e) {
+      print('Error uploading media: $e');
+      return null;
+    }
+  }
+
+  /// Send a rich media message
+  Future<bool> sendMediaMessage(String conversationId, String filePath, String messageType, {String text = ''}) async {
+    print('=============================================');
+    print('[DEBUG] Starting sendMediaMessage');
+    print('[DEBUG] ConversationId: $conversationId');
+    print('[DEBUG] FilePath: $filePath');
+    print('[DEBUG] MessageType: $messageType');
+    print('=============================================');
+    final String? senderId = await AuthService.getUserId();
+    final String tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
+    // 1. Optimistic UI update: show message immediately with 'sending' status
+    final Map<String, dynamic> optimisticMsg = {
+      "_id": tempId,
+      "tempId": tempId,
+      "text": text,
+      "messageType": messageType,
+      "senderType": "telecaller",
+      "senderId": senderId,
+      "status": "sending",
+      "timestamp": DateTime.now().toUtc().toIso8601String(),
+      "localFilePath": filePath, // Temporarily store local path for UI rendering before upload
+    };
+    
+    print('[DEBUG] Inserting optimistic message with tempId: $tempId');
+    _currentMessages.insert(0, optimisticMsg); // Insert at 0 because ListView is reverse: true
+    notifyListeners();
+
+    // 2. Upload media and send message in one multipart request
+    try {
+      final url = "${ApiConfig.chatEndpoint}/conversations/$conversationId/media";
+      final Map<String, String> fields = {
+        'type': messageType,
+        'caption': text,
+        'tempId': tempId,
+      };
+      if (messageType == 'audio') {
+        fields['isVoiceNote'] = 'true';
+      }
+      if (senderId != null) {
+        fields['senderId'] = senderId;
+      }
+
+      print('[DEBUG] Endpoint: $url');
+      print('[DEBUG] Fields: $fields');
+      final response = await _httpClient.postMultipart(url, filePath, fields: fields);
+      print('[DEBUG] postMultipart Response: $response');
+      
+      final index = _currentMessages.indexWhere((m) => m['tempId'] == tempId);
+      if (index == -1) {
+        print('[DEBUG] Optimistic message $tempId not found after upload!');
+        return false;
+      }
+
+      if (response != null && response['data'] != null) {
+        final responseData = response['data'] is Map ? response['data'] : {};
+        _currentMessages[index] = {
+          ..._currentMessages[index],
+          "_id": responseData['_id'] ?? _currentMessages[index]['_id'],
+          "status": responseData['status'] ?? "sent",
+          "media": responseData['media'] ?? _currentMessages[index]['media'],
+          "attachmentUrl": responseData['attachmentUrl'] ?? _currentMessages[index]['attachmentUrl'],
+        };
+        notifyListeners();
+        return true;
+      } else {
+        _currentMessages[index] = {
+          ..._currentMessages[index],
+          "status": "sent", // Assume success if no error thrown
+        };
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      print('=============================================');
+      print('[DEBUG ERROR] sendMediaMessage failed!');
+      print('[DEBUG ERROR] Exception: $e');
+      print('=============================================');
+      final index = _currentMessages.indexWhere((m) => m['tempId'] == tempId);
+      if (index != -1) {
+        _currentMessages[index] = {
+          ..._currentMessages[index],
+          "status": "failed",
+        };
+        notifyListeners();
+      }
+      return false;
+    }
+  }
+
   Future<bool> _performSendMessage(String conversationId, String tempId, Map<String, dynamic> msgPayload) async {
     try {
       final String url = "${ApiConfig.chatEndpoint}/conversations/$conversationId/messages";
@@ -255,6 +364,7 @@ class ChatController extends ChangeNotifier {
         "senderType": "telecaller",
         "tempId": tempId,
         if (msgPayload['senderId'] != null) "senderId": msgPayload['senderId'],
+        if (msgPayload['media'] != null) "media": msgPayload['media'],
       };
 
       final response = await _httpClient.post(url, body);

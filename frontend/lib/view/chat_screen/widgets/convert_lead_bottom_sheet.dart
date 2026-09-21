@@ -82,7 +82,20 @@ class _ConvertLeadBottomSheetState extends State<ConvertLeadBottomSheet> {
       _isLoading = false;
     });
 
-    if (response != null && response['success'] == true) {
+    // Handle API response that might not have an explicit success boolean
+    bool isSuccess = false;
+    if (response != null) {
+      if (response['success'] == true) {
+        isSuccess = true;
+      } else if (response['success'] == false || response.containsKey('error')) {
+        isSuccess = false;
+      } else {
+        // If there's no explicit false/error, assume 2xx success
+        isSuccess = true;
+      }
+    }
+
+    if (isSuccess) {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(

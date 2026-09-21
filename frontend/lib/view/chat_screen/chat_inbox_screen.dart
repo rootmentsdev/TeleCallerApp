@@ -51,7 +51,15 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> with SingleTickerProv
   void _fetchFilteredData({bool showLoading = true}) {
     final controller = Provider.of<ChatController>(context, listen: false);
     String channelParam = _channels[_tabController.index].toLowerCase();
-    String brandParam = _selectedBrand == 'All Chats' ? '' : _selectedBrand;
+    
+    String brandParam = '';
+    if (_selectedBrand == 'Suitor Guy') {
+      brandParam = 'suitor_guy';
+    } else if (_selectedBrand == 'Zorucci') {
+      brandParam = 'zorucci';
+    } else if (_selectedBrand == 'Dappr Squad' || _selectedBrand == 'Dapper Squad') {
+      brandParam = 'dapper_squad';
+    }
     
     controller.fetchConversations(
       channel: channelParam,

@@ -204,23 +204,29 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildCustomerCard(),
-                    const SizedBox(height: 24),
-                    if (!_hasCalled) _buildCallButton() else ...[
-                      _buildFormSection(),
-                      const SizedBox(height: 24),
-                      _buildSaveButton(),
-                    ],
-                  ],
-                ),
-              ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCustomerCard(),
+                          const SizedBox(height: 24),
+                          if (!_hasCalled) _buildCallButton() else ...[
+                            _buildFormSection(),
+                            const SizedBox(height: 24),
+                            _buildSaveButton(),
+                          ],
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
