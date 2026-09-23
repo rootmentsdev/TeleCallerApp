@@ -163,7 +163,6 @@ class _ConvertLeadBottomSheetState extends State<ConvertLeadBottomSheet> {
                   items: const [
                     DropdownMenuItem(value: 'enquiry', child: Text('Enquiry')),
                     DropdownMenuItem(value: 'booked', child: Text('Booked')),
-                    DropdownMenuItem(value: 'loss_of_sale', child: Text('Loss of Sale')),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedLeadType = val);

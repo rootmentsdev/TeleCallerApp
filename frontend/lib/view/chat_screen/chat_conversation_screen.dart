@@ -389,16 +389,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'transfer',
-                child: Row(
-                  children: [
-                    Icon(Icons.swap_horiz, color: Colors.black54, size: 20),
-                    SizedBox(width: 8),
-                    Text('Transfer'),
-                  ],
-                ),
-              ),
             ],
           )
         ],
