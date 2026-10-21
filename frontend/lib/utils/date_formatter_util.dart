@@ -20,20 +20,23 @@ class DateFormatterUtil {
 
   /// Format date as "DD MMM, YYYY" (e.g., "20 Apr, 2026")
   static String formatDate(DateTime date) {
-    final month = _monthAbbreviations[date.month - 1];
-    return "${date.day} $month, ${date.year}";
+    final local = date.toLocal();
+    final month = _monthAbbreviations[local.month - 1];
+    return "${local.day} $month, ${local.year}";
   }
 
   /// Format date for API calls as "YYYY-MM-DD"
   static String formatDateForApi(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final local = date.toLocal();
+    return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
   }
 
   /// Format date and time as "DD MMM, YYYY HH:mm"
   static String formatDateTime(DateTime dateTime) {
-    final date = formatDate(dateTime);
+    final local = dateTime.toLocal();
+    final date = formatDate(local);
     final time =
-        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
     return '$date $time';
   }
 
@@ -55,7 +58,7 @@ class DateFormatterUtil {
     }
   }
 
-  /// Parse date from various formats
+  /// Parse date from various formats and convert to local timezone
   /// Handles ISO 8601, MongoDB format, and manual parsing
   static DateTime? parseDate(dynamic dateValue) {
     if (dateValue == null) return null;
@@ -66,7 +69,7 @@ class DateFormatterUtil {
           dateValue['\$date']?.toString() ?? dateValue['date']?.toString();
       if (dateStr != null && dateStr.isNotEmpty) {
         try {
-          return DateTime.parse(dateStr);
+          return DateTime.parse(dateStr).toLocal();
         } catch (e) {
           return null;
         }
@@ -77,7 +80,7 @@ class DateFormatterUtil {
     if (dateStr.isEmpty) return null;
 
     try {
-      return DateTime.parse(dateStr);
+      return DateTime.parse(dateStr).toLocal();
     } catch (e) {
       // Try manual parsing for non-ISO formats
       final parts = dateStr.split(RegExp(r'[-/]'));

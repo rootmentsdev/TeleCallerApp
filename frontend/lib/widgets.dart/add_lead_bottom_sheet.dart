@@ -42,6 +42,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
   int? _callDuration;
   String? _selectedCallStatus;
   DateTime? _followUpDate;
+  bool _sendWhatsappMessage = false;
 
   bool _isLoading = false;
 
@@ -440,6 +441,31 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
                                 ),
                               ],
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Send WhatsApp Message
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _sendWhatsappMessage,
+                          onChanged: (value) {
+                            setState(() {
+                              _sendWhatsappMessage = value ?? false;
+                            });
+                          },
+                          activeColor: const Color(0xFF003D7A),
+                        ),
+                        const Text(
+                          "Send WhatsApp Message",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF333333),
                           ),
                         ),
                       ],
@@ -986,6 +1012,7 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         closingAction: _selectedCloseReason,
         markAsComplaint: _markAsComplaint,
         callStatus: _selectedCallStatus,
+        sendWhatsapp: _sendWhatsappMessage,
       );
 
       String leadId = '';
@@ -1063,6 +1090,17 @@ class _AddLeadBottomSheetState extends State<AddLeadBottomSheet> {
         );
 
         await leadRepository.addLead(lead);
+      }
+
+      if (_sendWhatsappMessage) {
+        // Send automated WhatsApp brochure
+        await apiService.sendBrochureTemplate(
+          customerPhone: _phoneController.text.trim(),
+          customerName: _nameController.text.trim().isEmpty 
+              ? 'Customer' 
+              : _nameController.text.trim(),
+          brand: _selectedBrand ?? 'Unknown',
+        );
       }
 
       if (mounted) {

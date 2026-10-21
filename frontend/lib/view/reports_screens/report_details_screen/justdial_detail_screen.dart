@@ -3,6 +3,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
+import 'package:telecaller_app/widgets.dart/send_whatsapp_brochure_widget.dart';
 
 class JustDialDetailScreen extends StatefulWidget {
   final String name;
@@ -592,6 +593,16 @@ Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // Send WhatsApp Message Checkbox
+                  SendWhatsappBrochureWidget(
+                    customerPhone: widget.phone,
+                    customerName: widget.name,
+                    initialBrand: data['brand'] ??
+                        leadData['brand'] ??
+                        leadSnapshot['brand'] ??
+                        location,
+                  ),
 
                   // Share Call Report Button - JustDial Orange Theme
                   SizedBox(

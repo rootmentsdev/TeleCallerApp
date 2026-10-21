@@ -17,11 +17,13 @@ class DateFormatter {
 
   /// Format date as "DD MMM YYYY" (e.g., "15 Jan 2025")
   static String formatDate(DateTime date) {
-    return "${date.day} ${_months[date.month - 1]} ${date.year}";
+    final local = date.toLocal();
+    return "${local.day} ${_months[local.month - 1]} ${local.year}";
   }
 
   /// Format date as "DD/MM/YYYY" (e.g., "15/01/2025")
   static String formatDateShort(DateTime date) {
-    return "${date.day}/${date.month}/${date.year}";
+    final local = date.toLocal();
+    return "${local.day}/${local.month}/${local.year}";
   }
 }

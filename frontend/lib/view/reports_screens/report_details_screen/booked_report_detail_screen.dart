@@ -3,6 +3,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
+import 'package:telecaller_app/widgets.dart/send_whatsapp_brochure_widget.dart';
 
 class BookedReportDetailScreen extends StatefulWidget {
   final String name;
@@ -132,8 +133,12 @@ Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
       data['callDuration'] ?? data['call_duration'],
     );
     final functionDate = _formatDateString(
-      data['functionDate'] ??
+      data['deliveryDate'] ??
+          data['delivery_date'] ??
+          data['functionDate'] ??
           data['function_date'] ??
+          leadData['deliveryDate'] ??
+          leadData['delivery_date'] ??
           leadData['functionDate'] ??
           leadData['function_date'],
     );
@@ -760,6 +765,17 @@ Remarks: ${_getDisplayValue(data['remarks'], 'Not available')}
                       ],
                     ),
                     const SizedBox(height: 24),
+
+                    // Send WhatsApp Message Checkbox
+                    SendWhatsappBrochureWidget(
+                      customerPhone: phone,
+                      customerName: customerName,
+                      initialBrand: data['brand'] ??
+                          data['store'] ??
+                          leadData['brand'] ??
+                          leadData['store'] ??
+                          location,
+                    ),
 
                     // Share Call Report Button
                     SizedBox(

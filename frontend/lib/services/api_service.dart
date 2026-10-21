@@ -123,6 +123,69 @@ class ApiService {
     }
   }
 
+  // Logout
+  Future<Map<String, dynamic>?> logoutUser() async {
+    final url = Uri.parse(ApiConfig.logout());
+
+    try {
+      final headers = await _getAuthHeaders();
+      String? fcmToken;
+      try {
+        fcmToken = await FirebaseMessaging.instance.getToken();
+        print('[LOGOUT DEBUG] FCM Token retrieved: $fcmToken');
+      } catch (e) {
+        print('[LOGOUT DEBUG] Failed to fetch FCM Token: $e');
+      }
+
+      final requestBody = {
+        if (fcmToken != null) "fcmToken": fcmToken,
+      };
+
+      print('==================== [LOGOUT REQUEST] ====================');
+      print('[LOGOUT DEBUG] Method: POST');
+      print('[LOGOUT DEBUG] Called URL: $url');
+      print('[LOGOUT DEBUG] Headers: $headers');
+      print('[LOGOUT DEBUG] Body: ${json.encode(requestBody)}');
+      print('=========================================================');
+
+      final response = await http
+          .post(
+            url,
+            headers: headers,
+            body: json.encode(requestBody),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('==================== [LOGOUT RESPONSE] ===================');
+      print('[LOGOUT DEBUG] Called URL: $url');
+      print('[LOGOUT DEBUG] Response Status: ${response.statusCode}');
+      print('[LOGOUT DEBUG] Response Body: ${response.body}');
+      print('=========================================================');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (response.body.isNotEmpty) {
+          try {
+            return json.decode(response.body) as Map<String, dynamic>;
+          } catch (_) {
+            return null;
+          }
+        }
+      }
+      return null;
+    } catch (e, s) {
+      print('==================== [LOGOUT ERROR] ====================');
+      print('[LOGOUT DEBUG] Called URL: $url');
+      print('[LOGOUT DEBUG] Error: $e');
+      print('========================================================');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'logoutUser failed',
+      );
+      return null;
+    }
+  }
+
   // Get Return Leads
   Future<Map<String, dynamic>> getReturnLeads({
     String? store,
@@ -649,6 +712,7 @@ class ApiService {
     String? closingAction,
     bool markAsComplaint = false,
     String? callStatus,
+    bool sendWhatsapp = false,
   }) async {
     final url = ApiConfig.addLead();
 
@@ -681,6 +745,7 @@ class ApiService {
                 ? followUpDate
                 : null,
         'callDuration': callDuration?.toString() ?? '0',
+        'sendWhatsapp': sendWhatsapp,
       };
 
       requestBody.removeWhere((key, value) => value == null);
@@ -1683,6 +1748,59 @@ class ApiService {
         e,
         s,
         reason: 'updateGenericLead failed',
+      );
+      rethrow;
+    }
+  }
+
+  // ===== WhatsApp Notifications =====
+  Future<Map<String, dynamic>?> sendBrochureTemplate({
+    required String customerPhone,
+    required String customerName,
+    required String brand,
+  }) async {
+    final url = ApiConfig.sendBrochureTemplate();
+    
+    // Normalize brand to match backend expected values ("suitor_guy" or "zorucci")
+    String normalizedBrand = brand.toLowerCase().replaceAll(' ', '_');
+    if (normalizedBrand != 'suitor_guy' && normalizedBrand != 'zorucci') {
+      if (normalizedBrand.contains('suitor')) {
+        normalizedBrand = 'suitor_guy';
+      } else if (normalizedBrand.contains('zorucci')) {
+        normalizedBrand = 'zorucci';
+      }
+    }
+    
+    try {
+      final requestBody = {
+        'customerPhone': customerPhone,
+        'customerName': customerName,
+        'brand': normalizedBrand,
+      };
+      
+      print('==================== [SEND BROCHURE REQUEST] ====================');
+      print('[BROCHURE DEBUG] Method: POST');
+      print('[BROCHURE DEBUG] Called URL: $url');
+      print('[BROCHURE DEBUG] Request Body: $requestBody');
+      print('================================================================');
+      
+      final response = await _httpClient.post(url, requestBody);
+      
+      print('==================== [SEND BROCHURE RESPONSE] ===================');
+      print('[BROCHURE DEBUG] Called URL: $url');
+      print('[BROCHURE DEBUG] Response: $response');
+      print('================================================================');
+
+      return response;
+    } catch (e, s) {
+      print('==================== [SEND BROCHURE ERROR] ====================');
+      print('[BROCHURE DEBUG] Called URL: $url');
+      print('[BROCHURE DEBUG] Error: $e');
+      print('==============================================================');
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: 'sendBrochureTemplate failed',
       );
       rethrow;
     }

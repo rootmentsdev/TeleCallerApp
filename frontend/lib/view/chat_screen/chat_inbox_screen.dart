@@ -267,6 +267,8 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> with SingleTickerProv
                       conversationId: chat['_id'] ?? '',
                       participantName: title,
                       participantPhone: participant['phone'] ?? '',
+                      channel: channel,
+                      brand: chat['brand']?.toString(),
                     ),
                   ),
                 );

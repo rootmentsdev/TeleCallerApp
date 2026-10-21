@@ -44,6 +44,7 @@ class _AddLeadOutgoingCallBottomSheetState
   String? _selectedCallStatus;
   DateTime? _followUpDate;
   int _rating = 0;
+  bool _sendWhatsappMessage = false;
 
   bool _isLoading = false;
 
@@ -523,6 +524,31 @@ class _AddLeadOutgoingCallBottomSheetState
                         ),
                       ),
                     ],
+
+                    const SizedBox(height: 16),
+
+                    // Send WhatsApp Message
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _sendWhatsappMessage,
+                          onChanged: (value) {
+                            setState(() {
+                              _sendWhatsappMessage = value ?? false;
+                            });
+                          },
+                          activeColor: const Color(0xFF003D7A),
+                        ),
+                        const Text(
+                          "Send WhatsApp Message",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                      ],
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -1071,6 +1097,7 @@ class _AddLeadOutgoingCallBottomSheetState
         callStatus: _selectedCallStatus,
         followUpFlag: _followUpDate != null,
         followUpDate: _followUpDate?.toIso8601String(),
+        sendWhatsapp: _sendWhatsappMessage,
       );
 
       String leadId = '';
@@ -1194,6 +1221,17 @@ class _AddLeadOutgoingCallBottomSheetState
         );
 
         await leadRepository.addLead(lead);
+      }
+
+      if (_sendWhatsappMessage) {
+        // Send automated WhatsApp brochure
+        await apiService.sendBrochureTemplate(
+          customerPhone: _phoneController.text.trim(),
+          customerName: _nameController.text.trim().isEmpty 
+              ? 'Customer' 
+              : _nameController.text.trim(),
+          brand: _selectedBrand ?? 'Unknown',
+        );
       }
 
       if (mounted) {

@@ -645,7 +645,7 @@ class LeadRepository extends ChangeNotifier {
           dateValue['\$date']?.toString() ?? dateValue['date']?.toString();
       if (dateStr != null && dateStr.isNotEmpty) {
         try {
-          return DateTime.parse(dateStr);
+          return DateTime.parse(dateStr).toLocal();
         } catch (e) {
           print(
             'LeadRepository: Failed to parse MongoDB date: $dateStr, error: $e',
@@ -659,7 +659,7 @@ class LeadRepository extends ChangeNotifier {
     if (dateStr.isEmpty) return null;
 
     try {
-      return DateTime.parse(dateStr);
+      return DateTime.parse(dateStr).toLocal();
     } catch (e) {
       // Try manual parsing for non-ISO formats
       final parts = dateStr.split(RegExp(r'[-/]'));
@@ -882,7 +882,11 @@ class LeadRepository extends ChangeNotifier {
       );
       final functionDate =
           _parseDate(leadData['function_date']) ??
-          _parseDate(leadData['functionDate']);
+          _parseDate(leadData['functionDate']) ??
+          _parseDate(leadData['deliveryDate']) ??
+          _parseDate(leadData['delivery_date']) ??
+          _parseDate(leadData['pickupDate']) ??
+          _parseDate(leadData['pickup_date']);
       final enquiryDate =
           _parseDate(leadData['enquiry_date']) ??
           _parseDate(leadData['enquiryDate']);

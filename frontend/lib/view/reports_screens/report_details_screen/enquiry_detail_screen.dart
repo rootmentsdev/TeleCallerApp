@@ -3,6 +3,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
+import 'package:telecaller_app/widgets.dart/send_whatsapp_brochure_widget.dart';
 
 class EnquiryDetailScreen extends StatefulWidget {
   final String name;
@@ -579,6 +580,17 @@ Follow Up Date: ${_getDisplayValue(data['followUpDate'], 'Not available')}
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // Send WhatsApp Message Checkbox
+                  SendWhatsappBrochureWidget(
+                    customerPhone: widget.phone,
+                    customerName: widget.name,
+                    initialBrand: data['brand'] ??
+                        data['store'] ??
+                        leadData['brand'] ??
+                        leadData['store'] ??
+                        location,
+                  ),
 
                   // Share Call Report Button
                   SizedBox(

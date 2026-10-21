@@ -20,18 +20,24 @@ import 'package:file_picker/file_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:telecaller_app/view/chat_screen/widgets/send_brochure_bottom_sheet.dart';
 
 class ChatConversationScreen extends StatefulWidget {
   final String conversationId;
   final String participantName;
   final String participantPhone;
+  final String? channel;
+  final String? brand;
 
   const ChatConversationScreen({
-    Key? key,
+    super.key,
     required this.conversationId,
     required this.participantName,
     required this.participantPhone,
-  }) : super(key: key);
+    this.channel,
+    this.brand,
+  });
 
   @override
   State<ChatConversationScreen> createState() => _ChatConversationScreenState();
@@ -131,16 +137,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         curve: Curves.easeOut,
         duration: const Duration(milliseconds: 300),
       );
-    }
-  }
-
-  Future<void> _takePhoto() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.camera);
-    if (picked != null) {
-      final controller = Provider.of<ChatController>(this.context, listen: false);
-      controller.sendMediaMessage(widget.conversationId, picked.path, 'image');
-      _scrollToBottom();
     }
   }
 
@@ -290,11 +286,54 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     }
   }
 
+  bool _isWhatsAppConversation(ChatController chatController) {
+    if (widget.channel != null &&
+        widget.channel!.toLowerCase().trim() == 'whatsapp') {
+      return true;
+    }
+    final convIndex = chatController.conversations
+        .indexWhere((c) => c['_id'] == widget.conversationId);
+    if (convIndex != -1) {
+      final conv = chatController.conversations[convIndex];
+      final ch = (conv['channel'] ?? '').toString().toLowerCase().trim();
+      if (ch == 'whatsapp') return true;
+      final pName =
+          (conv['participant']?['name'] ?? '').toString().toLowerCase();
+      if (pName.contains('(whatsapp)')) return true;
+    }
+    if (widget.participantName.toLowerCase().contains('(whatsapp)')) {
+      return true;
+    }
+    return false;
+  }
+
+  void _openSendBrochureSheet(String brand) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SendBrochureBottomSheet(
+        conversationId: widget.conversationId,
+        participantName: widget.participantName,
+        participantPhone: widget.participantPhone,
+        initialBrand: brand,
+        onSuccess: () {
+          final controller =
+              Provider.of<ChatController>(context, listen: false);
+          controller.fetchMessages(widget.conversationId, showLoading: false);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatController = Provider.of<ChatController>(context);
     final convIndex = chatController.conversations.indexWhere((c) => c['_id'] == widget.conversationId);
-    final brand = convIndex != -1 ? (chatController.conversations[convIndex]['brand']?.toString().toLowerCase() ?? 'zorucci') : 'zorucci';
+    final brand = convIndex != -1 
+        ? (chatController.conversations[convIndex]['brand']?.toString().toLowerCase() ?? widget.brand?.toLowerCase() ?? 'zorucci') 
+        : (widget.brand?.toLowerCase() ?? 'zorucci');
+    final isWhatsApp = _isWhatsAppConversation(chatController);
 
     String brandInitial = 'Z';
     Color avatarColor = Colors.pinkAccent; 
@@ -362,6 +401,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           ],
         ),
         actions: [
+          if (isWhatsApp)
+            IconButton(
+              icon: const FaIcon(
+                FontAwesomeIcons.whatsapp,
+                color: Color(0xFF25D366),
+                size: 22,
+              ),
+              tooltip: 'Send WhatsApp Brochure',
+              onPressed: () => _openSendBrochureSheet(brand),
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.black),
             onSelected: (value) {
@@ -376,9 +425,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     participantPhone: widget.participantPhone,
                   ),
                 );
+              } else if (value == 'send_brochure') {
+                _openSendBrochureSheet(brand);
               }
             },
             itemBuilder: (context) => [
+              if (isWhatsApp)
+                const PopupMenuItem(
+                  value: 'send_brochure',
+                  child: Row(
+                    children: [
+                      FaIcon(FontAwesomeIcons.whatsapp, color: Color(0xFF25D366), size: 18),
+                      SizedBox(width: 8),
+                      Text('Send Brochure Template'),
+                    ],
+                  ),
+                ),
               const PopupMenuItem(
                 value: 'convert_lead',
                 child: Row(
@@ -979,64 +1041,75 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   Widget _buildInputBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: const BoxDecoration(
         color: Colors.white,
       ),
       child: Row(
         children: [
           Expanded(
-            child: _isRecording ? _buildRecordingBar() : Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: ColorConstant.chatBubbleBlue.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: _showQuickReplies,
-                    child: const Icon(Icons.bolt, color: Colors.amber, size: 26),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: const InputDecoration(
-                        hintText: 'Type something...',
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onChanged: (_) => setState(() {}),
+            child: _isRecording
+                ? _buildRecordingBar()
+                : Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: ColorConstant.chatBubbleBlue.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      children: [
+                        InkWell(
+                          onTap: _showQuickReplies,
+                          child: const Icon(Icons.bolt,
+                              color: Colors.amber, size: 26),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: const InputDecoration(
+                              hintText: 'Type something...',
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding:
+                                  EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: _pickAttachment,
+                          child: const Icon(Icons.attach_file,
+                              color: Colors.black54, size: 22),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _showCameraOptions,
+                          child: const Icon(Icons.camera_alt_outlined,
+                              color: Colors.black54, size: 22),
+                        ),
+                      ],
                     ),
                   ),
-                  InkWell(
-                    onTap: _pickAttachment,
-                    child: const Icon(Icons.attach_file, color: Colors.black54, size: 22),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _showCameraOptions,
-                    child: const Icon(Icons.camera_alt_outlined, color: Colors.black54, size: 22),
-                  ),
-                ],
-              ),
-            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           GestureDetector(
             onLongPressStart: (_) => _startRecording(),
             onLongPressEnd: (_) => _stopRecording(),
             onTap: _sendMessage,
             child: Container(
-              padding: const EdgeInsets.all(12),
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: _isRecording ? Colors.redAccent : ColorConstant.primaryColor,
+                color: _isRecording
+                    ? Colors.redAccent
+                    : ColorConstant.primaryColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                _messageController.text.isNotEmpty ? Icons.send : Icons.mic,
+                _messageController.text.isNotEmpty
+                    ? Icons.send
+                    : Icons.mic,
                 color: Colors.white,
                 size: 20,
               ),

@@ -23,6 +23,10 @@ class ApiConfig {
     return "$authEndpoint/telecaller-login";
   }
 
+  static String logout() {
+    return "$authEndpoint/telecaller-logout";
+  }
+
   static String refreshToken() {
     return "$authEndpoint/refresh-token";
   }
@@ -252,6 +256,11 @@ class ApiConfig {
   // ===== Stores =====
   static String getStores() {
     return storesEndpoint;
+  }
+
+  // ===== Chat & WhatsApp =====
+  static String sendBrochureTemplate() {
+    return "$chatEndpoint/send-brochure-template";
   }
 
   // ===== Legacy Methods (for backward compatibility) =====

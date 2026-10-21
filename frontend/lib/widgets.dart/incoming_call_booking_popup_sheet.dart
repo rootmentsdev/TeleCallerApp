@@ -57,7 +57,8 @@ class _IncomingCallBookingPopupSheetState
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'N/A';
-    return '${date.day}/${date.month}/${date.year}';
+    final local = date.toLocal();
+    return '${local.day}/${local.month}/${local.year}';
   }
 
   Future<void> _handleSave() async {

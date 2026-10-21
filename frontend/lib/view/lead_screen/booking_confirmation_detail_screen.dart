@@ -183,7 +183,7 @@ class _BookingConfirmationDetailScreenState
   String _formatDate(dynamic value) {
     if (value == null) return 'N/A';
     try {
-      return DateFormatter.formatDate(DateTime.parse(value.toString()));
+      return DateFormatter.formatDate(DateTime.parse(value.toString()).toLocal());
     } catch (_) {
       return value.toString();
     }
@@ -306,6 +306,8 @@ class _BookingConfirmationDetailScreenState
         _detail['enquiryDate'] ??
         _detail['enquiry_date'];
     final pickupDate =
+        _detail['deliveryDate'] ??
+        _detail['delivery_date'] ??
         _detail['pickupDate'] ??
         _detail['pickup_date'] ??
         _detail['functionDate'] ??

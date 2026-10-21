@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/utils/text_constant.dart';
 import 'package:telecaller_app/utils/date_formatter.dart';
+import 'package:telecaller_app/widgets.dart/send_whatsapp_brochure_widget.dart';
 
 class BookingDetailScreen extends StatelessWidget {
   final String name;
@@ -62,8 +63,12 @@ class BookingDetailScreen extends StatelessWidget {
       'Not available',
     );
     final functionDate = _formatDateString(
-      data['functionDate'] ??
+      data['deliveryDate'] ??
+          data['delivery_date'] ??
+          data['functionDate'] ??
           data['function_date'] ??
+          leadData['deliveryDate'] ??
+          leadData['delivery_date'] ??
           leadData['functionDate'] ??
           leadData['function_date'],
     );
@@ -594,6 +599,17 @@ class BookingDetailScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 24),
+
+                    // Send WhatsApp Message Checkbox
+                    SendWhatsappBrochureWidget(
+                      customerPhone: phone,
+                      customerName: name,
+                      initialBrand: data['brand'] ??
+                          data['store'] ??
+                          leadData['brand'] ??
+                          leadData['store'] ??
+                          location,
+                    ),
                   ],
                 ),
               ),

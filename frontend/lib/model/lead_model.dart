@@ -129,7 +129,7 @@ class LeadModel {
       callStatus: map['callStatus'],
       followUpDate:
           map['followUpDate'] != null
-              ? DateTime.parse(map['followUpDate'])
+              ? DateTime.parse(map['followUpDate']).toLocal()
               : null,
       reason: map['reason'],
       category: map['category'],
@@ -137,12 +137,16 @@ class LeadModel {
       callCount: map['callCount'] ?? 0,
       createdAt:
           map['createdAt'] != null
-              ? DateTime.parse(map['createdAt'])
+              ? DateTime.parse(map['createdAt']).toLocal()
               : DateTime.now(),
       updatedAt:
-          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+          map['updatedAt'] != null
+              ? DateTime.parse(map['updatedAt']).toLocal()
+              : null,
       returnDate:
-          map['returnDate'] != null ? DateTime.parse(map['returnDate']) : null,
+          map['returnDate'] != null
+              ? DateTime.parse(map['returnDate']).toLocal()
+              : null,
       source: map['source'],
       leadType: map['leadType'],
       isStarred: map['isStarred'] ?? false,
@@ -150,14 +154,16 @@ class LeadModel {
       closingAction: map['closingAction'],
       enquiryDate:
           map['enquiryDate'] != null
-              ? DateTime.parse(map['enquiryDate'])
+              ? DateTime.parse(map['enquiryDate']).toLocal()
               : null,
       functionDate:
           map['functionDate'] != null
-              ? DateTime.parse(map['functionDate'])
+              ? DateTime.parse(map['functionDate']).toLocal()
               : null,
       visitDate:
-          map['visitDate'] != null ? DateTime.parse(map['visitDate']) : null,
+          map['visitDate'] != null
+              ? DateTime.parse(map['visitDate']).toLocal()
+              : null,
       bookingNumber: map['bookingNumber'],
       assignedTo: map['assignedTo'],
       rating: map['rating'],
@@ -165,7 +171,7 @@ class LeadModel {
       markAsComplaint: map['markAsComplaint'],
       bookingDate:
           map['bookingDate'] != null
-              ? DateTime.parse(map['bookingDate'])
+              ? DateTime.parse(map['bookingDate']).toLocal()
               : null,
     );
   }
@@ -231,7 +237,7 @@ class LeadModel {
         json['follow_up_date'] ?? json['followUpDate'] ?? json['followupDate'];
     if (followUpDateValue != null) {
       try {
-        followUpDate = DateTime.parse(followUpDateValue.toString());
+        followUpDate = DateTime.parse(followUpDateValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, leave as null
       }
@@ -252,7 +258,7 @@ class LeadModel {
         json['created_at'] ?? json['createdAt'] ?? json['date'];
     if (createdAtValue != null) {
       try {
-        createdAt = DateTime.parse(createdAtValue.toString());
+        createdAt = DateTime.parse(createdAtValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, use current time
       }
@@ -263,7 +269,7 @@ class LeadModel {
     final updatedAtValue = json['updated_at'] ?? json['updatedAt'];
     if (updatedAtValue != null) {
       try {
-        updatedAt = DateTime.parse(updatedAtValue.toString());
+        updatedAt = DateTime.parse(updatedAtValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, leave as null
       }
@@ -284,7 +290,7 @@ class LeadModel {
     final returnDateValue = json['return_date'] ?? json['returnDate'];
     if (returnDateValue != null) {
       try {
-        returnDate = DateTime.parse(returnDateValue.toString());
+        returnDate = DateTime.parse(returnDateValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, leave as null
       }
@@ -295,18 +301,24 @@ class LeadModel {
     final enquiryDateValue = json['enquiry_date'] ?? json['enquiryDate'];
     if (enquiryDateValue != null) {
       try {
-        enquiryDate = DateTime.parse(enquiryDateValue.toString());
+        enquiryDate = DateTime.parse(enquiryDateValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, leave as null
       }
     }
 
-    // Handle function date
+    // Handle function date (also maps pickup date and deliveryDate from backend API)
     DateTime? functionDate;
-    final functionDateValue = json['function_date'] ?? json['functionDate'];
+    final functionDateValue =
+        json['function_date'] ??
+        json['functionDate'] ??
+        json['deliveryDate'] ??
+        json['delivery_date'] ??
+        json['pickupDate'] ??
+        json['pickup_date'];
     if (functionDateValue != null) {
       try {
-        functionDate = DateTime.parse(functionDateValue.toString());
+        functionDate = DateTime.parse(functionDateValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, leave as null
       }
@@ -317,7 +329,7 @@ class LeadModel {
     final visitDateValue = json['visit_date'] ?? json['visitDate'];
     if (visitDateValue != null) {
       try {
-        visitDate = DateTime.parse(visitDateValue.toString());
+        visitDate = DateTime.parse(visitDateValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, leave as null
       }
@@ -346,7 +358,7 @@ class LeadModel {
     final bookingDateValue = json['bookingDate'] ?? json['booking_date'];
     if (bookingDateValue != null) {
       try {
-        bookingDate = DateTime.parse(bookingDateValue.toString());
+        bookingDate = DateTime.parse(bookingDateValue.toString()).toLocal();
       } catch (e) {
         // If parsing fails, leave as null
       }

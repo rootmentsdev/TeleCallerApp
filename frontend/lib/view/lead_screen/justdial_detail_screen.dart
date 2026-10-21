@@ -27,10 +27,12 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
 
   // New form fields
   final TextEditingController _customerNameController = TextEditingController();
+  final TextEditingController _otherItemCategoryController = TextEditingController();
   String? _selectedBrand;
   String? _selectedLocation;
   DateTime? _selectedFunctionDate;
   bool _isComplaint = false;
+  bool _sendWhatsappMessage = false;
   String? _selectedSubCategory;
   String? _selectedCloseReason;
   String? _selectedItemCategory;
@@ -72,6 +74,7 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
     'Tie',
     'Shoes',
     'Blazer',
+    'Other',
   ];
 
   @override
@@ -243,6 +246,17 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
         );
         return;
       }
+
+      if (_selectedItemCategory == 'Other' &&
+          _otherItemCategoryController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter other item category'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -264,7 +278,14 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
         'markAsComplaint': _isComplaint,
         'subCategory': _selectedSubCategory,
         'closeReason': _selectedCloseReason,
-        'itemCategory': _selectedItemCategory,
+        'itemCategory': _selectedItemCategory == 'Other'
+            ? (_otherItemCategoryController.text.trim().isNotEmpty
+                ? _otherItemCategoryController.text.trim()
+                : 'Other')
+            : _selectedItemCategory,
+        'otherItemCategory': _selectedItemCategory == 'Other'
+            ? _otherItemCategoryController.text.trim()
+            : null,
         'remarks':
             _remarksController.text.isEmpty ? null : _remarksController.text,
         'callStatus': _selectedCallStatus,
@@ -272,6 +293,20 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
       };
 
       await apiService.updateJustDialLead(widget.lead.id, payload);
+
+      if (_sendWhatsappMessage) {
+        String cleanPhone = widget.lead.phone.replaceAll(RegExp(r'[^0-9]'), '');
+        if (cleanPhone.length == 12 && cleanPhone.startsWith('91')) {
+          cleanPhone = cleanPhone.substring(2);
+        }
+        await apiService.sendBrochureTemplate(
+          customerPhone: cleanPhone,
+          customerName: _customerNameController.text.trim().isNotEmpty
+              ? _customerNameController.text.trim()
+              : (widget.lead.name.isNotEmpty ? widget.lead.name : 'Customer'),
+          brand: _selectedBrand ?? 'suitor_guy',
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -300,6 +335,7 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
   @override
   void dispose() {
     _customerNameController.dispose();
+    _otherItemCategoryController.dispose();
     _remarksController.dispose();
     super.dispose();
   }
@@ -846,6 +882,29 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 8),
+
+                              // Send WhatsApp Message Checkbox
+                              Row(
+                                children: [
+                                  Checkbox(
+                                    value: _sendWhatsappMessage,
+                                    activeColor: const Color(0xFF25D366),
+                                    onChanged:
+                                        (value) => setState(
+                                          () => _sendWhatsappMessage =
+                                              value ?? false,
+                                        ),
+                                  ),
+                                  const Text(
+                                    'Send WhatsApp Message',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 16),
 
                               // Sub Category Dropdown
@@ -912,7 +971,7 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
                                     ),
                                     child: DropdownButton<String>(
                                       value: _selectedItemCategory,
-                                      hint: const Text('Kurta'),
+                                      hint: const Text('Select Item Category'),
                                       isExpanded: true,
                                       underline: const SizedBox(),
                                       items:
@@ -925,13 +984,69 @@ class _JustDialDetailScreenState extends State<JustDialDetailScreen> {
                                             );
                                           }).toList(),
                                       onChanged:
-                                          (value) => setState(
-                                            () => _selectedItemCategory = value,
-                                          ),
+                                          (value) => setState(() {
+                                            _selectedItemCategory = value;
+                                            if (value != 'Other') {
+                                              _otherItemCategoryController.clear();
+                                            }
+                                          }),
                                     ),
                                   ),
                                 ],
                               ),
+                              if (_selectedItemCategory == 'Other') ...[
+                                const SizedBox(height: 16),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Other Item Category',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                            fontFamily:
+                                                TextConstant.dmSansRegular,
+                                          ),
+                                        ),
+                                        if (_selectedCallStatus != 'Not Connected')
+                                          Text(
+                                            ' *',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.red,
+                                              fontFamily:
+                                                  TextConstant.dmSansRegular,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Colors.grey[300]!,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: TextField(
+                                        controller: _otherItemCategoryController,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Enter item category',
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 16),
 
                               // Call Remarks Text Area

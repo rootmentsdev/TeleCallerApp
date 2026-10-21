@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:telecaller_app/services/api_service.dart';
 import 'package:telecaller_app/services/auth_service.dart';
 import 'package:telecaller_app/utils/color_constant.dart';
 import 'package:telecaller_app/view/login_screen.dart';
@@ -13,8 +14,29 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Future<void> _logout(BuildContext context) async {
+    debugPrint('[LOGOUT DEBUG] User pressed Logout button on ProfileScreen');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+    );
+
+    try {
+      await ApiService().logoutUser();
+    } catch (e) {
+      debugPrint('[LOGOUT DEBUG] ProfileScreen caught error during logout: $e');
+    }
+
+    debugPrint('[LOGOUT DEBUG] Clearing auth session and navigating to login');
     await AuthService.clearAuth();
     if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
